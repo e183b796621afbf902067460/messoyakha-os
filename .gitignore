@@ -2,9 +2,13 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.idea/
 
 # C extensions
 *.so
+
+# DuckDB
+:memory
 
 # Distribution / packaging
 .Python
@@ -102,7 +106,6 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
 .venv
 env/
 venv/
@@ -127,3 +130,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# VSCode
+.vscode/
+.env
+*.csv
+*.html
+draft.ipynb

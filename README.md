@@ -1,88 +1,236 @@
-# C3f1nance
-Depends on: [medici](https://github.com/e183b796621afbf902067460/medici).
+# C3D3 FastAPI
+No dependencies.
 
 ---
-It's a core framework for interacting with centralized cryptocurrency exchanges. The purpose of the framework is to implement the logic of the certain centralized exchange. All exchanges inherit the [`iCBE`](https://github.com/e183b796621afbf902067460/medici/blob/master/medici/interfaces/exchanges/interface.py) logic.
 
-# Installation
+C3D3 FastAPI backend helps to automate C3D3 Data Vault management.
+
+# Configuration
+
+First of all to configure FastAPI backend correctly need to do next steps:
+
+- Clone current repository:
 ```
-pip install git+https://github.com/e183b796621afbf902067460/c3f1nance.git#egg=c3f1nance
+git clone https://github.com/e183b796621afbf902067460/c3d3-fastapi.git
 ```
 
-# Usage
-Let's build our first exchange wrapper:
+- Get into the project folder:
+```
+cd c3d3-fastapi/src/microservices
+```
+
+- Set environment variables in [.env](https://github.com/e183b796621afbf902067460/c3d3-fastapi/blob/master/src/microservices/.env).
+
+# Docker
+
+- Run docker compose (`sudo`):
+```
+docker-compose up -d --build
+```
+
+- Check C3 and D3 container's ID and copy them:
+```
+docker ps
+```
+
+- Create AuthDB, C3Vault and D3Vault instances:
+```
+docker exec -it <CONTAINER ID> python3 app/orm/scripts/create.py
+```
+
+- And setup alembic for each instance:
+```
+sudo docker exec -it <CONTAINER ID> bash -c 'cd app/orm; alembic upgrade head'
+```
+
+- Create default admin user in `auth` container:
+```
+docker exec -it <CONTAINER ID> python3 app/__init__.py
+```
+
+# Exit
+- To stop all running containers:
+```
+docker stop $(docker ps -a -q)
+```
+- And remove it all:
+```
+docker rm $(docker ps -a -q)
+```
+
+# Alembic
+- After any changes in DBs this command should be done in `/app/orm` path:
+```
+alembic revision --autogenerate
+```
+- And make migrations:
+```
+alembic upgrade head
+```
+
+# Endpoints
+
+### auth/
+- `/api/v1/auth/login`
 ```python
-from requests.models import Response
-
-from typing import Optional
-import hmac
-import hashlib
-from urllib.parse import urlencode
-
-from medici.interfaces.exchanges.interface import iCBE
-from medici.decorators.permission.decorator import permission
+import requests as r
 
 
-class BinanceSpotExchange(iCBE):
-    _E = 'https://api.binance.com'
-    _ping = '/api/v3/ping'
+url = 'http://0.0.0.0:8000/api/v1/auth/login?self=self'
+data = {
+  "username": "string",
+  "password": "string"
+}
+header = {'accept': 'application/json', 'Content-Type': 'application/json'}
 
-    def __signature(self, params: dict):
-        return hmac.new(self.secret.encode('utf-8'), urlencode(params).replace('%40', '@').encode('utf-8'), hashlib.sha256).hexdigest()
-
-    def __header(self):
-        return {'X-MBX-APIKEY': self.api}
-
-    def aggTrades(
-            self,
-            symbol: str,
-            fromId: Optional[int] = None,
-            startTime: Optional[int] = None,
-            endTime: Optional[int] = None,
-            limit: Optional[int] = None
-    ) -> Response:
-        params: dict = {
-            'symbol': symbol,
-            'fromId': fromId,
-            'startTime': startTime,
-            'endTime': endTime,
-            'limit': limit
-        }
-
-        r = self._r(method='get', url='/api/v3/aggTrades', params=params)
-        assert isinstance(r, Response)
-        return r
-
-    @permission
-    def account(
-            self,
-            timestamp: float,
-            recvWindow: Optional[int] = None
-    ) -> Response:
-        params: dict = {'timestamp': timestamp} if recvWindow is None else {'timestamp': timestamp, 'recvWindow': recvWindow}
-        params.update({'signature': self.__signature(params)})
-
-        r = self._r(
-            method='get',
-            url='/api/v3/account',
-            params=params,
-            headers=self.__header()
-        )
-        assert isinstance(r, Response)
-        return r
-
+response = r.post(url=url, json=data, headers=header)
 ```
 
-The code above is implementation of the [Binance SPOT](https://binance-docs.github.io/apidocs/spot/en/#change-log). 
-
-Example of exchange building:
+### c3/
+- `/api/v1/c3/new_account`
 ```python
-from c3f1nance.binance.Spot import BinanceSpotExchange
+import requests as r
 
 
-exchange = BinanceSpotExchange()
+access_token = ''
+url = 'http://0.0.0.0:8000/api/v1/c3/new_account?self=self'
+data = {
+  "label_name": "string",
+  "label_api_key": "string",
+  "label_api_secret": "string"
+}
+header = {'accept': 'application/json', 'Content-Type': 'application/json', 'authorization': access_token}
+
+response = r.post(url=url, json=data, headers=header)
 ```
-And finally to call needed methods just do it:
+
+- `/api/v1/c3/new_account_balances`
 ```python
-agg_trades = exchange.aggTrades(symbol='ETHUSDT')
+import requests as r
+
+
+access_token = ''
+url = 'http://0.0.0.0:8000/api/v1/c3/new_account_balances?self=self'
+data = {
+  "exchange_name": "string",
+  "instrument_name": "string",
+  "label_name": "string"
+}
+header = {'accept': 'application/json', 'Content-Type': 'application/json', 'authorization': access_token}
+
+response = r.post(url=url, json=data, headers=header)
+```
+
+- `/api/v1/c3/new_account_limit_orders`
+```python
+import requests as r
+
+
+access_token = ''
+url = 'http://0.0.0.0:8000/api/v1/c3/new_account_limit_orders?self=self'
+data = {
+  "exchange_name": "string",
+  "instrument_name": "string",
+  "label_name": "string"
+}
+header = {'accept': 'application/json', 'Content-Type': 'application/json', 'authorization': access_token}
+
+response = r.post(url=url, json=data, headers=header)
+```
+
+- `/api/v1/c3/new_account_liquidations`
+```python
+import requests as r
+
+
+access_token = ''
+url = 'http://0.0.0.0:8000/api/v1/c3/new_account_liquidations?self=self'
+data = {
+  "exchange_name": "string",
+  "instrument_name": "string",
+  "label_name": "string"
+}
+header = {'accept': 'application/json', 'Content-Type': 'application/json', 'authorization': access_token}
+
+response = r.post(url=url, json=data, headers=header)
+```
+
+### d3/
+
+- `/api/v1/d3/new_chain`
+```python
+import requests as r
+
+
+access_token = ''
+url = 'http://0.0.0.0:8000/api/v1/d3/new_chain?self=self'
+data = {
+  "network_name": "string",
+  "native_chain_token": "string",
+  "rpc_node": "string",
+  "block_limit": 0,
+  "network_uri": "string",
+  "network_api_key": "string"
+}
+header = {'accept': 'application/json', 'Content-Type': 'application/json', 'authorization': access_token}
+
+response = r.post(url=url, json=data, headers=header)
+```
+
+- `/api/v1/d3/new_hedge_to_borrows`
+```python
+import requests as r
+
+
+access_token = ''
+url = 'http://0.0.0.0:8000/api/v1/d3/new_hedge_to_borrows?self=self'
+data = {
+  "wallet_address": "string",
+  "token_address": "string",
+  "network_name": "string",
+  "label_name": "string",
+  "protocol_name": "string",
+  "specification_name": "string"
+}
+header = {'accept': 'application/json', 'Content-Type': 'application/json', 'authorization': access_token}
+
+response = r.post(url=url, json=data, headers=header)
+```
+
+- `/api/v1/d3/new_hedge_to_supplies`
+```python
+import requests as r
+
+
+access_token = ''
+url = 'http://0.0.0.0:8000/api/v1/d3/new_hedge_to_supplies?self=self'
+data = {
+  "wallet_address": "string",
+  "token_address": "string",
+  "network_name": "string",
+  "label_name": "string",
+  "protocol_name": "string",
+  "specification_name": "string"
+}
+header = {'accept': 'application/json', 'Content-Type': 'application/json', 'authorization': access_token}
+
+response = r.post(url=url, json=data, headers=header)
+```
+
+- `/api/v1/d3/new_wallet_balances`
+```python
+import requests as r
+
+
+access_token = ''
+url = 'http://0.0.0.0:8000/api/v1/d3/new_wallet_balances?self=self'
+data = {
+  "wallet_address": "string",
+  "token_address": "string",
+  "network_name": "string",
+  "label_name": "string"
+}
+header = {'accept': 'application/json', 'Content-Type': 'application/json', 'authorization': access_token}
+
+response = r.post(url=url, json=data, headers=header)
 ```
