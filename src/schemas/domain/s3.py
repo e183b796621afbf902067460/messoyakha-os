@@ -32,7 +32,7 @@ class _ResponseMetadataSchema(BaseModel):
     retry_attempts: int = Field(alias="RetryAttempts")
 
 
-class ContentSchema(BaseModel):
+class _ContentSchema(BaseModel):
     key: Path = Field(alias="Key")
     e_tag: str = Field(alias="ETag")
 
@@ -44,12 +44,29 @@ class ContentSchema(BaseModel):
 
 class ListObjectsResponseSchema(BaseModel):
     name: str = Field(alias="Name")
-    prefix: str = Field(alias="Prefix")
+    prefix: Path = Field(alias="Prefix")
 
     response_metadata: _ResponseMetadataSchema = Field(alias="ResponseMetadata")
     is_truncated: bool = Field(alias="IsTruncated")
 
-    contents: list[ContentSchema] = Field(alias="Contents")
+    contents: list[_ContentSchema] = Field(alias="Contents", default=[])
     max_keys: int = Field(alias="MaxKeys")
     encoding_type: str = Field(alias="EncodingType")
     key_count: int = Field(alias="KeyCount")
+
+    # pylint: disable=no-member
+    @property
+    def filepath(self) -> str:
+        return self.prefix.as_posix()
+
+    # pylint: enable=no-member
+
+    @property
+    def filename(self) -> str | None:
+        filename: str | None = None
+
+        contents: list[_ContentSchema] = [content for content in self.contents if content.size]
+        if contents:
+            assert len(contents) == 1  # noqa: S101
+            filename = contents[0].key.name
+        return filename

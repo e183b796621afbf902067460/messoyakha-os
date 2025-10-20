@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from time import sleep
 
 from attr import attrs
 from numpy import floor
@@ -49,4 +50,5 @@ class BinanceService:
             )
 
             klines.extend(batch)
+            sleep(0.25)  # noqa: WPS432
         return DataFrame([kline.model_dump() for kline in klines])

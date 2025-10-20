@@ -1,5 +1,4 @@
 from datetime import datetime
-from pathlib import Path
 from uuid import uuid1
 
 from boto3 import Session
@@ -10,16 +9,16 @@ from src.adapters.clients.binance import BinanceSpotAPIClient, BinanceUsdtmAPICl
 from src.adapters.clients.s3 import S3Client
 from src.adapters.repositories.candlesticks import CandlesticksRepository
 from src.adapters.repositories.common.duckdb_base import get_duckdb_connection
-from src.schemas.candlesticks import CandlesticksQueryParametersSchema, LatestTimestampQueryParametersSchema
 from src.schemas.domain.binance import BinanceKlinesInputSchema
-from src.schemas.domain.s3 import ContentSchema, ListObjectsResponseSchema
+from src.schemas.domain.s3 import ListObjectsResponseSchema
+from src.schemas.queries import CandlesticksQueryParametersSchema, LatestTimestampQueryParametersSchema
 from src.services.binance import BinanceService
-from src.services.common.misc import determine_latest_timestamp, format_s3_path, format_s3_prefix
+from src.services.common.misc import determine_latest_timestamp, format_s3_key, format_s3_path
 from src.settings import settings
 
 
-# pylint: disable=too-many-locals
-async def main(exchange: str, section: str, client: BinanceSpotAPIClient | BinanceUsdtmAPIClient) -> None:
+# pylint: disable=too-many-locals, duplicate-code
+async def main(client: BinanceSpotAPIClient | BinanceUsdtmAPIClient) -> None:
     await client.ping()
 
     s3_client: S3Client = S3Client(
@@ -38,44 +37,55 @@ async def main(exchange: str, section: str, client: BinanceSpotAPIClient | Binan
     candlesticks_repository: CandlesticksRepository = CandlesticksRepository(connection=duckdb_connection)
     binance_service: BinanceService = BinanceService(client=client)
 
-    s3_path: str = format_s3_path(exchange=exchange, section=section, directory="candlesticks")
+    s3_path: str = format_s3_path(exchange=settings.EXCHANGE, section=settings.SECTION, directory="candlesticks")
     list_objects_response: ListObjectsResponseSchema = s3_client.list_objects(
-        bucket=settings.S3_BUCKET, prefix=format_s3_prefix(exchange=exchange, section=section, directory="candlesticks")
+        bucket=settings.S3_BUCKET,
+        prefix=format_s3_key(exchange=settings.EXCHANGE, section=settings.SECTION, directory="candlesticks"),
     )
-    content_schemas: list[ContentSchema] = [content for content in list_objects_response.contents if content.size]
-    assert len(content_schemas) == 1  # noqa: S101
-    s3_filepath: Path = content_schemas[0].key
-    s3_filename: str = s3_filepath.name
 
     latest_timestamp: datetime | None = candlesticks_repository.query_latest_timestamp(
         parameters_schema=LatestTimestampQueryParametersSchema(
-            ticker=settings.TICKER, exchange=exchange, section=section, interval=settings.INTERVAL
+            ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
         ),
-        path=f"{s3_path}/{s3_filename}",
+        path=f"{s3_path}/{list_objects_response.filename}" if list_objects_response.filename else f"{s3_path}/",
     )
     latest_timestamp = determine_latest_timestamp(latest_timestamp=latest_timestamp)
 
-    existing_candlesticks: DataFrame = candlesticks_repository.query_candlesticks(
+    existing_candlesticks: DataFrame | None = candlesticks_repository.query_candlesticks(
         parameters_schema=CandlesticksQueryParametersSchema(
-            ticker=settings.TICKER, exchange=exchange, section=section, interval=settings.INTERVAL
+            ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
         ),
-        path=f"{s3_path}/{s3_filename}",
+        path=f"{s3_path}/{list_objects_response.filename}" if list_objects_response.filename else f"{s3_path}/",
     )
 
     incoming_candlesticks: DataFrame = await binance_service.get_klines(
         input_schema=BinanceKlinesInputSchema(
             ticker=settings.TICKER,
-            section=section,
+            section=settings.SECTION,
             interval=settings.INTERVAL,
             start_time=latest_timestamp,
             end_time=settings.TRIGGER_DATE,
         )
     )
-    candlesticks: DataFrame = concat([existing_candlesticks, incoming_candlesticks])
+    candlesticks: DataFrame = (
+        concat([existing_candlesticks, incoming_candlesticks])
+        if isinstance(existing_candlesticks, DataFrame)
+        else incoming_candlesticks
+    )
     candlesticks.drop_duplicates(inplace=True)
+    candlesticks["exchange"] = settings.EXCHANGE
 
     candlesticks_repository.insert_dataframe_as_parquet(dataframe=candlesticks, key=f"{s3_path}/{uuid1()}.parquet")
-    s3_client.delete_object(bucket=settings.S3_BUCKET, key=s3_filepath.as_posix())
+    if list_objects_response.filename:
+        s3_client.delete_object(
+            bucket=settings.S3_BUCKET,
+            key=format_s3_key(
+                exchange=settings.EXCHANGE,
+                section=settings.SECTION,
+                directory="candlesticks",
+                filename=list_objects_response.filename,
+            ),
+        )
 
 
-# pylint: enable=too-many-locals
+# pylint: enable=too-many-locals, duplicate-code

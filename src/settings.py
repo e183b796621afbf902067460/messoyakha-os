@@ -22,19 +22,12 @@ class AppSettings(BaseSettings):
     S3_CONNECT_TIMEOUT: int = 2 * 60
     S3_BUCKET: str = "f8e90488-f511555d-274b-4258-bffc-572dd1900382"
 
-    BINANCE_SPOT_API_HTTP_URL: HttpUrl = HttpUrl("https://api.binance.com")
-    BINANCE_SPOT_API_TIMEOUT: int = 60
-    BINANCE_SPOT_API_RETRIES: int = 3
-
-    BINANCE_USDTM_API_HTTP_URL: HttpUrl = HttpUrl("https://fapi.binance.com")
-    BINANCE_USDTM_API_TIMEOUT: int = 60
-    BINANCE_USDTM_API_RETRIES: int = 3
-
+    EXCHANGE: str = "Binance"
+    SECTION: str = "SPOT"
     TICKER: str = "BTCUSDT"
     INTERVAL: str = "4h"
 
     TRIGGER_DATE: datetime = datetime.now()
-    START_DATE: int = datetime.now().year - 2000  # noqa: WPS432
 
     MILLISECONDS_IN_SECOND: int = 10**3
     DAYS_IN_YEAR: int = 365

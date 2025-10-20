@@ -17,3 +17,7 @@ class CandlesticksQueryParametersSchema(_QueryParametersBaseSchema):
 
 class LatestTimestampQueryParametersSchema(_QueryParametersBaseSchema):
     """Query parameters to fetch latest timestamp."""
+
+
+class MovingAveragesQueryParametersSchema(_QueryParametersBaseSchema):
+    """Query parameters to fetch moving averages."""

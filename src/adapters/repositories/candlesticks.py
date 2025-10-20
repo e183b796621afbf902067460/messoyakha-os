@@ -1,12 +1,13 @@
 from datetime import datetime
 
-from _duckdb import HTTPException  # noqa: WPS436
+from _duckdb import HTTPException, InvalidInputException, IOException  # noqa: WPS436
 from pandas import DataFrame
 
 from src.adapters.repositories.common.duckdb_base import DuckDBBaseRepository
-from src.schemas.candlesticks import CandlesticksQueryParametersSchema, LatestTimestampQueryParametersSchema
+from src.schemas.queries import CandlesticksQueryParametersSchema, LatestTimestampQueryParametersSchema
 
 
+# pylint: disable=duplicate-code
 class CandlesticksRepository(DuckDBBaseRepository):
     def query_candlesticks(self, path: str, parameters_schema: CandlesticksQueryParametersSchema) -> DataFrame | None:
         query: str = f"""
@@ -36,7 +37,7 @@ class CandlesticksRepository(DuckDBBaseRepository):
         candlesticks: DataFrame | None = None
         try:
             candlesticks = self._query_dataframe(query=query, parameters=parameters_schema.to_list())
-        except HTTPException:
+        except (HTTPException, IOException, InvalidInputException):
             ...  # noqa: WPS428
         return candlesticks
 
@@ -57,6 +58,9 @@ class CandlesticksRepository(DuckDBBaseRepository):
         latest_timestamp: datetime | None = None
         try:
             latest_timestamp = self._query_dataframe(query=query, parameters=parameters_schema.to_list()).values[0][0]
-        except HTTPException:
+        except (HTTPException, IOException, InvalidInputException):
             ...  # noqa: WPS428
         return latest_timestamp
+
+
+# pylint: enable=duplicate-code
