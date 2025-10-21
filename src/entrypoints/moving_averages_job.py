@@ -17,6 +17,7 @@ from src.services.common.misc import format_s3_key, format_s3_path
 from src.settings import settings
 
 
+# pylint: disable=redefined-outer-name
 def _compute_moving_average(
     data: DataFrame, moving_average_method: Callable[[ndarray, int], ndarray], moving_average_window: int
 ) -> DataFrame:
@@ -27,6 +28,9 @@ def _compute_moving_average(
     data[f"{prefix}_low"] = Series(moving_average_method(data.low.values, moving_average_window))
     data[f"{prefix}_close"] = Series(moving_average_method(data.close.values, moving_average_window))
     return data
+
+
+# pylint: enable=redefined-outer-name
 
 
 # pylint: disable=duplicate-code
@@ -76,14 +80,14 @@ if __name__ == "__main__":
         raise FileNotFoundError(f"There is no candlesticks data in {s3_candlesticks_path}.")
     candlesticks.drop_duplicates(inplace=True)
 
-    moving_averages_methods: list[Callable[[ndarray, int], ndarray]] = [SMA, TRIMA, EMA, DEMA, TEMA, KAMA]
-    moving_averages_windows: list[int] = [2**2, 2**4, 2**6, 2**8, 2**10]
-    for moving_averages_method in moving_averages_methods:
-        for moving_averages_window in moving_averages_windows:
+    moving_average_methods: list[Callable[[ndarray, int], ndarray]] = [SMA, TRIMA, EMA, DEMA, TEMA, KAMA]
+    moving_average_windows: list[int] = [2**2, 2**4, 2**6, 2**8, 2**10]
+    for moving_average_method in moving_average_methods:
+        for moving_average_window in moving_average_windows:
             candlesticks = _compute_moving_average(
                 data=candlesticks,
-                moving_average_method=moving_averages_method,
-                moving_average_window=moving_averages_window,
+                moving_average_method=moving_average_method,
+                moving_average_window=moving_average_window,
             )
     candlesticks.drop(columns=["open", "high", "low", "close", "close_time"], axis=1, inplace=True)
     candlesticks.rename(columns={"open_time": "datetime"}, inplace=True)

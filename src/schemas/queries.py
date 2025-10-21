@@ -21,3 +21,7 @@ class LatestTimestampQueryParametersSchema(_QueryParametersBaseSchema):
 
 class MovingAveragesQueryParametersSchema(_QueryParametersBaseSchema):
     """Query parameters to fetch moving averages."""
+
+
+class ADXQueryParametersSchema(_QueryParametersBaseSchema):
+    """Query parameters to fetch ADX."""

@@ -32,7 +32,7 @@ class CandlesticksRepository(DuckDBBaseRepository):
                 ticker = ? AND
                 interval = ?
             ORDER BY
-                open_time ASC
+                open_time ASC;
         """  # noqa: S608
         candlesticks: DataFrame | None = None
         try:
@@ -54,6 +54,8 @@ class CandlesticksRepository(DuckDBBaseRepository):
                 section = ? AND
                 ticker = ? AND
                 interval = ?
+            ORDER BY
+                open_time ASC;
         """  # noqa: S608
         latest_timestamp: datetime | None = None
         try:
