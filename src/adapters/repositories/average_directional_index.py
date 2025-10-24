@@ -2,13 +2,13 @@ from _duckdb import HTTPException, InvalidInputException, IOException  # noqa: W
 from pandas import DataFrame
 
 from src.adapters.repositories.common.duckdb_base import DuckDBBaseRepository
-from src.schemas.queries import MovingAveragesQueryParametersSchema
+from src.schemas.queries import ADXQueryParametersSchema
 
 
 # pylint: disable=duplicate-code
-class MovingAveragesRepository(DuckDBBaseRepository):
-    def query_moving_averages(
-        self, path: str, parameters_schema: MovingAveragesQueryParametersSchema
+class ADXRepository(DuckDBBaseRepository):
+    def query_average_directional_indexes(
+        self, path: str, parameters_schema: ADXQueryParametersSchema
     ) -> DataFrame | None:
         query: str = f"""
             SELECT
@@ -28,18 +28,18 @@ class MovingAveragesRepository(DuckDBBaseRepository):
                 ticker = ? AND
                 interval = ?
             ORDER BY
-                datetime ASC;
+                datetime   ASC;
         """  # noqa: S608
-        moving_averages: DataFrame | None = None
+        average_directional_indexes: DataFrame | None = None
         try:
-            moving_averages = self._query_dataframe(query=query, parameters=parameters_schema.to_list())
+            average_directional_indexes = self._query_dataframe(query=query, parameters=parameters_schema.to_list())
         except (HTTPException, IOException, InvalidInputException):
             ...  # noqa: WPS428
-        if isinstance(moving_averages, DataFrame):
-            moving_averages.drop(
+        if isinstance(average_directional_indexes, DataFrame):
+            average_directional_indexes.drop(
                 columns=["exchange_1", "section_1", "ticker_1", "interval_1", "datetime_1"], axis=1, inplace=True
             )
-        return moving_averages
+        return average_directional_indexes
 
 
 # pylint: enable=duplicate-code

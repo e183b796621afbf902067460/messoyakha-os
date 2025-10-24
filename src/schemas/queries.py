@@ -11,15 +11,15 @@ class _QueryParametersBaseSchema(BaseModel):
         return [self.exchange, self.section, self.ticker, self.interval]
 
 
-class CandlesticksQueryParametersSchema(_QueryParametersBaseSchema):
-    """Query parameters to fetch candlestick data."""
+class OHLCQueryParametersSchema(_QueryParametersBaseSchema):
+    """Query parameters to fetch OHLC data."""
 
 
 class LatestTimestampQueryParametersSchema(_QueryParametersBaseSchema):
     """Query parameters to fetch latest timestamp."""
 
 
-class MovingAveragesQueryParametersSchema(_QueryParametersBaseSchema):
+class MAQueryParametersSchema(_QueryParametersBaseSchema):
     """Query parameters to fetch moving averages."""
 
 

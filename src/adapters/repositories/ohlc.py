@@ -4,12 +4,12 @@ from _duckdb import HTTPException, InvalidInputException, IOException  # noqa: W
 from pandas import DataFrame
 
 from src.adapters.repositories.common.duckdb_base import DuckDBBaseRepository
-from src.schemas.queries import CandlesticksQueryParametersSchema, LatestTimestampQueryParametersSchema
+from src.schemas.queries import LatestTimestampQueryParametersSchema, OHLCQueryParametersSchema
 
 
 # pylint: disable=duplicate-code
-class CandlesticksRepository(DuckDBBaseRepository):
-    def query_candlesticks(self, path: str, parameters_schema: CandlesticksQueryParametersSchema) -> DataFrame | None:
+class OHLCRepository(DuckDBBaseRepository):
+    def query_candlesticks(self, path: str, parameters_schema: OHLCQueryParametersSchema) -> DataFrame | None:
         query: str = f"""
             SELECT
                 exchange,
@@ -53,9 +53,7 @@ class CandlesticksRepository(DuckDBBaseRepository):
                 exchange = ? AND
                 section = ? AND
                 ticker = ? AND
-                interval = ?
-            ORDER BY
-                open_time ASC;
+                interval = ?;
         """  # noqa: S608
         latest_timestamp: datetime | None = None
         try:

@@ -8,11 +8,11 @@ from pandas import DataFrame, Series
 from talib import DEMA, EMA, KAMA, SMA, TEMA, TRIMA
 
 from src.adapters.clients.s3 import S3Client
-from src.adapters.repositories.candlesticks import CandlesticksRepository
 from src.adapters.repositories.common.duckdb_base import get_duckdb_connection
-from src.adapters.repositories.moving_averages import MovingAveragesRepository
+from src.adapters.repositories.moving_average import MARepository
+from src.adapters.repositories.ohlc import OHLCRepository
 from src.schemas.domain.s3 import ListObjectsResponseSchema
-from src.schemas.queries import CandlesticksQueryParametersSchema
+from src.schemas.queries import OHLCQueryParametersSchema
 from src.services.common.misc import format_s3_key, format_s3_path
 from src.settings import settings
 
@@ -48,36 +48,32 @@ if __name__ == "__main__":
         s3_endpoint_url=settings.S3_ENDPOINT_URL.host,
         s3_region_name=settings.S3_REGION_NAME,
     )
-    candlesticks_repository: CandlesticksRepository = CandlesticksRepository(connection=duckdb_connection)
-    moving_averages_repository: MovingAveragesRepository = MovingAveragesRepository(connection=duckdb_connection)
+    ohlc_repository: OHLCRepository = OHLCRepository(connection=duckdb_connection)
+    ma_repository: MARepository = MARepository(connection=duckdb_connection)
 
-    s3_candlesticks_path: str = format_s3_path(
-        exchange=settings.EXCHANGE, section=settings.SECTION, directory="candlesticks"
-    )
-    s3_moving_averages_path: str = format_s3_path(
-        exchange=settings.EXCHANGE, section=settings.SECTION, directory="moving-averages"
-    )
-    list_candlesticks_objects_response: ListObjectsResponseSchema = s3_client.list_objects(
+    s3_ohlc_path: str = format_s3_path(exchange=settings.EXCHANGE, section=settings.SECTION, directory="candlesticks")
+    s3_ma_path: str = format_s3_path(exchange=settings.EXCHANGE, section=settings.SECTION, directory="moving-averages")
+    list_ohlc_objects_response: ListObjectsResponseSchema = s3_client.list_objects(
         bucket=settings.S3_BUCKET,
         prefix=format_s3_key(exchange=settings.EXCHANGE, section=settings.SECTION, directory="candlesticks"),
     )
-    list_moving_averages_objects_response: ListObjectsResponseSchema = s3_client.list_objects(
+    list_ma_objects_response: ListObjectsResponseSchema = s3_client.list_objects(
         bucket=settings.S3_BUCKET,
         prefix=format_s3_key(exchange=settings.EXCHANGE, section=settings.SECTION, directory="moving-averages"),
     )
 
-    candlesticks: DataFrame | None = candlesticks_repository.query_candlesticks(
-        parameters_schema=CandlesticksQueryParametersSchema(
+    candlesticks: DataFrame | None = ohlc_repository.query_candlesticks(
+        parameters_schema=OHLCQueryParametersSchema(
             ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
         ),
         path=(
-            f"{s3_candlesticks_path}/{list_candlesticks_objects_response.filename}"
-            if list_candlesticks_objects_response.filename
-            else f"{s3_candlesticks_path}/"
+            f"{s3_ohlc_path}/{list_ohlc_objects_response.filename}"
+            if list_ohlc_objects_response.filename
+            else f"{s3_ohlc_path}/"
         ),
     )
     if candlesticks is None:
-        raise FileNotFoundError(f"There is no candlesticks data in {s3_candlesticks_path}.")
+        raise FileNotFoundError(f"There is no candlesticks data in {s3_ohlc_path}.")
     candlesticks.drop_duplicates(inplace=True)
 
     moving_average_methods: list[Callable[[ndarray, int], ndarray]] = [SMA, TRIMA, EMA, DEMA, TEMA, KAMA]
@@ -92,17 +88,16 @@ if __name__ == "__main__":
     candlesticks.drop(columns=["open", "high", "low", "close", "close_time"], axis=1, inplace=True)
     candlesticks.rename(columns={"open_time": "datetime"}, inplace=True)
 
-    moving_averages_repository.insert_dataframe_as_parquet(
-        dataframe=candlesticks, key=f"{s3_moving_averages_path}/{uuid1()}.parquet"
-    )
-    if list_moving_averages_objects_response.filename:
+    moving_averages: DataFrame = candlesticks.copy(deep=True)
+    ma_repository.insert_dataframe_as_parquet(dataframe=moving_averages, key=f"{s3_ma_path}/{uuid1()}.parquet")
+    if list_ma_objects_response.filename:
         s3_client.delete_object(
             bucket=settings.S3_BUCKET,
             key=format_s3_key(
                 exchange=settings.EXCHANGE,
                 section=settings.SECTION,
                 directory="moving-averages",
-                filename=list_moving_averages_objects_response.filename,
+                filename=list_ma_objects_response.filename,
             ),
         )
 
