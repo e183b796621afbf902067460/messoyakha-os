@@ -28,7 +28,7 @@ class ADXRepository(DuckDBBaseRepository):
                 ticker = ? AND
                 interval = ?
             ORDER BY
-                datetime   ASC;
+                datetime ASC;
         """  # noqa: S608
         average_directional_indexes: DataFrame | None = None
         try:

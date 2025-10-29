@@ -25,3 +25,11 @@ class MAQueryParametersSchema(_QueryParametersBaseSchema):
 
 class ADXQueryParametersSchema(_QueryParametersBaseSchema):
     """Query parameters to fetch ADX."""
+
+
+class SARQueryParametersSchema(_QueryParametersBaseSchema):
+    """Query parameters to fetch ADX."""
+
+
+class SARTrialsQueryParametersSchema(_QueryParametersBaseSchema):
+    """Query parameters to fetch SAR trials."""

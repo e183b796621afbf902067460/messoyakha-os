@@ -55,14 +55,18 @@ if __name__ == "__main__":
     adx_repository: ADXRepository = ADXRepository(connection=duckdb_connection)
 
     s3_ma_path: str = format_s3_path(exchange=settings.EXCHANGE, section=settings.SECTION, directory="moving-averages")
-    s3_adx_path: str = format_s3_path(exchange=settings.EXCHANGE, section=settings.SECTION, directory="adx")
+    s3_adx_path: str = format_s3_path(
+        exchange=settings.EXCHANGE, section=settings.SECTION, directory="average-directional-indexes"
+    )
     list_ma_objects_response: ListObjectsResponseSchema = s3_client.list_objects(
         bucket=settings.S3_BUCKET,
         prefix=format_s3_key(exchange=settings.EXCHANGE, section=settings.SECTION, directory="moving-averages"),
     )
     list_adx_objects_response: ListObjectsResponseSchema = s3_client.list_objects(
         bucket=settings.S3_BUCKET,
-        prefix=format_s3_key(exchange=settings.EXCHANGE, section=settings.SECTION, directory="adx"),
+        prefix=format_s3_key(
+            exchange=settings.EXCHANGE, section=settings.SECTION, directory="average-directional-indexes"
+        ),
     )
 
     moving_averages: DataFrame | None = ma_repository.query_moving_averages(
@@ -72,7 +76,7 @@ if __name__ == "__main__":
         path=(
             f"{s3_ma_path}/{list_ma_objects_response.filename}"
             if list_ma_objects_response.filename
-            else f"{list_ma_objects_response}/"
+            else f"{s3_ma_path}/"
         ),
     )
     if moving_averages is None:
@@ -109,7 +113,7 @@ if __name__ == "__main__":
             key=format_s3_key(
                 exchange=settings.EXCHANGE,
                 section=settings.SECTION,
-                directory="adx",
+                directory="average-directional-indexes",
                 filename=list_adx_objects_response.filename,
             ),
         )
