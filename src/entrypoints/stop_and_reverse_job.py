@@ -148,10 +148,21 @@ if __name__ == "__main__":
 
     ohlc = ohlc.merge(right=moving_averages, how="left", on=["exchange", "section", "ticker", "interval", "datetime"])
     ohlc["datetime"] = to_datetime(ohlc["datetime"])
+    ohlc["year"] = ohlc["datetime"].dt.year
     ohlc.set_index(keys="datetime", inplace=True)
 
     def objective(trial: Trial) -> float:
         data: DataFrame = ohlc.copy(deep=True)  # type: ignore[union-attr]
+        data.query(f"year < {settings.TRIGGER_DATE.year - 1}", inplace=True)
+        data.dropna(
+            subset=[
+                f"{_KAMA_SIXTY_FOUR}_open",
+                f"{_KAMA_SIXTY_FOUR}_high",
+                f"{_KAMA_SIXTY_FOUR}_low",
+                f"{_KAMA_SIXTY_FOUR}_close",
+            ],
+            inplace=True,
+        )
         statistics: Series = _main(
             data=data,
             parameters_schema=_SAREXTParametersSchema(
@@ -258,7 +269,9 @@ if __name__ == "__main__":
     ohlc["sar"] = abs(ohlc["sar"])
     ohlc.reset_index(inplace=True)
 
-    stops_and_reverses: DataFrame = ohlc[["exchange", "section", "ticker", "interval", "sar", "datetime"]]
+    stops_and_reverses: DataFrame = ohlc[["exchange", "section", "ticker", "interval", "sar", "datetime"]].copy(
+        deep=True
+    )
     sar_repository.insert_dataframe_as_parquet(dataframe=stops_and_reverses, key=f"{s3_sar_path}/{uuid1()}.parquet")
     if list_sar_objects_response.filename:
         s3_client.delete_object(
