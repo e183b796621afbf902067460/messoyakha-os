@@ -27,9 +27,9 @@ class ADXQueryParametersSchema(_QueryParametersBaseSchema):
     """Query parameters to fetch ADX."""
 
 
-class SARQueryParametersSchema(_QueryParametersBaseSchema):
-    """Query parameters to fetch ADX."""
-
-
-class SARTrialsQueryParametersSchema(_QueryParametersBaseSchema):
+class SARTrialQueryParametersSchema(_QueryParametersBaseSchema):
     """Query parameters to fetch SAR trials."""
+
+
+class TradeQueryParametersSchema(_QueryParametersBaseSchema):
+    """Query parameters to fetch trades."""
