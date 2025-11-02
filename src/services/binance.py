@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta
 from time import sleep
 
-from attr import attrs
 from numpy import floor
 from pandas import DataFrame
 
-from src.adapters.clients.binance import BinanceSpotAPIClient, BinanceUsdtmAPIClient
+from src.adapters.clients.binance import BinanceAPIClientBase
 from src.schemas.domain.binance import BinanceKlinesInputSchema, BinanceKlinesOutputSchema
+from src.services.common.api_base import APIBaseService
 
 
 def _convert_binance_interval_to_seconds(interval: str) -> float:
@@ -21,12 +21,11 @@ def _convert_binance_interval_to_seconds(interval: str) -> float:
     raise ValueError(f"Invalid interval `{interval}` were passed.")
 
 
-@attrs(slots=True, auto_attribs=True, kw_only=True)
-class BinanceService:
+class BinanceService(APIBaseService):
 
-    _client: BinanceSpotAPIClient | BinanceUsdtmAPIClient
+    _client: BinanceAPIClientBase
 
-    async def get_klines(self, input_schema: BinanceKlinesInputSchema) -> DataFrame:
+    async def _get_klines(self, input_schema: BinanceKlinesInputSchema) -> DataFrame:
         klines: list[BinanceKlinesOutputSchema] = []
 
         number_of_batches: int = int(
@@ -52,3 +51,6 @@ class BinanceService:
             klines.extend(batch)
             sleep(0.25)  # noqa: WPS432
         return DataFrame([kline.model_dump() for kline in klines])
+
+    async def get_ohlc(self, input_schema: BinanceKlinesInputSchema) -> DataFrame:
+        return await self._get_klines(input_schema=input_schema)

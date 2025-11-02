@@ -2,13 +2,13 @@ from _duckdb import HTTPException, InvalidInputException, IOException  # noqa: W
 from pandas import DataFrame
 
 from src.adapters.repositories.common.duckdb_base import DuckDBBaseRepository
-from src.schemas.queries import ADXQueryParametersSchema
+from src.schemas.filters import SARTrialQueryParametersSchema
 
 
 # pylint: disable=duplicate-code
-class ADXRepository(DuckDBBaseRepository):
-    def query_average_directional_indexes(
-        self, path: str, parameters_schema: ADXQueryParametersSchema
+class SARTrialsRepository(DuckDBBaseRepository):
+    def query_stop_and_reverse_trials(
+        self, path: str, parameters_schema: SARTrialQueryParametersSchema
     ) -> DataFrame | None:
         query: str = f"""
             SELECT
@@ -17,9 +17,21 @@ class ADXRepository(DuckDBBaseRepository):
                 ticker,
                 interval,
 
-                *,
+                value,
 
-                datetime
+                startvalue,
+                offsetonreverse,
+
+                accelerationinitlong,
+                accelerationinitshort,
+
+                accelerationlong,
+                accelerationshort,
+
+                accelerationmaxlong,
+                accelerationmaxshort,
+
+                state
             FROM
                 read_parquet({path!r})
             WHERE
@@ -28,18 +40,14 @@ class ADXRepository(DuckDBBaseRepository):
                 ticker = ? AND
                 interval = ?
             ORDER BY
-                datetime ASC;
+                value DESC;
         """  # noqa: S608
-        average_directional_indexes: DataFrame | None = None
+        stop_and_reverse_trials: DataFrame | None = None
         try:
-            average_directional_indexes = self._query_dataframe(query=query, parameters=parameters_schema.to_list())
+            stop_and_reverse_trials = self._query_dataframe(query=query, parameters=parameters_schema.to_list())
         except (HTTPException, IOException, InvalidInputException):
             ...  # noqa: WPS428
-        if isinstance(average_directional_indexes, DataFrame):
-            average_directional_indexes.drop(
-                columns=["exchange_1", "section_1", "ticker_1", "interval_1", "datetime_1"], axis=1, inplace=True
-            )
-        return average_directional_indexes
+        return stop_and_reverse_trials
 
 
 # pylint: enable=duplicate-code

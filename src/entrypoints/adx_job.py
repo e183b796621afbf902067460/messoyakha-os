@@ -1,3 +1,4 @@
+from re import findall
 from uuid import uuid1
 
 from boto3 import Session
@@ -6,13 +7,27 @@ from pandas import DataFrame
 from talib import ADX
 
 from src.adapters.clients.s3 import S3Client
-from src.adapters.repositories.average_directional_index import ADXRepository
-from src.adapters.repositories.common.duckdb_base import get_duckdb_connection
-from src.adapters.repositories.moving_average import MARepository
-from src.schemas.domain.s3 import ListObjectsResponseSchema
-from src.schemas.queries import MAQueryParametersSchema
-from src.services.common.misc import findall_prefixes, format_s3_key, format_s3_path
+from src.adapters.connections.duckdb import get_duckdb_connection
+from src.adapters.repositories.indicators import ADXRepository, MARepository
+from src.schemas.filters import (
+    ADXPathParametersSchema,
+    ADXQueryParametersSchema,
+    MAPathParametersSchema,
+    MAQueryParametersSchema,
+)
+from src.services.s3 import ADXService, MAService
 from src.settings import settings
+
+
+def _findall_prefixes(strings: list[str]) -> list[str]:
+    pattern: str = r"\b([a-zA-Z]+_\d+)_(?:open|high|low|close)\b"
+
+    prefixes: list[str] = []
+    for string in strings:
+        match: list[str] = findall(pattern=pattern, string=string)
+        if match and match[0] not in prefixes:
+            prefixes.append(match[0])
+    return prefixes
 
 
 # pylint: disable=redefined-outer-name
@@ -51,39 +66,30 @@ if __name__ == "__main__":
         s3_endpoint_url=settings.S3_ENDPOINT_URL.host,
         s3_region_name=settings.S3_REGION_NAME,
     )
-    ma_repository: MARepository = MARepository(connection=duckdb_connection)
-    adx_repository: ADXRepository = ADXRepository(connection=duckdb_connection)
 
-    s3_ma_path: str = format_s3_path(exchange=settings.EXCHANGE, section=settings.SECTION, directory="moving-averages")
-    s3_adx_path: str = format_s3_path(
-        exchange=settings.EXCHANGE, section=settings.SECTION, directory="average-directional-indexes"
-    )
-    list_ma_objects_response: ListObjectsResponseSchema = s3_client.list_objects(
-        bucket=settings.S3_BUCKET,
-        prefix=format_s3_key(exchange=settings.EXCHANGE, section=settings.SECTION, directory="moving-averages"),
-    )
-    list_adx_objects_response: ListObjectsResponseSchema = s3_client.list_objects(
-        bucket=settings.S3_BUCKET,
-        prefix=format_s3_key(
-            exchange=settings.EXCHANGE, section=settings.SECTION, directory="average-directional-indexes"
-        ),
-    )
-
-    moving_averages: DataFrame | None = ma_repository.query_moving_averages(
-        parameters_schema=MAQueryParametersSchema(
+    ma_service: MAService = MAService(
+        s3_client=s3_client,
+        repository=MARepository(connection=duckdb_connection),
+        query_parameters=MAQueryParametersSchema(
             ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
         ),
-        path=(
-            f"{s3_ma_path}/{list_ma_objects_response.filename}"
-            if list_ma_objects_response.filename
-            else f"{s3_ma_path}/"
-        ),
+        path_parameters=MAPathParametersSchema(bucket=settings.S3_BUCKET, directory="moving-averages"),
     )
+    adx_service: ADXService = ADXService(
+        s3_client=s3_client,
+        repository=ADXRepository(connection=duckdb_connection),
+        query_parameters=ADXQueryParametersSchema(
+            ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
+        ),
+        path_parameters=ADXPathParametersSchema(bucket=settings.S3_BUCKET, directory="average-directional-indexes"),
+    )
+
+    moving_averages: DataFrame | None = ma_service.extract_ma()
     if moving_averages is None:
-        raise FileNotFoundError(f"There is no moving averages data in {s3_ma_path}.")
+        raise FileNotFoundError("There is no moving averages data.")
     moving_averages.drop_duplicates(inplace=True)
 
-    moving_average_prefixes: list[str] = findall_prefixes(strings=moving_averages.columns.to_list())
+    moving_average_prefixes: list[str] = _findall_prefixes(strings=moving_averages.columns.to_list())
     average_directional_index_windows: list[int] = [2**2, 2**4, 2**6, 2**8]
     for moving_average_prefix in moving_average_prefixes:
         for average_directional_index_window in average_directional_index_windows:
@@ -103,19 +109,8 @@ if __name__ == "__main__":
         inplace=True,
     )
     average_directional_indexes: DataFrame = moving_averages.copy(deep=True)
+    adx_service.load_dataframe_as_parquet(dataframe=average_directional_indexes, filename=f"{uuid1()}.parquet")
+    adx_service.delete_object()
 
-    adx_repository.insert_dataframe_as_parquet(
-        dataframe=average_directional_indexes, key=f"{s3_adx_path}/{uuid1()}.parquet"
-    )
-    if list_adx_objects_response.filename:
-        s3_client.delete_object(
-            bucket=settings.S3_BUCKET,
-            key=format_s3_key(
-                exchange=settings.EXCHANGE,
-                section=settings.SECTION,
-                directory="average-directional-indexes",
-                filename=list_adx_objects_response.filename,
-            ),
-        )
 
 # pylint: enable=duplicate-code

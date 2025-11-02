@@ -4,11 +4,11 @@ from _duckdb import HTTPException, InvalidInputException, IOException  # noqa: W
 from pandas import DataFrame
 
 from src.adapters.repositories.common.duckdb_base import DuckDBBaseRepository
-from src.schemas.queries import LatestTimestampQueryParametersSchema, OHLCQueryParametersSchema
+from src.schemas.filters import LatestTimestampQueryParametersSchema, OHLCQueryParametersSchema
 
 
 # pylint: disable=duplicate-code
-class OHLCRepository(DuckDBBaseRepository):
+class CandlesticksRepository(DuckDBBaseRepository):
     def query_candlesticks(self, path: str, parameters_schema: OHLCQueryParametersSchema) -> DataFrame | None:
         query: str = f"""
             SELECT

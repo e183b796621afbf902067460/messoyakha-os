@@ -2,10 +2,11 @@ from datetime import datetime, timedelta
 
 from pydantic import BaseModel, Field, field_serializer
 
+from src.schemas.common.base import APIBaseInputSchema
 from src.settings import settings
 
 
-class BinanceKlinesInputSchema(BaseModel):
+class BinanceKlinesInputSchema(APIBaseInputSchema):
 
     ticker: str = Field(serialization_alias="symbol")
     section: str = Field(exclude=True)

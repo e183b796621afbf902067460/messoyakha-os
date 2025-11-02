@@ -1,7 +1,14 @@
-from typing import Any
+from typing import Any, Literal
 
-from backtesting import Strategy
+from backtesting import Backtest, Strategy
 from numpy import ceil
+from pandas import DataFrame, Series
+from talib import SAREXT
+
+from src.schemas.backtests import BacktestParametersSchema
+from src.schemas.trials import SARParametersSchema
+
+KAMA_SIXTY_FOUR: Literal["kama_64"] = "kama_64"
 
 
 class _BullishTrendStrategy(Strategy):
@@ -90,3 +97,29 @@ class TrendStrategy(_BullishTrendStrategy, _BearishTrendStrategy):
     def next(self) -> None:
         _BullishTrendStrategy.next(self=self)
         _BearishTrendStrategy.next(self=self)
+
+
+def backtest(data: DataFrame, parameters_schema: SARParametersSchema) -> Series:
+    data["sar"] = SAREXT(
+        high=data[f"{KAMA_SIXTY_FOUR}_high"],
+        low=data[f"{KAMA_SIXTY_FOUR}_low"],
+        **parameters_schema.model_dump(by_alias=True),
+    )
+    data["sar"] = abs(data["sar"])
+
+    test: Backtest = Backtest(
+        data=data,
+        strategy=TrendStrategy,
+        trade_on_close=True,
+        hedging=False,
+        finalize_trades=False,
+        exclusive_orders=True,
+        **BacktestParametersSchema().model_dump(),
+    )
+    statistics: Series = test.run(
+        sar_on_bull_market_prefix="sar",
+        ma_on_bull_market_prefix=KAMA_SIXTY_FOUR,
+        sar_on_bear_market_prefix="sar",
+        ma_on_bear_market_prefix=KAMA_SIXTY_FOUR,
+    )
+    return statistics

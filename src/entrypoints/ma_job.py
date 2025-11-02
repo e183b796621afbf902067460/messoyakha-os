@@ -1,3 +1,4 @@
+# pylint: disable=duplicate-code
 from typing import Callable
 from uuid import uuid1
 
@@ -8,13 +9,19 @@ from pandas import DataFrame, Series
 from talib import DEMA, EMA, KAMA, SMA, TEMA, TRIMA
 
 from src.adapters.clients.s3 import S3Client
-from src.adapters.repositories.common.duckdb_base import get_duckdb_connection
-from src.adapters.repositories.moving_average import MARepository
-from src.adapters.repositories.ohlc import OHLCRepository
-from src.schemas.domain.s3 import ListObjectsResponseSchema
-from src.schemas.queries import OHLCQueryParametersSchema
-from src.services.common.misc import format_s3_key, format_s3_path
+from src.adapters.connections.duckdb import get_duckdb_connection
+from src.adapters.repositories.candlesticks import CandlesticksRepository
+from src.adapters.repositories.indicators import MARepository
+from src.schemas.filters import (
+    MAPathParametersSchema,
+    MAQueryParametersSchema,
+    OHLCPathParametersSchema,
+    OHLCQueryParametersSchema,
+)
+from src.services.s3 import MAService, OHLCService
 from src.settings import settings
+
+# pylint: enable=duplicate-code
 
 
 # pylint: disable=redefined-outer-name
@@ -48,32 +55,26 @@ if __name__ == "__main__":
         s3_endpoint_url=settings.S3_ENDPOINT_URL.host,
         s3_region_name=settings.S3_REGION_NAME,
     )
-    ohlc_repository: OHLCRepository = OHLCRepository(connection=duckdb_connection)
-    ma_repository: MARepository = MARepository(connection=duckdb_connection)
-
-    s3_ohlc_path: str = format_s3_path(exchange=settings.EXCHANGE, section=settings.SECTION, directory="candlesticks")
-    s3_ma_path: str = format_s3_path(exchange=settings.EXCHANGE, section=settings.SECTION, directory="moving-averages")
-    list_ohlc_objects_response: ListObjectsResponseSchema = s3_client.list_objects(
-        bucket=settings.S3_BUCKET,
-        prefix=format_s3_key(exchange=settings.EXCHANGE, section=settings.SECTION, directory="candlesticks"),
-    )
-    list_ma_objects_response: ListObjectsResponseSchema = s3_client.list_objects(
-        bucket=settings.S3_BUCKET,
-        prefix=format_s3_key(exchange=settings.EXCHANGE, section=settings.SECTION, directory="moving-averages"),
-    )
-
-    candlesticks: DataFrame | None = ohlc_repository.query_candlesticks(
-        parameters_schema=OHLCQueryParametersSchema(
+    ohlc_service: OHLCService = OHLCService(
+        s3_client=s3_client,
+        repository=CandlesticksRepository(connection=duckdb_connection),
+        query_parameters=OHLCQueryParametersSchema(
             ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
         ),
-        path=(
-            f"{s3_ohlc_path}/{list_ohlc_objects_response.filename}"
-            if list_ohlc_objects_response.filename
-            else f"{s3_ohlc_path}/"
-        ),
+        path_parameters=OHLCPathParametersSchema(bucket=settings.S3_BUCKET, directory="candlesticks"),
     )
+    ma_service: MAService = MAService(
+        s3_client=s3_client,
+        repository=MARepository(connection=duckdb_connection),
+        query_parameters=MAQueryParametersSchema(
+            ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
+        ),
+        path_parameters=MAPathParametersSchema(bucket=settings.S3_BUCKET, directory="moving-averages"),
+    )
+
+    candlesticks: DataFrame | None = ohlc_service.extract_ohlc()
     if candlesticks is None:
-        raise FileNotFoundError(f"There is no candlesticks data in {s3_ohlc_path}.")
+        raise FileNotFoundError("There is no candlesticks data.")
     candlesticks.drop_duplicates(inplace=True)
 
     moving_average_methods: list[Callable[[ndarray, int], ndarray]] = [SMA, TRIMA, EMA, DEMA, TEMA, KAMA]
@@ -89,16 +90,8 @@ if __name__ == "__main__":
     candlesticks.rename(columns={"open_time": "datetime"}, inplace=True)
 
     moving_averages: DataFrame = candlesticks.copy(deep=True)
-    ma_repository.insert_dataframe_as_parquet(dataframe=moving_averages, key=f"{s3_ma_path}/{uuid1()}.parquet")
-    if list_ma_objects_response.filename:
-        s3_client.delete_object(
-            bucket=settings.S3_BUCKET,
-            key=format_s3_key(
-                exchange=settings.EXCHANGE,
-                section=settings.SECTION,
-                directory="moving-averages",
-                filename=list_ma_objects_response.filename,
-            ),
-        )
+    ma_service.load_dataframe_as_parquet(dataframe=moving_averages, filename=f"{uuid1()}.parquet")
+    ma_service.delete_object()
+
 
 # pylint: enable=duplicate-code

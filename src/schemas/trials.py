@@ -1,8 +1,4 @@
-from typing import Literal
-
 from pydantic import BaseModel, Field
-
-KAMA_SIXTY_FOUR: Literal["kama_64"] = "kama_64"
 
 
 class SARParametersSchema(BaseModel):

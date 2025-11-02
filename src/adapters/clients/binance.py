@@ -12,7 +12,7 @@ class _BinanceAPIClientInvalidMethod(_BinanceAPIClientExceptionBase):
     """Raises only and only if invalid method was passed."""
 
 
-class _BinanceAPIClientBase(APIClientBase):
+class BinanceAPIClientBase(APIClientBase):
 
     _ping_endpoint: str
     _klines_endpoint: str
@@ -39,7 +39,7 @@ class _BinanceAPIClientBase(APIClientBase):
         ]
 
 
-class BinanceSpotAPIClient(_BinanceAPIClientBase):
+class BinanceSpotAPIClient(BinanceAPIClientBase):
 
     _ping_endpoint: str = "/api/v3/ping"
 
@@ -47,7 +47,7 @@ class BinanceSpotAPIClient(_BinanceAPIClientBase):
     _klines_endpoint: str = "/api/v3/klines"
 
 
-class BinanceUsdtmAPIClient(_BinanceAPIClientBase):
+class BinanceUsdtmAPIClient(BinanceAPIClientBase):
 
     _ping_endpoint: str = "/fapi/v1/ping"
 

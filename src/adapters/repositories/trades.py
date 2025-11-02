@@ -2,14 +2,12 @@ from _duckdb import HTTPException, InvalidInputException, IOException  # noqa: W
 from pandas import DataFrame
 
 from src.adapters.repositories.common.duckdb_base import DuckDBBaseRepository
-from src.schemas.queries import SARTrialQueryParametersSchema
+from src.schemas.filters import TradeQueryParametersSchema
 
 
 # pylint: disable=duplicate-code
-class SARTrialRepository(DuckDBBaseRepository):
-    def query_stop_and_reverse_trials(
-        self, path: str, parameters_schema: SARTrialQueryParametersSchema
-    ) -> DataFrame | None:
+class TradesRepository(DuckDBBaseRepository):
+    def query_trades(self, path: str, parameters_schema: TradeQueryParametersSchema) -> DataFrame | None:
         query: str = f"""
             SELECT
                 exchange,
@@ -17,21 +15,10 @@ class SARTrialRepository(DuckDBBaseRepository):
                 ticker,
                 interval,
 
-                value,
+                pct,
+                ticks,
 
-                startvalue,
-                offsetonreverse,
-
-                accelerationinitlong,
-                accelerationinitshort,
-
-                accelerationlong,
-                accelerationshort,
-
-                accelerationmaxlong,
-                accelerationmaxshort,
-
-                state
+                datetime
             FROM
                 read_parquet({path!r})
             WHERE
@@ -42,12 +29,12 @@ class SARTrialRepository(DuckDBBaseRepository):
             ORDER BY
                 value DESC;
         """  # noqa: S608
-        stop_and_reverse_trials: DataFrame | None = None
+        trades: DataFrame | None = None
         try:
-            stop_and_reverse_trials = self._query_dataframe(query=query, parameters=parameters_schema.to_list())
+            trades = self._query_dataframe(query=query, parameters=parameters_schema.to_list())
         except (HTTPException, IOException, InvalidInputException):
             ...  # noqa: WPS428
-        return stop_and_reverse_trials
+        return trades
 
 
 # pylint: enable=duplicate-code

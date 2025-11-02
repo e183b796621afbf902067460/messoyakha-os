@@ -1,3 +1,4 @@
+# pylint: disable=duplicate-code
 from uuid import uuid1
 
 from boto3 import Session
@@ -6,18 +7,23 @@ from optuna import Study, Trial, create_study
 from pandas import DataFrame, Series, concat, to_datetime  # noqa: WPS347
 
 from src.adapters.clients.s3 import S3Client
-from src.adapters.repositories.common.duckdb_base import get_duckdb_connection
-from src.adapters.repositories.moving_average import MARepository
-from src.adapters.repositories.ohlc import OHLCRepository
-from src.adapters.repositories.stop_and_reverse_trial import SARTrialRepository
-from src.entrypoints.commmon.trend_backtest_base import main as backtest
-from src.schemas.domain.s3 import ListObjectsResponseSchema
-from src.schemas.queries import MAQueryParametersSchema, OHLCQueryParametersSchema, SARTrialQueryParametersSchema
-from src.schemas.trend import KAMA_SIXTY_FOUR, SARParametersSchema
-from src.services.common.misc import format_s3_key, format_s3_path
+from src.adapters.connections.duckdb import get_duckdb_connection
+from src.adapters.repositories.candlesticks import CandlesticksRepository
+from src.adapters.repositories.indicators import MARepository
+from src.adapters.repositories.trials import SARTrialsRepository
+from src.schemas.filters import (
+    MAPathParametersSchema,
+    MAQueryParametersSchema,
+    OHLCPathParametersSchema,
+    OHLCQueryParametersSchema,
+    SARTrialPathParametersSchema,
+    SARTrialQueryParametersSchema,
+)
+from src.schemas.trials import SARParametersSchema
+from src.services.s3 import MAService, OHLCService, SARService
+from src.services.trend import KAMA_SIXTY_FOUR, backtest
 from src.settings import settings
 
-# pylint: disable=duplicate-code
 if __name__ == "__main__":
     s3_client: S3Client = S3Client(
         session=Session(
@@ -32,40 +38,34 @@ if __name__ == "__main__":
         s3_endpoint_url=settings.S3_ENDPOINT_URL.host,
         s3_region_name=settings.S3_REGION_NAME,
     )
-    ohlc_repository: OHLCRepository = OHLCRepository(connection=duckdb_connection)
-    ma_repository: MARepository = MARepository(connection=duckdb_connection)
-    sar_repository: SARTrialRepository = SARTrialRepository(connection=duckdb_connection)
-
-    s3_ohlc_path: str = format_s3_path(exchange=settings.EXCHANGE, section=settings.SECTION, directory="candlesticks")
-    s3_ma_path: str = format_s3_path(exchange=settings.EXCHANGE, section=settings.SECTION, directory="moving-averages")
-    s3_sar_trials_path: str = format_s3_path(
-        exchange=settings.EXCHANGE, section=settings.SECTION, directory="stop-and-reverse-trials"
-    )
-    list_ohlc_objects_response: ListObjectsResponseSchema = s3_client.list_objects(
-        bucket=settings.S3_BUCKET,
-        prefix=format_s3_key(exchange=settings.EXCHANGE, section=settings.SECTION, directory="candlesticks"),
-    )
-    list_ma_objects_response: ListObjectsResponseSchema = s3_client.list_objects(
-        bucket=settings.S3_BUCKET,
-        prefix=format_s3_key(exchange=settings.EXCHANGE, section=settings.SECTION, directory="moving-averages"),
-    )
-    list_sar_trial_objects_response: ListObjectsResponseSchema = s3_client.list_objects(
-        bucket=settings.S3_BUCKET,
-        prefix=format_s3_key(exchange=settings.EXCHANGE, section=settings.SECTION, directory="stop-and-reverse-trials"),
-    )
-
-    ohlc: DataFrame | None = ohlc_repository.query_candlesticks(
-        parameters_schema=OHLCQueryParametersSchema(
+    ohlc_service: OHLCService = OHLCService(
+        s3_client=s3_client,
+        repository=CandlesticksRepository(connection=duckdb_connection),
+        query_parameters=OHLCQueryParametersSchema(
             ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
         ),
-        path=(
-            f"{s3_ohlc_path}/{list_ohlc_objects_response.filename}"
-            if list_ohlc_objects_response.filename
-            else f"{s3_ohlc_path}/"
-        ),
+        path_parameters=OHLCPathParametersSchema(bucket=settings.S3_BUCKET, directory="candlesticks"),
     )
+    ma_service: MAService = MAService(
+        s3_client=s3_client,
+        repository=MARepository(connection=duckdb_connection),
+        query_parameters=MAQueryParametersSchema(
+            ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
+        ),
+        path_parameters=MAPathParametersSchema(bucket=settings.S3_BUCKET, directory="moving-averages"),
+    )
+    sar_service: SARService = SARService(
+        s3_client=s3_client,
+        repository=SARTrialsRepository(connection=duckdb_connection),
+        query_parameters=SARTrialQueryParametersSchema(
+            ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
+        ),
+        path_parameters=SARTrialPathParametersSchema(bucket=settings.S3_BUCKET, directory="stop-and-reverse-trials"),
+    )
+
+    ohlc: DataFrame | None = ohlc_service.extract_ohlc()
     if ohlc is None:
-        raise FileNotFoundError(f"There is no moving averages data in {s3_ohlc_path}.")
+        raise FileNotFoundError("There is no moving averages data.")
     ohlc.rename(
         mapper={"open": "Open", "high": "High", "low": "Low", "close": "Close", "open_time": "datetime"},
         axis=1,
@@ -74,18 +74,9 @@ if __name__ == "__main__":
     ohlc.drop(columns=["close_time"], axis=1, inplace=True)
     ohlc.drop_duplicates(inplace=True)
 
-    moving_averages: DataFrame | None = ma_repository.query_moving_averages(
-        parameters_schema=MAQueryParametersSchema(
-            ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
-        ),
-        path=(
-            f"{s3_ma_path}/{list_ma_objects_response.filename}"
-            if list_ma_objects_response.filename
-            else f"{s3_ma_path}/"
-        ),
-    )
+    moving_averages: DataFrame | None = ma_service.extract_ma()
     if moving_averages is None:
-        raise FileNotFoundError(f"There is no moving averages data in {s3_ma_path}.")
+        raise FileNotFoundError("There is no moving averages data.")
     moving_averages.drop_duplicates(inplace=True)
 
     ohlc = ohlc.merge(right=moving_averages, how="left", on=["exchange", "section", "ticker", "interval", "datetime"])
@@ -137,7 +128,7 @@ if __name__ == "__main__":
         return cagr / abs(drawdown)
 
     study: Study = create_study(direction="maximize")
-    study.optimize(func=objective, n_trials=5000, n_jobs=12, gc_after_trial=True)  # noqa: WPS432
+    study.optimize(func=objective, n_trials=2, n_jobs=12, gc_after_trial=True)  # noqa: WPS432
     incoming_trials: DataFrame = study.trials_dataframe()
     incoming_trials = incoming_trials[
         [
@@ -172,33 +163,15 @@ if __name__ == "__main__":
     incoming_trials["ticker"] = settings.TICKER
     incoming_trials["interval"] = settings.INTERVAL
 
-    existing_trials: DataFrame | None = sar_repository.query_stop_and_reverse_trials(
-        parameters_schema=SARTrialQueryParametersSchema(
-            ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
-        ),
-        path=(
-            f"{s3_sar_trials_path}/{list_sar_trial_objects_response.filename}"
-            if list_sar_trial_objects_response.filename
-            else f"{s3_sar_trials_path}/"
-        ),
-    )
+    existing_trials: DataFrame | None = sar_service.extract_sar()
     trials: DataFrame = (
         concat([existing_trials, incoming_trials]) if isinstance(existing_trials, DataFrame) else incoming_trials
     )
     trials.drop_duplicates(inplace=True)
     trials.sort_values(by=["value"], ascending=False, inplace=True)
 
-    sar_repository.insert_dataframe_as_parquet(dataframe=trials, key=f"{s3_sar_trials_path}/{uuid1()}.parquet")
-    if list_sar_trial_objects_response.filename:
-        s3_client.delete_object(
-            bucket=settings.S3_BUCKET,
-            key=format_s3_key(
-                exchange=settings.EXCHANGE,
-                section=settings.SECTION,
-                directory="stop-and-reverse-trials",
-                filename=list_sar_trial_objects_response.filename,
-            ),
-        )
+    sar_service.load_dataframe_as_parquet(dataframe=trials, filename=f"{uuid1()}.parquet")
+    sar_service.delete_object()
 
 
 # pylint: enable=duplicate-code
