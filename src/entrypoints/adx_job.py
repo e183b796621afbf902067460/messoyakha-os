@@ -15,7 +15,7 @@ from src.schemas.filters import (
     MAPathParametersSchema,
     MAQueryParametersSchema,
 )
-from src.services.s3 import ADXService, MAService
+from src.services.domain.s3 import ADXService, MAService
 from src.settings import settings
 
 

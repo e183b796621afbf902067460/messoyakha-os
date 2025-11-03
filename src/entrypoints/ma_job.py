@@ -18,7 +18,7 @@ from src.schemas.filters import (
     OHLCPathParametersSchema,
     OHLCQueryParametersSchema,
 )
-from src.services.s3 import MAService, OHLCService
+from src.services.domain.s3 import MAService, OHLCService
 from src.settings import settings
 
 # pylint: enable=duplicate-code

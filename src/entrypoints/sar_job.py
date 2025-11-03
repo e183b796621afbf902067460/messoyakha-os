@@ -20,7 +20,7 @@ from src.schemas.filters import (
     SARTrialQueryParametersSchema,
 )
 from src.schemas.trials import SARParametersSchema
-from src.services.s3 import MAService, OHLCService, SARService
+from src.services.domain.s3 import MAService, OHLCService, SARService
 from src.services.trend import KAMA_SIXTY_FOUR, backtest
 from src.settings import settings
 

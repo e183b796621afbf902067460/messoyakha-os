@@ -112,7 +112,7 @@ class OHLCService(_S3BaseService):
         return self._repository.query_candlesticks(parameters_schema=self._query_parameters, path=self._formatted_path)
 
     def extract_latest_timestamp(self) -> datetime | None:
-        return self._repository.query_latest_timestamp(
+        return self._repository.query_latest_timestamp(  # type: ignore[no-any-return]
             parameters_schema=self._query_parameters, path=self._formatted_path
         )
 

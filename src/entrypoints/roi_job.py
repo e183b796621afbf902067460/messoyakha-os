@@ -23,7 +23,7 @@ from src.schemas.filters import (
     TradeQueryParametersSchema,
 )
 from src.schemas.trials import SARParametersSchema
-from src.services.s3 import MAService, OHLCService, ROIService, SARService
+from src.services.domain.s3 import MAService, OHLCService, ROIService, SARService
 from src.services.trend import backtest
 from src.settings import settings
 
@@ -100,9 +100,9 @@ if __name__ == "__main__":
         raise FileNotFoundError("There is no trials data.")
     trials.drop_duplicates(inplace=True)
 
-    top_percentile: int = int(0.15 * len(trials))  # noqa: WPS432
+    top_percentile: int = int(0.1 * len(trials))  # noqa: WPS432
     stochastic_parameters_indexes: list[int] = [
-        randbelow(exclusive_upper_bound=top_percentile) for _ in range(int(top_percentile * 0.15))  # noqa: WPS432
+        randbelow(exclusive_upper_bound=top_percentile) for _ in range(int(top_percentile * 0.2))  # noqa: WPS432
     ]
 
     trades: list[DataFrame] | DataFrame = []
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         statistics["_trades"]["Ticks"] = statistics["_trades"]["ExitBar"] - statistics["_trades"]["EntryBar"]
         trades.append(statistics["_trades"][["EntryTime", "ReturnPct", "Ticks"]])
     trades = concat(trades)
-    trades.sort_values(by="ReturnPct", ascending=False)
+    trades.sort_values(by="ReturnPct")
     trades.drop_duplicates(subset="EntryTime", keep="first", inplace=True)
     trades.rename(
         mapper={"ReturnPct": "pct", "Ticks": "ticks", "EntryTime": "datetime"},

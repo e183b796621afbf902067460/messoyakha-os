@@ -7,13 +7,14 @@ from httpx import AsyncHTTPTransport
 
 from src.adapters.clients.binance import BinanceAPIClientBase, BinanceSpotAPIClient, BinanceUsdtmAPIClient
 from src.entrypoints.commmon.ohlc_base import main
-from src.services.binance import BinanceService
+from src.services.domain.binance import BinanceService
 from src.settings import settings
 
 _SPOT_BINANCE_SECTION: Literal["SPOT"] = "SPOT"
 _USDTM_BINANCE_SECTION: Literal["USDT-M"] = "USDT-M"
 
 
+# TODO: create abstract factory for different exchanges
 @attrs(slots=True, auto_attribs=True, kw_only=True)
 class _BinanceAPIClientFactory:
     _factory: dict[str, BinanceAPIClientBase] = attrib(init=False, default={})
