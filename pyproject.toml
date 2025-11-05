@@ -24,6 +24,9 @@ optuna = "^4.4.0"
 arch = "^7.2.0"
 boto3 = "^1.40.50"
 duckdb = "^1.4.1"
+catboost = "^1.2.8"
+lightgbm = "^4.6.0"
+xgboost = "^3.1.1"
 
 [tool.poetry.group.linters.dependencies]
 pre-commit = "3.6.0"

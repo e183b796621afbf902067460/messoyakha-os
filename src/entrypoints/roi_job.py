@@ -112,20 +112,24 @@ if __name__ == "__main__":
         )
         statistics: Series = backtest(data=ohlc, parameters_schema=parameters_schema)
         statistics["_trades"]["Ticks"] = statistics["_trades"]["ExitBar"] - statistics["_trades"]["EntryBar"]
-        trades.append(statistics["_trades"][["EntryTime", "ReturnPct", "Ticks"]])
+        statistics["_trades"]["IsLong"] = (statistics["_trades"]["Size"] > 0).astype(int)
+        trades.append(statistics["_trades"][["EntryTime", "ReturnPct", "Ticks", "IsLong"]])
     trades = concat(trades)
     trades.sort_values(by="ReturnPct")
     trades.drop_duplicates(subset="EntryTime", keep="first", inplace=True)
     trades.rename(
-        mapper={"ReturnPct": "pct", "Ticks": "ticks", "EntryTime": "datetime"},
+        mapper={"ReturnPct": "pct", "IsLong": "is_long", "Ticks": "ticks", "EntryTime": "datetime"},
         axis=1,
         inplace=True,
     )
 
+    trades["exchange"] = settings.EXCHANGE
+    trades["section"] = settings.SECTION
+    trades["ticker"] = settings.TICKER
+    trades["interval"] = settings.INTERVAL
+
     roi_service.load_dataframe_as_parquet(dataframe=trades, filename=f"{uuid1()}.parquet")
     roi_service.delete_object()
-
-    trades.to_csv("trades.csv", index=False)
 
 
 # pylint: enable=duplicate-code

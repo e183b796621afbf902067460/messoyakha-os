@@ -16,6 +16,7 @@ class TradesRepository(DuckDBBaseRepository):
                 interval,
 
                 pct,
+                is_long,
                 ticks,
 
                 datetime
@@ -27,7 +28,7 @@ class TradesRepository(DuckDBBaseRepository):
                 ticker = ? AND
                 interval = ?
             ORDER BY
-                value DESC;
+                datetime ASC;
         """  # noqa: S608
         trades: DataFrame | None = None
         try:
