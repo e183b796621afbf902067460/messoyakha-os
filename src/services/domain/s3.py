@@ -6,13 +6,17 @@ from pandas import DataFrame
 from src.adapters.clients.s3 import S3Client
 from src.adapters.repositories.candlesticks import CandlesticksRepository
 from src.adapters.repositories.common.duckdb_base import DuckDBBaseRepository
-from src.adapters.repositories.indicators import ADXRepository, MARepository
+from src.adapters.repositories.indicators import ADXRepository, AroonRepository, BinariesRepository, MARepository
 from src.adapters.repositories.trades import TradesRepository
 from src.adapters.repositories.trials import SARTrialsRepository
 from src.schemas.domain.s3 import ListObjectsResponseSchema
 from src.schemas.filters import (
     ADXPathParametersSchema,
     ADXQueryParametersSchema,
+    AroonPathParametersSchema,
+    AroonQueryParametersSchema,
+    BinaryPathParametersSchema,
+    BinaryQueryParametersSchema,
     LatestTimestampPathParametersSchema,
     LatestTimestampQueryParametersSchema,
     MAPathParametersSchema,
@@ -161,3 +165,23 @@ class ROIService(_S3BaseService):
 
     def extract_roi(self) -> DataFrame | None:
         return self._repository.query_trades(parameters_schema=self._query_parameters, path=self._formatted_path)
+
+
+class AroonService(_S3BaseService):
+    _repository: AroonRepository
+
+    _query_parameters: AroonQueryParametersSchema
+    _path_parameters: AroonPathParametersSchema
+
+    def extract_aroon(self) -> DataFrame | None:
+        return self._repository.query_aroons(parameters_schema=self._query_parameters, path=self._formatted_path)
+
+
+class BinaryService(_S3BaseService):
+    _repository: BinariesRepository
+
+    _query_parameters: BinaryQueryParametersSchema
+    _path_parameters: BinaryPathParametersSchema
+
+    def extract_binary(self) -> DataFrame | None:
+        return self._repository.query_binaries(parameters_schema=self._query_parameters, path=self._formatted_path)

@@ -3,34 +3,31 @@ from uuid import uuid1
 from boto3 import Session
 from duckdb import DuckDBPyConnection
 from pandas import DataFrame
-from talib import ADX
+from talib import AROONOSC
 
 from src.adapters.clients.s3 import S3Client
 from src.adapters.connections.duckdb import get_duckdb_connection
-from src.adapters.repositories.indicators import ADXRepository, MARepository
+from src.adapters.repositories.indicators import AroonRepository, MARepository
 from src.entrypoints.commmon.base import findall_prefixes
 from src.schemas.filters import (
-    ADXPathParametersSchema,
-    ADXQueryParametersSchema,
+    AroonPathParametersSchema,
+    AroonQueryParametersSchema,
     MAPathParametersSchema,
     MAQueryParametersSchema,
 )
-from src.services.domain.s3 import ADXService, MAService
+from src.services.domain.s3 import AroonService, MAService
 from src.settings import settings
 
 
 # pylint: disable=redefined-outer-name
-def _compute_average_directional_index(
-    data: DataFrame, moving_average_prefix: str, average_directional_index_window: int
-) -> DataFrame:
-    prefix: str = f"adx_{average_directional_index_window}_{moving_average_prefix}"
+def _compute_aroon(data: DataFrame, moving_average_prefix: str, aroon_window: int) -> DataFrame:
+    prefix: str = f"aroon_{aroon_window}_{moving_average_prefix}"
 
     data[prefix] = abs(
-        ADX(
+        AROONOSC(
             high=data[f"{moving_average_prefix}_high"],
             low=data[f"{moving_average_prefix}_low"],
-            close=data[f"{moving_average_prefix}_close"],
-            timeperiod=average_directional_index_window,
+            timeperiod=aroon_window,
         )
         / 10**2
     )
@@ -64,13 +61,13 @@ if __name__ == "__main__":
         ),
         path_parameters=MAPathParametersSchema(bucket=settings.S3_BUCKET, directory="moving-averages"),
     )
-    adx_service: ADXService = ADXService(
+    aroon_service: AroonService = AroonService(
         s3_client=s3_client,
-        repository=ADXRepository(connection=duckdb_connection),
-        query_parameters=ADXQueryParametersSchema(
+        repository=AroonRepository(connection=duckdb_connection),
+        query_parameters=AroonQueryParametersSchema(
             ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
         ),
-        path_parameters=ADXPathParametersSchema(bucket=settings.S3_BUCKET, directory="average-directional-indexes"),
+        path_parameters=AroonPathParametersSchema(bucket=settings.S3_BUCKET, directory="aroons"),
     )
 
     moving_averages: DataFrame | None = ma_service.extract_ma()
@@ -79,13 +76,13 @@ if __name__ == "__main__":
     moving_averages.drop_duplicates(inplace=True)
 
     moving_average_prefixes: list[str] = findall_prefixes(strings=moving_averages.columns.to_list())
-    average_directional_index_windows: list[int] = [2**2, 2**4, 2**6, 2**8]
+    aroon_windows: list[int] = [2**2, 2**4, 2**6, 2**8]
     for moving_average_prefix in moving_average_prefixes:
-        for average_directional_index_window in average_directional_index_windows:
-            moving_averages = _compute_average_directional_index(
+        for aroon_window in aroon_windows:
+            moving_averages = _compute_aroon(
                 data=moving_averages,
                 moving_average_prefix=moving_average_prefix,
-                average_directional_index_window=average_directional_index_window,
+                aroon_window=aroon_window,
             )
     moving_averages.drop(
         columns=[
@@ -97,9 +94,9 @@ if __name__ == "__main__":
         axis=1,
         inplace=True,
     )
-    average_directional_indexes: DataFrame = moving_averages.copy(deep=True)
-    adx_service.load_dataframe_as_parquet(dataframe=average_directional_indexes, filename=f"{uuid1()}.parquet")
-    adx_service.delete_object()
+    aroons: DataFrame = moving_averages.copy(deep=True)
+    aroon_service.load_dataframe_as_parquet(dataframe=aroons, filename=f"{uuid1()}.parquet")
+    aroon_service.delete_object()
 
 
 # pylint: enable=duplicate-code

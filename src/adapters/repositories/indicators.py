@@ -2,7 +2,13 @@ from _duckdb import HTTPException, InvalidInputException, IOException  # noqa: W
 from pandas import DataFrame
 
 from src.adapters.repositories.common.duckdb_base import DuckDBBaseRepository
-from src.schemas.filters import ADXQueryParametersSchema, MAQueryParametersSchema, QueryParametersBaseSchema
+from src.schemas.filters import (
+    ADXQueryParametersSchema,
+    AroonQueryParametersSchema,
+    BinaryQueryParametersSchema,
+    MAQueryParametersSchema,
+    QueryParametersBaseSchema,
+)
 
 
 # pylint: disable=duplicate-code
@@ -49,6 +55,16 @@ class ADXRepository(IndicatorsBaseRepository):
     def query_average_directional_indexes(
         self, path: str, parameters_schema: ADXQueryParametersSchema
     ) -> DataFrame | None:
+        return self._query_indicators(path=path, parameters_schema=parameters_schema)
+
+
+class AroonRepository(IndicatorsBaseRepository):
+    def query_aroons(self, path: str, parameters_schema: AroonQueryParametersSchema) -> DataFrame | None:
+        return self._query_indicators(path=path, parameters_schema=parameters_schema)
+
+
+class BinariesRepository(IndicatorsBaseRepository):
+    def query_binaries(self, path: str, parameters_schema: BinaryQueryParametersSchema) -> DataFrame | None:
         return self._query_indicators(path=path, parameters_schema=parameters_schema)
 
 

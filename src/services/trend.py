@@ -24,10 +24,6 @@ class _BullishTrendStrategy(Strategy):
         return self._data[self.sar_on_bull_market_prefix]
 
     @property
-    def _ma_high_on_bull_market(self) -> Any:
-        return self._data[f"{self.ma_on_bull_market_prefix}_high"]
-
-    @property
     def _ma_low_on_bull_market(self) -> Any:
         return self._data[f"{self.ma_on_bull_market_prefix}_low"]
 
@@ -65,10 +61,6 @@ class _BearishTrendStrategy(Strategy):
     @property
     def _ma_high_on_bear_market(self) -> Any:
         return self._data[f"{self.ma_on_bear_market_prefix}_high"]
-
-    @property
-    def _ma_low_on_bear_market(self) -> Any:
-        return self._data[f"{self.ma_on_bear_market_prefix}_low"]
 
     def _is_bear_reversal(self) -> bool:
         return bool(

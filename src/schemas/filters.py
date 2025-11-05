@@ -48,6 +48,22 @@ class ADXPathParametersSchema(PathParametersBaseSchema):
     """Path parameters to fetch average directional indexes."""
 
 
+class AroonQueryParametersSchema(QueryParametersBaseSchema):
+    """Query parameters to fetch aroons."""
+
+
+class AroonPathParametersSchema(PathParametersBaseSchema):
+    """Path parameters to fetch aroons."""
+
+
+class BinaryQueryParametersSchema(QueryParametersBaseSchema):
+    """Query parameters to fetch binaries."""
+
+
+class BinaryPathParametersSchema(PathParametersBaseSchema):
+    """Path parameters to fetch binaries."""
+
+
 class SARTrialQueryParametersSchema(QueryParametersBaseSchema):
     """Query parameters to fetch SAR trials."""
 

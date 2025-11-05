@@ -2,7 +2,7 @@
 from typing import Final
 
 from boto3 import Session
-from catboost import CatBoostRegressor, Pool
+from catboost import CatboostError, CatBoostRegressor, Pool
 from duckdb import DuckDBPyConnection
 from numpy import log, log1p, median, ndarray, vstack
 from numpy.ma import masked_invalid
@@ -32,7 +32,6 @@ _RANDOM_SEED: Final[int] = 42
 _TEST_SIZE: Final[float] = 0.2
 
 
-# TODO: add field_validator for data field
 class _BoxCoxTransform(BaseModel):
     data: ndarray
     lambda_optimizer: float
@@ -48,6 +47,7 @@ class _BoxCoxTransform(BaseModel):
     # pylint: enable=redefined-outer-name
 
 
+# pylint: disable=too-complex
 if __name__ == "__main__":
     s3_client: S3Client = S3Client(
         session=Session(
@@ -125,7 +125,6 @@ if __name__ == "__main__":
     )
 
     train: DataFrame = roi.query(f"year < {settings.TRIGGER_DATE.year - 1}")
-    scaler: MinMaxScaler = MinMaxScaler()
     boxcox_transform: _BoxCoxTransform = _BoxCoxTransform.from_boxcox(boxcox=boxcox(x=train["rank"]))
 
     numerical_columns: list[str] = [
@@ -133,6 +132,7 @@ if __name__ == "__main__":
     ]
     categorical_columns: list[str] = ["is_long"]
 
+    scaler: MinMaxScaler = MinMaxScaler()
     X_train, X_test, y_train, y_test = train_test_split(
         train[numerical_columns + categorical_columns],
         scaler.fit_transform(X=vstack(Series(boxcox_transform.data))),
@@ -155,21 +155,23 @@ if __name__ == "__main__":
             loss_function="MultiQuantile:alpha=0.15, 0.85",
             eval_metric="MultiQuantile:alpha=0.15, 0.85",
             random_seed=_RANDOM_SEED,
-            custom_metric=["R2", "MAPE", "MAE"],
-            use_best_model=True,
-            verbose=False,
+            custom_metric=["MAE"],
         )
-        train_model.fit(train_pool, eval_set=test_pool, use_best_model=True, verbose=False)
+        try:
+            train_model.fit(train_pool, eval_set=test_pool, use_best_model=True, verbose=False)
+        except CatboostError:
+            return 1
         return float(train_model.get_best_score()["validation"]["MAE"])
 
     study: Study = create_study(direction="minimize")
     study.optimize(objective, n_trials=10, gc_after_trial=True, show_progress_bar=True)
 
     validation: DataFrame = roi.query(f"year >= {settings.TRIGGER_DATE.year - 1}")
-    boxcox_target: ndarray = boxcox(x=validation["rank"], lmbda=boxcox_transform.lambda_optimizer)
+    boxcox_validation_target: ndarray = boxcox(x=validation["rank"], lmbda=boxcox_transform.lambda_optimizer)
+    boxcox_validation_target = scaler.transform(X=vstack(Series(boxcox_validation_target)))
     validation_pool: Pool = Pool(
         data=validation[numerical_columns + categorical_columns],
-        label=scaler.transform(X=vstack(Series(boxcox_target))),
+        label=boxcox_validation_target,
         cat_features=categorical_columns,
     )
 
@@ -178,12 +180,13 @@ if __name__ == "__main__":
         loss_function="MultiQuantile:alpha=0.15, 0.85",
         eval_metric="MultiQuantile:alpha=0.15, 0.85",
         random_seed=_RANDOM_SEED,
-        custom_metric=["R2", "MAPE", "MAE"],
         use_best_model=True,
         verbose=False,
     )
     test_model.fit(train_pool, eval_set=test_pool, use_best_model=True, verbose=False)
     assert test_model.is_fitted()  # noqa: S101
 
+    predictions = test_model.predict(validation_pool)
 
-# pylint: enable=duplicate-code
+
+# pylint: enable=duplicate-code,too-complex
