@@ -6,7 +6,13 @@ from pandas import DataFrame
 from src.adapters.clients.s3 import S3Client
 from src.adapters.repositories.candlesticks import CandlesticksRepository
 from src.adapters.repositories.common.duckdb_base import DuckDBBaseRepository
-from src.adapters.repositories.indicators import ADXRepository, AroonRepository, BinariesRepository, MARepository
+from src.adapters.repositories.indicators import (
+    ADXRepository,
+    AroonRepository,
+    BinariesRepository,
+    MARepository,
+    StreaksRepository,
+)
 from src.adapters.repositories.trades import TradesRepository
 from src.adapters.repositories.trials import SARTrialsRepository
 from src.schemas.domain.s3 import ListObjectsResponseSchema
@@ -27,6 +33,8 @@ from src.schemas.filters import (
     QueryParametersBaseSchema,
     SARTrialPathParametersSchema,
     SARTrialQueryParametersSchema,
+    StreakPathParametersSchema,
+    StreakQueryParametersSchema,
     TradePathParametersSchema,
     TradeQueryParametersSchema,
 )
@@ -185,3 +193,13 @@ class BinaryService(_S3BaseService):
 
     def extract_binary(self) -> DataFrame | None:
         return self._repository.query_binaries(parameters_schema=self._query_parameters, path=self._formatted_path)
+
+
+class StreakService(_S3BaseService):
+    _repository: StreaksRepository
+
+    _query_parameters: StreakQueryParametersSchema
+    _path_parameters: StreakPathParametersSchema
+
+    def extract_streak(self) -> DataFrame | None:
+        return self._repository.query_streaks(parameters_schema=self._query_parameters, path=self._formatted_path)

@@ -8,7 +8,7 @@ from talib import SAREXT
 from src.schemas.backtests import BacktestParametersSchema
 from src.schemas.trials import SARParametersSchema
 
-KAMA_SIXTY_FOUR: Literal["kama_64"] = "kama_64"
+MA: Literal["kama_256"] = "kama_256"
 
 
 class _BullishTrendStrategy(Strategy):
@@ -93,8 +93,8 @@ class TrendStrategy(_BullishTrendStrategy, _BearishTrendStrategy):
 
 def backtest(data: DataFrame, parameters_schema: SARParametersSchema) -> Series:
     data["sar"] = SAREXT(
-        high=data[f"{KAMA_SIXTY_FOUR}_high"],
-        low=data[f"{KAMA_SIXTY_FOUR}_low"],
+        high=data[f"{MA}_high"],
+        low=data[f"{MA}_low"],
         **parameters_schema.model_dump(by_alias=True),
     )
     data["sar"] = abs(data["sar"])
@@ -110,8 +110,8 @@ def backtest(data: DataFrame, parameters_schema: SARParametersSchema) -> Series:
     )
     statistics: Series = test.run(
         sar_on_bull_market_prefix="sar",
-        ma_on_bull_market_prefix=KAMA_SIXTY_FOUR,
+        ma_on_bull_market_prefix=MA,
         sar_on_bear_market_prefix="sar",
-        ma_on_bear_market_prefix=KAMA_SIXTY_FOUR,
+        ma_on_bear_market_prefix=MA,
     )
     return statistics

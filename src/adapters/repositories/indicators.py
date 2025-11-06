@@ -8,6 +8,7 @@ from src.schemas.filters import (
     BinaryQueryParametersSchema,
     MAQueryParametersSchema,
     QueryParametersBaseSchema,
+    StreakQueryParametersSchema,
 )
 
 
@@ -65,6 +66,11 @@ class AroonRepository(IndicatorsBaseRepository):
 
 class BinariesRepository(IndicatorsBaseRepository):
     def query_binaries(self, path: str, parameters_schema: BinaryQueryParametersSchema) -> DataFrame | None:
+        return self._query_indicators(path=path, parameters_schema=parameters_schema)
+
+
+class StreaksRepository(IndicatorsBaseRepository):
+    def query_streaks(self, path: str, parameters_schema: StreakQueryParametersSchema) -> DataFrame | None:
         return self._query_indicators(path=path, parameters_schema=parameters_schema)
 
 

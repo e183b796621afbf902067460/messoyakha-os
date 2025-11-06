@@ -21,7 +21,7 @@ from src.schemas.filters import (
 )
 from src.schemas.trials import SARParametersSchema
 from src.services.domain.s3 import MAService, OHLCService, SARService
-from src.services.trend import KAMA_SIXTY_FOUR, backtest
+from src.services.trend import MA, backtest
 from src.settings import settings
 
 if __name__ == "__main__":
@@ -89,10 +89,10 @@ if __name__ == "__main__":
         data.query(f"year < {settings.TRIGGER_DATE.year - 1}", inplace=True)
         data.dropna(
             subset=[
-                f"{KAMA_SIXTY_FOUR}_open",
-                f"{KAMA_SIXTY_FOUR}_high",
-                f"{KAMA_SIXTY_FOUR}_low",
-                f"{KAMA_SIXTY_FOUR}_close",
+                f"{MA}_open",
+                f"{MA}_high",
+                f"{MA}_low",
+                f"{MA}_close",
             ],
             inplace=True,
         )
@@ -128,7 +128,7 @@ if __name__ == "__main__":
         return cagr / abs(drawdown)
 
     study: Study = create_study(direction="maximize")
-    study.optimize(func=objective, n_trials=2, n_jobs=12, gc_after_trial=True)  # noqa: WPS432
+    study.optimize(func=objective, n_trials=10_000, n_jobs=12, gc_after_trial=True)  # noqa: WPS432
     incoming_trials: DataFrame = study.trials_dataframe()
     incoming_trials = incoming_trials[
         [

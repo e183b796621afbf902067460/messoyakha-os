@@ -7,8 +7,7 @@ from duckdb import DuckDBPyConnection
 from numpy import log, log1p, median, ndarray, vstack
 from numpy.ma import masked_invalid
 from optuna import Study, Trial, create_study
-from pandas import DataFrame, Series, to_datetime  # noqa: WPS347
-from pydantic import BaseModel
+from pandas import DataFrame, to_datetime  # noqa: WPS347
 from scipy.special import kl_div
 from scipy.stats import boxcox
 from sklearn.model_selection import train_test_split
@@ -16,35 +15,24 @@ from sklearn.preprocessing import MinMaxScaler
 
 from src.adapters.clients.s3 import S3Client
 from src.adapters.connections.duckdb import get_duckdb_connection
-from src.adapters.repositories.indicators import ADXRepository
+from src.adapters.repositories.indicators import ADXRepository, BinariesRepository, StreaksRepository
 from src.adapters.repositories.trades import TradesRepository
 from src.schemas.filters import (
     ADXPathParametersSchema,
     ADXQueryParametersSchema,
+    BinaryPathParametersSchema,
+    BinaryQueryParametersSchema,
+    StreakPathParametersSchema,
+    StreakQueryParametersSchema,
     TradePathParametersSchema,
     TradeQueryParametersSchema,
 )
-from src.services.domain.s3 import ADXService, ROIService
+from src.services.domain.s3 import ADXService, BinaryService, ROIService, StreakService
 from src.services.quantile import identify_nearest, quantile_matching_fit
 from src.settings import settings
 
 _RANDOM_SEED: Final[int] = 42
 _TEST_SIZE: Final[float] = 0.2
-
-
-class _BoxCoxTransform(BaseModel):
-    data: ndarray
-    lambda_optimizer: float
-
-    class Config:
-        arbitrary_types_allowed = True
-
-    # pylint: disable=redefined-outer-name
-    @staticmethod
-    def from_boxcox(boxcox: tuple[ndarray, float]) -> "_BoxCoxTransform":
-        return _BoxCoxTransform(data=boxcox[0], lambda_optimizer=boxcox[1])
-
-    # pylint: enable=redefined-outer-name
 
 
 # pylint: disable=too-complex
@@ -70,6 +58,22 @@ if __name__ == "__main__":
         ),
         path_parameters=ADXPathParametersSchema(bucket=settings.S3_BUCKET, directory="average-directional-indexes"),
     )
+    binary_service: BinaryService = BinaryService(
+        s3_client=s3_client,
+        repository=BinariesRepository(connection=duckdb_connection),
+        query_parameters=BinaryQueryParametersSchema(
+            ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
+        ),
+        path_parameters=BinaryPathParametersSchema(bucket=settings.S3_BUCKET, directory="binaries"),
+    )
+    streak_service: StreakService = StreakService(
+        s3_client=s3_client,
+        repository=StreaksRepository(connection=duckdb_connection),
+        query_parameters=StreakQueryParametersSchema(
+            ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
+        ),
+        path_parameters=StreakPathParametersSchema(bucket=settings.S3_BUCKET, directory="streaks"),
+    )
     roi_service: ROIService = ROIService(
         s3_client=s3_client,
         repository=TradesRepository(connection=duckdb_connection),
@@ -84,58 +88,78 @@ if __name__ == "__main__":
         raise FileNotFoundError("There is no average directional indexes data.")
     adx.drop_duplicates(inplace=True)
 
+    binaries: DataFrame | None = binary_service.extract_binary()
+    if binaries is None:
+        raise FileNotFoundError("There is no binaries data.")
+    binaries.drop_duplicates(inplace=True)
+
+    streaks: DataFrame | None = streak_service.extract_streak()
+    if streaks is None:
+        raise FileNotFoundError("There is no streaks data.")
+    streaks.drop_duplicates(inplace=True)
+
     roi: DataFrame | None = roi_service.extract_roi()
     if roi is None:
         raise FileNotFoundError("There is no trades data.")
     roi.drop_duplicates(inplace=True)
 
     roi = roi.merge(right=adx, how="left", on=["exchange", "section", "ticker", "interval", "datetime"])
+    roi = roi.merge(right=binaries, how="left", on=["exchange", "section", "ticker", "interval", "datetime"])
+    roi = roi.merge(right=streaks, how="left", on=["exchange", "section", "ticker", "interval", "datetime"])
     roi["datetime"] = to_datetime(roi["datetime"])
     roi["year"] = roi["datetime"].dt.year
     roi.dropna(inplace=True)
 
-    roi["ticks"] = log1p(roi["ticks"])
-    scaled_target: ndarray = MinMaxScaler().fit_transform(X=vstack(tup=roi["ticks"]))
+    roi["ticks"] = boxcox(x=log1p(roi["ticks"]))[0]
+    scaled_target: ndarray = MinMaxScaler().fit_transform(X=vstack(tup=roi["ticks"])).flatten()
 
-    features_data: list[dict[str, float]] | DataFrame = []
+    adx_features_data: list[dict[str, float]] | DataFrame = []
     for column in roi.columns.tolist():
+        if column.startswith("streak"):
+            roi[column] = log1p(roi[column])  # noqa: WPS204
+            roi[column] = MinMaxScaler().fit_transform(X=vstack(tup=roi[column])).flatten()
+
         if column.startswith("adx"):
             roi[column] = abs(log(roi[column]))
-            scaled_feature: ndarray = MinMaxScaler().fit_transform(X=vstack(tup=roi[column]))
+            roi[column] = MinMaxScaler().fit_transform(X=vstack(tup=roi[column])).flatten()
 
-            divergence: ndarray = kl_div(scaled_target, scaled_feature)
+            divergence: ndarray = kl_div(scaled_target, roi[column].values)
             divergence = divergence[~masked_invalid(a=divergence).mask]  # type: ignore[no-untyped-call]
 
             feature_data: dict[str, float] = {"column": column, "divergence": float(median(a=divergence))}
 
-            features_data.append(feature_data)
-    features: DataFrame = DataFrame(data=features_data)
+            adx_features_data.append(feature_data)
+    adx_features: DataFrame = DataFrame(data=adx_features_data)
 
-    top_percentile: float = features["divergence"].quantile(0.1)
-    features.query(f"divergence < {top_percentile}", inplace=True)
+    top_adx_percentile: float = adx_features["divergence"].quantile(0.1)
+    adx_features.query(f"divergence < {top_adx_percentile}", inplace=True)
 
     roi["qmf"] = quantile_matching_fit(
-        a=roi["ticks"].values, b=roi[features["column"].values.tolist()].values.flatten().tolist()  # noqa: WPS221
+        a=roi["ticks"].values, b=roi[adx_features["column"].values.tolist()].values.flatten().tolist()  # noqa: WPS221
     )
     roi["rank"] = roi.apply(
         lambda row: identify_nearest(
-            value=row.qmf, values=[row[feature] for feature in features["column"].values.tolist()], rank=1
+            value=row.qmf, values=[row[feature] for feature in adx_features["column"].values.tolist()], rank=1
         ),
         axis=1,
     )
 
     train: DataFrame = roi.query(f"year < {settings.TRIGGER_DATE.year - 1}")
-    boxcox_transform: _BoxCoxTransform = _BoxCoxTransform.from_boxcox(boxcox=boxcox(x=train["rank"]))
 
     numerical_columns: list[str] = [
-        column for column in roi.columns.tolist() if column.startswith("adx")  # noqa: WPS441
+        numerical_column
+        for numerical_column in roi.columns.tolist()
+        if numerical_column.startswith("adx") or numerical_column.startswith("streak")
     ]
-    categorical_columns: list[str] = ["is_long"]
+    categorical_columns: list[str] = [
+        categorical_column
+        for categorical_column in roi.columns.tolist()
+        if categorical_column.startswith("is") and "aroon" not in categorical_column
+    ]
 
-    scaler: MinMaxScaler = MinMaxScaler()
     X_train, X_test, y_train, y_test = train_test_split(
         train[numerical_columns + categorical_columns],
-        scaler.fit_transform(X=vstack(Series(boxcox_transform.data))),
+        train[["rank"]],
         test_size=_TEST_SIZE,
         random_state=_RANDOM_SEED,
     )
@@ -167,11 +191,9 @@ if __name__ == "__main__":
     study.optimize(objective, n_trials=10, gc_after_trial=True, show_progress_bar=True)
 
     validation: DataFrame = roi.query(f"year >= {settings.TRIGGER_DATE.year - 1}")
-    boxcox_validation_target: ndarray = boxcox(x=validation["rank"], lmbda=boxcox_transform.lambda_optimizer)
-    boxcox_validation_target = scaler.transform(X=vstack(Series(boxcox_validation_target)))
     validation_pool: Pool = Pool(
         data=validation[numerical_columns + categorical_columns],
-        label=boxcox_validation_target,
+        label=validation[["rank"]],
         cat_features=categorical_columns,
     )
 

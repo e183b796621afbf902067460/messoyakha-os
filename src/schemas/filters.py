@@ -64,6 +64,14 @@ class BinaryPathParametersSchema(PathParametersBaseSchema):
     """Path parameters to fetch binaries."""
 
 
+class StreakQueryParametersSchema(QueryParametersBaseSchema):
+    """Query parameters to fetch streaks."""
+
+
+class StreakPathParametersSchema(PathParametersBaseSchema):
+    """Path parameters to fetch streaks."""
+
+
 class SARTrialQueryParametersSchema(QueryParametersBaseSchema):
     """Query parameters to fetch SAR trials."""
 
