@@ -110,50 +110,73 @@ if __name__ == "__main__":
     roi["year"] = roi["datetime"].dt.year
     roi.dropna(inplace=True)
 
-    roi["ticks"] = boxcox(x=log1p(roi["ticks"]))[0]
-    scaled_target: ndarray = MinMaxScaler().fit_transform(X=vstack(tup=roi["ticks"])).flatten()
+    roi["ticks"] = log1p(roi["ticks"])
+    train: DataFrame = roi.query(f"year < {settings.TRIGGER_DATE.year - 1}")
+    validation: DataFrame = roi.query(f"year >= {settings.TRIGGER_DATE.year - 1}")
+
+    target_scaler: MinMaxScaler = MinMaxScaler()
+
+    optimizer: float
+    train["ticks"], optimizer = boxcox(x=train["ticks"])  # noqa: WPS414
+    train["ticks"] = target_scaler.fit_transform(X=vstack(tup=train["ticks"])).flatten()
+    validation["ticks"] = boxcox(x=validation["ticks"], lmbda=optimizer)
+    validation["ticks"] = target_scaler.transform(X=vstack(tup=validation["ticks"])).flatten()
 
     adx_features_data: list[dict[str, float]] | DataFrame = []
     for column in roi.columns.tolist():
         if column.startswith("streak"):
-            roi[column] = log1p(roi[column])  # noqa: WPS204
-            roi[column] = MinMaxScaler().fit_transform(X=vstack(tup=roi[column])).flatten()
+            train[column] = log1p(train[column])  # noqa: WPS204
+            validation[column] = log1p(validation[column])
+
+            streak_scaler: MinMaxScaler = MinMaxScaler()
+            train[column] = streak_scaler.fit_transform(X=vstack(tup=train[column])).flatten()
+            validation[column] = streak_scaler.transform(X=vstack(tup=validation[column])).flatten()
 
         if column.startswith("adx"):
-            roi[column] = abs(log(roi[column]))
-            roi[column] = MinMaxScaler().fit_transform(X=vstack(tup=roi[column])).flatten()
+            train[column] = abs(log(train[column]))
+            validation[column] = abs(log(validation[column]))
 
-            divergence: ndarray = kl_div(scaled_target, roi[column].values)
+            adx_scaler: MinMaxScaler = MinMaxScaler()
+            train[column] = adx_scaler.fit_transform(X=vstack(tup=train[column])).flatten()
+            validation[column] = adx_scaler.transform(X=vstack(tup=validation[column])).flatten()
+
+            divergence: ndarray = kl_div(train["ticks"].values, train[column].values)
             divergence = divergence[~masked_invalid(a=divergence).mask]  # type: ignore[no-untyped-call]
 
-            feature_data: dict[str, float] = {"column": column, "divergence": float(median(a=divergence))}
+            adx_feature_data: dict[str, float] = {"column": column, "divergence": float(median(a=divergence))}
 
-            adx_features_data.append(feature_data)
-    adx_features: DataFrame = DataFrame(data=adx_features_data)
-
-    top_adx_percentile: float = adx_features["divergence"].quantile(0.1)
-    adx_features.query(f"divergence < {top_adx_percentile}", inplace=True)
-
-    roi["qmf"] = quantile_matching_fit(
-        a=roi["ticks"].values, b=roi[adx_features["column"].values.tolist()].values.flatten().tolist()  # noqa: WPS221
+            adx_features_data.append(adx_feature_data)
+    adx_features_data = DataFrame(data=adx_features_data)
+    adx_features_data.query(
+        f"divergence < {adx_features_data['divergence'].quantile(0.2)}", inplace=True  # noqa: WPS432
     )
-    roi["rank"] = roi.apply(
-        lambda row: identify_nearest(
-            value=row.qmf, values=[row[feature] for feature in adx_features["column"].values.tolist()], rank=1
-        ),
+    adx_numerical_columns: list[str] = adx_features_data["column"].values.tolist()
+
+    train["qmf"] = quantile_matching_fit(
+        a=train["ticks"].values, b=train[adx_numerical_columns].values.flatten().tolist()  # noqa: WPS221
+    )
+    validation["qmf"] = quantile_matching_fit(
+        a=validation["ticks"].values, b=validation[adx_numerical_columns].values.flatten().tolist()  # noqa: WPS221
+    )
+
+    train["rank"] = train.apply(
+        lambda row: identify_nearest(value=row.qmf, values=[row[feature] for feature in adx_numerical_columns], rank=1),
+        axis=1,
+    )
+    validation["rank"] = validation.apply(
+        lambda row: identify_nearest(value=row.qmf, values=[row[feature] for feature in adx_numerical_columns], rank=1),
         axis=1,
     )
 
-    train: DataFrame = roi.query(f"year < {settings.TRIGGER_DATE.year - 1}")
-
+    columns: list[str] = train.columns.tolist()
     numerical_columns: list[str] = [
         numerical_column
-        for numerical_column in roi.columns.tolist()
+        for numerical_column in columns
         if numerical_column.startswith("streak") and "aroon" not in numerical_column
-    ] + adx_features["column"].values.tolist()
+    ] + adx_numerical_columns
     categorical_columns: list[str] = [
         categorical_column
-        for categorical_column in roi.columns.tolist()
+        for categorical_column in columns
         if categorical_column.startswith("is") and "aroon" not in categorical_column
     ]
 
@@ -165,6 +188,11 @@ if __name__ == "__main__":
     )
     train_pool: Pool = Pool(data=X_train, label=y_train, cat_features=categorical_columns)
     test_pool: Pool = Pool(data=X_test, label=y_test, cat_features=categorical_columns)
+    validation_pool: Pool = Pool(
+        data=validation[numerical_columns + categorical_columns],
+        label=validation[["rank"]],
+        cat_features=categorical_columns,
+    )
 
     def objective(trial: Trial) -> float:
         params = {
@@ -189,13 +217,6 @@ if __name__ == "__main__":
 
     study: Study = create_study(direction="minimize")
     study.optimize(objective, n_trials=10, gc_after_trial=True, show_progress_bar=True)
-
-    validation: DataFrame = roi.query(f"year >= {settings.TRIGGER_DATE.year - 1}")
-    validation_pool: Pool = Pool(
-        data=validation[numerical_columns + categorical_columns],
-        label=validation[["rank"]],
-        cat_features=categorical_columns,
-    )
 
     test_model: CatBoostRegressor = CatBoostRegressor(
         **study.best_params,

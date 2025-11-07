@@ -1,5 +1,4 @@
 from numpy import arange, argsort, array, isnan, ndarray, searchsorted, sort
-from pandas import Series
 from scipy.interpolate import interp1d
 
 
@@ -27,10 +26,3 @@ def identify_nearest(value: float, values: list[float] | ndarray, rank: int = 0)
     indices: ndarray = argsort(a=distances)
 
     return float(values[indices[rank]])
-
-
-def identify_column(series: Series, target: str, columns: list[str]) -> str | None:
-    for column in columns:
-        if series[target] == series[column]:
-            return column
-    return None
