@@ -149,8 +149,8 @@ if __name__ == "__main__":
     numerical_columns: list[str] = [
         numerical_column
         for numerical_column in roi.columns.tolist()
-        if numerical_column.startswith("adx") or numerical_column.startswith("streak")
-    ]
+        if numerical_column.startswith("streak") and "aroon" not in numerical_column
+    ] + adx_features["column"].values.tolist()
     categorical_columns: list[str] = [
         categorical_column
         for categorical_column in roi.columns.tolist()
