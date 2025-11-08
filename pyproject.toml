@@ -69,7 +69,7 @@ select = [
     "WPS603", "WPS604", "WPS605", "WPS606", "WPS607", "WPS608", "WPS609", "WPS610", "WPS611", "WPS612", "WPS614"
 ]
 # https://lintlyci.github.io/Flake8Rules/rules/W503.html
-ignore = ["W503", "C8", "B001", "B008", "B950", "WPS", "DAR", "N400", "T100", "I", "Q", "RST", "FMT", "N8", "P1", "P3"]
+ignore = ["W503", "C8", "B023", "B001", "B008", "B950", "WPS", "DAR", "N400", "T100", "I", "Q", "RST", "FMT", "N8", "P1", "P3"]
 
 [tool.isort]
 line_length = 120

@@ -1,5 +1,6 @@
 # pylint: disable=duplicate-code
 from uuid import uuid1
+from warnings import filterwarnings
 
 from boto3 import Session
 from duckdb import DuckDBPyConnection
@@ -16,6 +17,8 @@ from src.schemas.filters import (
 )
 from src.services.domain.s3 import BinaryService, StreakService
 from src.settings import settings
+
+filterwarnings("ignore")
 
 # pylint: disable=too-complex
 if __name__ == "__main__":

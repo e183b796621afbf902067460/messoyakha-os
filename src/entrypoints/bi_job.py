@@ -1,5 +1,6 @@
 # pylint: disable=duplicate-code
 from uuid import uuid1
+from warnings import filterwarnings
 
 from boto3 import Session
 from duckdb import DuckDBPyConnection
@@ -21,6 +22,8 @@ from src.schemas.filters import (
 )
 from src.services.domain.s3 import ADXService, AroonService, BinaryService, MAService
 from src.settings import settings
+
+filterwarnings("ignore")
 
 
 # pylint: disable=redefined-outer-name,disallowed-name
@@ -138,10 +141,10 @@ if __name__ == "__main__":
             aroons = _compute_binary(data=aroons, a=aroon_column, b=shifted_column)
             aroons.drop(columns=[aroon_column, shifted_column], axis=1, inplace=True)
 
+    # TODO: aroons
     binaries: DataFrame = moving_averages.merge(
         right=average_directional_indexes, how="left", on=["exchange", "section", "ticker", "interval", "datetime"]
     )
-    binaries = binaries.merge(right=aroons, how="left", on=["exchange", "section", "ticker", "interval", "datetime"])
 
     binary_service.load_dataframe_as_parquet(dataframe=binaries, filename=f"{uuid1()}.parquet")
     binary_service.delete_object()

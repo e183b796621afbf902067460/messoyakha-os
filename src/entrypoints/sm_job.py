@@ -1,13 +1,14 @@
 # pylint: disable=duplicate-code
 from typing import Final
+from warnings import filterwarnings
 
 from boto3 import Session
 from catboost import CatboostError, CatBoostRegressor, Pool
 from duckdb import DuckDBPyConnection
-from numpy import log, log1p, median, ndarray, vstack
+from numpy import average, log, log1p, median, ndarray, vstack
 from numpy.ma import masked_invalid
 from optuna import Study, Trial, create_study
-from pandas import DataFrame, to_datetime  # noqa: WPS347
+from pandas import DataFrame, Series, to_datetime  # noqa: WPS347
 from scipy.special import kl_div
 from scipy.stats import boxcox
 from sklearn.model_selection import train_test_split
@@ -31,11 +32,20 @@ from src.services.domain.s3 import ADXService, BinaryService, ROIService, Streak
 from src.services.quantile import identify_nearest, quantile_matching_fit
 from src.settings import settings
 
+filterwarnings("ignore")
+
 _RANDOM_SEED: Final[int] = 42
 _TEST_SIZE: Final[float] = 0.2
 
 
-# pylint: disable=too-complex
+def _identify_rank(row: Series, quantile_columns: list[str]) -> str | None:
+    for quantile_column in quantile_columns:
+        if row["rank"] == row[quantile_column]:
+            return quantile_column
+    return None
+
+
+# pylint: disable=too-complex,cell-var-from-loop
 if __name__ == "__main__":
     s3_client: S3Client = S3Client(
         session=Session(
@@ -123,10 +133,10 @@ if __name__ == "__main__":
     validation["ticks"] = target_scaler.transform(X=vstack(tup=validation["ticks"])).flatten()
 
     adx_features_data: list[dict[str, float]] | DataFrame = []
-    for column in roi.columns.tolist():
+    for column in roi.columns.tolist():  # noqa: WPS426
         if column.startswith("streak"):
             train[column] = log1p(train[column])  # noqa: WPS204
-            validation[column] = log1p(validation[column])
+            validation[column] = log1p(validation[column])  # noqa: WPS204
 
             streak_scaler: MinMaxScaler = MinMaxScaler()
             train[column] = streak_scaler.fit_transform(X=vstack(tup=train[column])).flatten()
@@ -139,6 +149,7 @@ if __name__ == "__main__":
             adx_scaler: MinMaxScaler = MinMaxScaler()
             train[column] = adx_scaler.fit_transform(X=vstack(tup=train[column])).flatten()
             validation[column] = adx_scaler.transform(X=vstack(tup=validation[column])).flatten()
+            validation[column] = validation.apply(lambda row: min(row[column], 1), axis=1)  # noqa: B023
 
             divergence: ndarray = kl_div(train["ticks"].values, train[column].values)
             divergence = divergence[~masked_invalid(a=divergence).mask]  # type: ignore[no-untyped-call]
@@ -168,16 +179,47 @@ if __name__ == "__main__":
         axis=1,
     )
 
+    adx_numerical_weights: dict[str, int] = (
+        train.apply(lambda row: _identify_rank(row=row, quantile_columns=adx_numerical_columns), axis=1)
+        .value_counts()
+        .to_dict()
+    )
+    for first_adx_numerical_column in adx_numerical_columns:  # noqa: WPS426
+        for second_adx_numerical_column in adx_numerical_columns:  # noqa: WPS426
+            if first_adx_numerical_column != second_adx_numerical_column:
+                adx_weighted_numerical_column: str = "weighted" + str(
+                    sorted([first_adx_numerical_column, second_adx_numerical_column])
+                ).replace("[", "(").replace("]", ")").replace("'", "")
+                if adx_weighted_numerical_column not in train.columns.tolist():
+                    train[adx_weighted_numerical_column] = train.apply(
+                        lambda row: average(
+                            a=[row[first_adx_numerical_column], row[second_adx_numerical_column]],
+                            weights=[
+                                adx_numerical_weights[first_adx_numerical_column],
+                                adx_numerical_weights[second_adx_numerical_column],
+                            ],
+                        ),
+                        axis=1,
+                    )
+                    validation[adx_weighted_numerical_column] = validation.apply(
+                        lambda row: average(
+                            a=[row[first_adx_numerical_column], row[second_adx_numerical_column]],
+                            weights=[
+                                adx_numerical_weights[first_adx_numerical_column],
+                                adx_numerical_weights[second_adx_numerical_column],
+                            ],
+                        ),
+                        axis=1,
+                    )
+
     columns: list[str] = train.columns.tolist()
     numerical_columns: list[str] = [
         numerical_column
         for numerical_column in columns
-        if numerical_column.startswith("streak") and "aroon" not in numerical_column
+        if numerical_column.startswith("streak") or numerical_column.startswith("weighted")
     ] + adx_numerical_columns
     categorical_columns: list[str] = [
-        categorical_column
-        for categorical_column in columns
-        if categorical_column.startswith("is") and "aroon" not in categorical_column
+        categorical_column for categorical_column in columns if categorical_column.startswith("is")
     ]
 
     X_train, X_test, y_train, y_test = train_test_split(
@@ -197,15 +239,15 @@ if __name__ == "__main__":
     def objective(trial: Trial) -> float:
         params = {
             "rsm": trial.suggest_float("rsm", 0.1, 0.9),  # noqa: WPS432
-            "learning_rate": trial.suggest_float("learning_rate", 1e-5, 0.5, log=True),  # noqa: WPS432
+            "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.5, log=True),  # noqa: WPS432
             "depth": trial.suggest_int("depth", 4, 8),  # noqa: WPS432
             "iterations": trial.suggest_int("iterations", 500, 1000),  # noqa: WPS432
         }
 
         train_model: CatBoostRegressor = CatBoostRegressor(
             **params,
-            loss_function="MultiQuantile:alpha=0.15, 0.85",
-            eval_metric="MultiQuantile:alpha=0.15, 0.85",
+            loss_function="Quantile:alpha=0.5",
+            eval_metric="Quantile:alpha=0.5",
             random_seed=_RANDOM_SEED,
             custom_metric=["MAE"],
         )
@@ -220,8 +262,8 @@ if __name__ == "__main__":
 
     test_model: CatBoostRegressor = CatBoostRegressor(
         **study.best_params,
-        loss_function="MultiQuantile:alpha=0.15, 0.85",
-        eval_metric="MultiQuantile:alpha=0.15, 0.85",
+        loss_function="Quantile:alpha=0.5",
+        eval_metric="Quantile:alpha=0.5",
         random_seed=_RANDOM_SEED,
         use_best_model=True,
         verbose=False,
@@ -232,4 +274,4 @@ if __name__ == "__main__":
     predictions = test_model.predict(validation_pool)
 
 
-# pylint: enable=duplicate-code,too-complex
+# pylint: enable=duplicate-code,too-complex,cell-var-from-loop
