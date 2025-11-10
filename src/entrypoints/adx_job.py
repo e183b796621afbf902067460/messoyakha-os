@@ -1,14 +1,18 @@
 from uuid import uuid1
 
 from boto3 import Session
+from collinearity import SelectNonCollinear
 from duckdb import DuckDBPyConnection
+from loguru import logger
+from numpy import array, ndarray
 from pandas import DataFrame
+from sklearn.feature_selection import f_regression
 from talib import ADX
 
 from src.adapters.clients.s3 import S3Client
 from src.adapters.connections.duckdb import get_duckdb_connection
 from src.adapters.repositories.indicators import ADXRepository, MARepository
-from src.entrypoints.commmon.base import findall_prefixes
+from src.entrypoints.common.base import findall_prefixes
 from src.schemas.filters import (
     ADXPathParametersSchema,
     ADXQueryParametersSchema,
@@ -97,7 +101,26 @@ if __name__ == "__main__":
         axis=1,
         inplace=True,
     )
-    average_directional_indexes: DataFrame = moving_averages.copy(deep=True)
+    moving_averages.dropna(inplace=True)
+
+    feature_columns: list[str] = [column for column in moving_averages.columns.tolist() if column.startswith("adx")]
+    feature_values: ndarray = moving_averages[feature_columns].values
+
+    selector: SelectNonCollinear = SelectNonCollinear(correlation_threshold=1, scoring=f_regression)
+    selector.fit(X=feature_values)
+
+    average_directional_index_columns: list[str] = array(feature_columns)[selector.get_support()].tolist()
+    average_directional_indexes: DataFrame = moving_averages[average_directional_index_columns].copy(deep=True)
+
+    average_directional_indexes["exchange"] = settings.EXCHANGE
+    average_directional_indexes["section"] = settings.SECTION
+    average_directional_indexes["ticker"] = settings.TICKER
+    average_directional_indexes["interval"] = settings.INTERVAL
+    average_directional_indexes["datetime"] = moving_averages["datetime"].values
+    average_directional_indexes.sort_values(by="datetime", inplace=True)
+
+    logger.info(f"There are {len(average_directional_indexes.columns.tolist())} in total.")
+
     adx_service.load_dataframe_as_parquet(dataframe=average_directional_indexes, filename=f"{uuid1()}.parquet")
     adx_service.delete_object()
 

@@ -1,34 +1,34 @@
 # pylint: disable=duplicate-code
+from itertools import product
 from typing import Final
 from warnings import filterwarnings
 
 from boto3 import Session
-from catboost import CatboostError, CatBoostRegressor, Pool
+from collinearity import SelectNonCollinear
 from duckdb import DuckDBPyConnection
-from numpy import average, log, log1p, median, ndarray, vstack
+from lightgbm import LGBMRegressor
+from loguru import logger
+from numpy import array, average, log, log1p, median, ndarray, vstack
 from numpy.ma import masked_invalid
 from optuna import Study, Trial, create_study
-from pandas import DataFrame, Series, to_datetime  # noqa: WPS347
+from pandas import DataFrame, Series, concat, to_datetime  # noqa: WPS347
 from scipy.special import kl_div
 from scipy.stats import boxcox
+from sklearn.feature_selection import f_regression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
 from src.adapters.clients.s3 import S3Client
 from src.adapters.connections.duckdb import get_duckdb_connection
-from src.adapters.repositories.indicators import ADXRepository, BinariesRepository, StreaksRepository
+from src.adapters.repositories.indicators import ADXRepository
 from src.adapters.repositories.trades import TradesRepository
 from src.schemas.filters import (
     ADXPathParametersSchema,
     ADXQueryParametersSchema,
-    BinaryPathParametersSchema,
-    BinaryQueryParametersSchema,
-    StreakPathParametersSchema,
-    StreakQueryParametersSchema,
     TradePathParametersSchema,
     TradeQueryParametersSchema,
 )
-from src.services.domain.s3 import ADXService, BinaryService, ROIService, StreakService
+from src.services.domain.s3 import ADXService, ROIService
 from src.services.quantile import identify_nearest, quantile_matching_fit
 from src.settings import settings
 
@@ -68,22 +68,6 @@ if __name__ == "__main__":
         ),
         path_parameters=ADXPathParametersSchema(bucket=settings.S3_BUCKET, directory="average-directional-indexes"),
     )
-    binary_service: BinaryService = BinaryService(
-        s3_client=s3_client,
-        repository=BinariesRepository(connection=duckdb_connection),
-        query_parameters=BinaryQueryParametersSchema(
-            ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
-        ),
-        path_parameters=BinaryPathParametersSchema(bucket=settings.S3_BUCKET, directory="binaries"),
-    )
-    streak_service: StreakService = StreakService(
-        s3_client=s3_client,
-        repository=StreaksRepository(connection=duckdb_connection),
-        query_parameters=StreakQueryParametersSchema(
-            ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
-        ),
-        path_parameters=StreakPathParametersSchema(bucket=settings.S3_BUCKET, directory="streaks"),
-    )
     roi_service: ROIService = ROIService(
         s3_client=s3_client,
         repository=TradesRepository(connection=duckdb_connection),
@@ -98,24 +82,12 @@ if __name__ == "__main__":
         raise FileNotFoundError("There is no average directional indexes data.")
     adx.drop_duplicates(inplace=True)
 
-    binaries: DataFrame | None = binary_service.extract_binary()
-    if binaries is None:
-        raise FileNotFoundError("There is no binaries data.")
-    binaries.drop_duplicates(inplace=True)
-
-    streaks: DataFrame | None = streak_service.extract_streak()
-    if streaks is None:
-        raise FileNotFoundError("There is no streaks data.")
-    streaks.drop_duplicates(inplace=True)
-
     roi: DataFrame | None = roi_service.extract_roi()
     if roi is None:
         raise FileNotFoundError("There is no trades data.")
     roi.drop_duplicates(inplace=True)
 
     roi = roi.merge(right=adx, how="left", on=["exchange", "section", "ticker", "interval", "datetime"])
-    roi = roi.merge(right=binaries, how="left", on=["exchange", "section", "ticker", "interval", "datetime"])
-    roi = roi.merge(right=streaks, how="left", on=["exchange", "section", "ticker", "interval", "datetime"])
     roi["datetime"] = to_datetime(roi["datetime"])
     roi["year"] = roi["datetime"].dt.year
     roi.dropna(inplace=True)
@@ -132,146 +104,152 @@ if __name__ == "__main__":
     validation["ticks"] = boxcox(x=validation["ticks"], lmbda=optimizer)
     validation["ticks"] = target_scaler.transform(X=vstack(tup=validation["ticks"])).flatten()
 
-    adx_features_data: list[dict[str, float]] | DataFrame = []
-    for column in roi.columns.tolist():  # noqa: WPS426
-        if column.startswith("streak"):
-            train[column] = log1p(train[column])  # noqa: WPS204
-            validation[column] = log1p(validation[column])  # noqa: WPS204
+    divergences: DataFrame = DataFrame()
 
-            streak_scaler: MinMaxScaler = MinMaxScaler()
-            train[column] = streak_scaler.fit_transform(X=vstack(tup=train[column])).flatten()
-            validation[column] = streak_scaler.transform(X=vstack(tup=validation[column])).flatten()
+    numerical_columns: list[str] = [column for column in roi.columns.tolist() if column.startswith("adx")]
+    for column in numerical_columns:  # noqa: WPS426
+        train[column] = abs(log(train[column]))
+        validation[column] = abs(log(validation[column]))
 
-        if column.startswith("adx"):
-            train[column] = abs(log(train[column]))
-            validation[column] = abs(log(validation[column]))
+        adx_scaler: MinMaxScaler = MinMaxScaler()
 
-            adx_scaler: MinMaxScaler = MinMaxScaler()
-            train[column] = adx_scaler.fit_transform(X=vstack(tup=train[column])).flatten()
-            validation[column] = adx_scaler.transform(X=vstack(tup=validation[column])).flatten()
-            validation[column] = validation.apply(lambda row: min(row[column], 1), axis=1)  # noqa: B023
+        train[column] = adx_scaler.fit_transform(X=vstack(tup=train[column])).flatten()
+        validation[column] = adx_scaler.transform(X=vstack(tup=validation[column])).flatten()
+        validation[column] = validation.apply(lambda row: min(row[column], 1), axis=1)  # noqa: B023
 
-            divergence: ndarray = kl_div(train["ticks"].values, train[column].values)
-            divergence = divergence[~masked_invalid(a=divergence).mask]  # type: ignore[no-untyped-call]
-
-            adx_feature_data: dict[str, float] = {"column": column, "divergence": float(median(a=divergence))}
-
-            adx_features_data.append(adx_feature_data)
-    adx_features_data = DataFrame(data=adx_features_data)
-    adx_features_data.query(
-        f"divergence < {adx_features_data['divergence'].quantile(0.2)}", inplace=True  # noqa: WPS432
-    )
-    adx_numerical_columns: list[str] = adx_features_data["column"].values.tolist()
+        divergence: ndarray = kl_div(train["ticks"].values, train[column].values)
+        divergence = divergence[~masked_invalid(a=divergence).mask]  # type: ignore[no-untyped-call]
+        divergences = concat(
+            objs=[divergences, DataFrame(data=[{"column": column, "divergence": float(median(a=divergence))}])]
+        )
+    divergences.query(f"divergence < {divergences['divergence'].quantile(0.2)}", inplace=True)  # noqa: WPS432
+    numerical_columns = divergences["column"].values.tolist()
 
     train["qmf"] = quantile_matching_fit(
-        a=train["ticks"].values, b=train[adx_numerical_columns].values.flatten().tolist()  # noqa: WPS221
+        a=train["ticks"].values, b=train[numerical_columns].values.flatten().tolist()  # noqa: WPS221
     )
     validation["qmf"] = quantile_matching_fit(
-        a=validation["ticks"].values, b=validation[adx_numerical_columns].values.flatten().tolist()  # noqa: WPS221
+        a=validation["ticks"].values, b=train[numerical_columns].values.flatten().tolist()  # noqa: WPS221
     )
-
     train["rank"] = train.apply(
-        lambda row: identify_nearest(value=row.qmf, values=[row[feature] for feature in adx_numerical_columns], rank=1),
+        lambda row: identify_nearest(value=row["qmf"], values=[row[feature] for feature in numerical_columns], rank=1),
         axis=1,
     )
     validation["rank"] = validation.apply(
-        lambda row: identify_nearest(value=row.qmf, values=[row[feature] for feature in adx_numerical_columns], rank=1),
+        lambda row: identify_nearest(value=row["qmf"], values=[row[feature] for feature in numerical_columns], rank=1),
         axis=1,
     )
 
-    adx_numerical_weights: dict[str, int] = (
-        train.apply(lambda row: _identify_rank(row=row, quantile_columns=adx_numerical_columns), axis=1)
+    weights: dict[str, int] = (
+        train.apply(lambda row: _identify_rank(row=row, quantile_columns=numerical_columns), axis=1)
         .value_counts()
         .to_dict()
     )
-    for first_adx_numerical_column in adx_numerical_columns:  # noqa: WPS426
-        for second_adx_numerical_column in adx_numerical_columns:  # noqa: WPS426
-            if first_adx_numerical_column != second_adx_numerical_column:
-                adx_weighted_numerical_column: str = "weighted" + str(
-                    sorted([first_adx_numerical_column, second_adx_numerical_column])
-                ).replace("[", "(").replace("]", ")").replace("'", "")
-                if adx_weighted_numerical_column not in train.columns.tolist():
-                    train[adx_weighted_numerical_column] = train.apply(
-                        lambda row: average(
-                            a=[row[first_adx_numerical_column], row[second_adx_numerical_column]],
-                            weights=[
-                                adx_numerical_weights[first_adx_numerical_column],
-                                adx_numerical_weights[second_adx_numerical_column],
-                            ],
-                        ),
-                        axis=1,
-                    )
-                    validation[adx_weighted_numerical_column] = validation.apply(
-                        lambda row: average(
-                            a=[row[first_adx_numerical_column], row[second_adx_numerical_column]],
-                            weights=[
-                                adx_numerical_weights[first_adx_numerical_column],
-                                adx_numerical_weights[second_adx_numerical_column],
-                            ],
-                        ),
-                        axis=1,
-                    )
+    for first_numerical_column, second_numerical_column in product(  # noqa: WPS426
+        numerical_columns, numerical_columns
+    ):
+        if first_numerical_column != second_numerical_column:
+            adx_numerical_column: str = (
+                str(sorted([first_numerical_column, second_numerical_column]))
+                .replace("[", "")
+                .replace("]", "")
+                .replace("'", "")
+                .replace(",", "")
+            )
 
-    columns: list[str] = train.columns.tolist()
-    numerical_columns: list[str] = [
-        numerical_column
-        for numerical_column in columns
-        if numerical_column.startswith("streak") or numerical_column.startswith("weighted")
-    ] + adx_numerical_columns
-    categorical_columns: list[str] = [
-        categorical_column for categorical_column in columns if categorical_column.startswith("is")
-    ]
+            adx_weighted_numerical_column: str = "weighted" + adx_numerical_column
+            adx_average_numerical_column: str = "average" + adx_numerical_column
+
+            columns: list[str] = train.columns.tolist()
+            if adx_weighted_numerical_column not in columns and adx_average_numerical_column not in columns:
+                train[adx_weighted_numerical_column] = train.apply(
+                    lambda row: average(
+                        a=[row[first_numerical_column], row[second_numerical_column]],
+                        weights=[weights[first_numerical_column], weights[second_numerical_column]],
+                    ),
+                    axis=1,
+                )
+                train[adx_average_numerical_column] = train.apply(
+                    lambda row: average(
+                        a=[row[first_numerical_column], row[second_numerical_column]],
+                    ),
+                    axis=1,
+                )
+
+                validation[adx_weighted_numerical_column] = validation.apply(
+                    lambda row: average(
+                        a=[row[first_numerical_column], row[second_numerical_column]],
+                        weights=[weights[first_numerical_column], weights[second_numerical_column]],
+                    ),
+                    axis=1,
+                )
+                validation[adx_average_numerical_column] = validation.apply(
+                    lambda row: average(
+                        a=[row[first_numerical_column], row[second_numerical_column]],
+                    ),
+                    axis=1,
+                )
+
+    columns = train.columns.tolist()
+
+    numerical_columns = []
+    for prefix in ["weighted", "average"]:  # noqa: WPS335
+        collinear_columns: list[str] = [
+            collinear_column for collinear_column in columns if collinear_column.startswith(prefix)
+        ]
+        collinear_values: ndarray = train[collinear_columns].values
+
+        selector: SelectNonCollinear = SelectNonCollinear(
+            correlation_threshold=0.95, scoring=f_regression  # noqa: WPS432
+        )
+        selector.fit(X=collinear_values)
+
+        numerical_columns.extend(array(collinear_columns)[selector.get_support()].tolist())
+
+    logger.info(f"Total number of features is {len(numerical_columns)}.")
+
+    train["rank"] = train.apply(
+        lambda row: identify_nearest(
+            value=row["ticks"], values=[row[feature] for feature in numerical_columns], rank=1
+        ),
+        axis=1,
+    )
+    validation["rank"] = validation.apply(
+        lambda row: identify_nearest(
+            value=row["ticks"], values=[row[feature] for feature in numerical_columns], rank=1
+        ),
+        axis=1,
+    )
 
     X_train, X_test, y_train, y_test = train_test_split(
-        train[numerical_columns + categorical_columns],
+        train[numerical_columns],
         train[["rank"]],
         test_size=_TEST_SIZE,
         random_state=_RANDOM_SEED,
     )
-    train_pool: Pool = Pool(data=X_train, label=y_train, cat_features=categorical_columns)
-    test_pool: Pool = Pool(data=X_test, label=y_test, cat_features=categorical_columns)
-    validation_pool: Pool = Pool(
-        data=validation[numerical_columns + categorical_columns],
-        label=validation[["rank"]],
-        cat_features=categorical_columns,
-    )
 
     def objective(trial: Trial) -> float:
         params = {
-            "rsm": trial.suggest_float("rsm", 0.1, 0.9),  # noqa: WPS432
-            "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.5, log=True),  # noqa: WPS432
-            "depth": trial.suggest_int("depth", 4, 8),  # noqa: WPS432
-            "iterations": trial.suggest_int("iterations", 500, 1000),  # noqa: WPS432
+            "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.5, log=True),  # noqa: WPS432,
+            "n_estimators": trial.suggest_int("n_estimators", 1000, 5000),  # noqa: WPS432
+            "early_stopping_round": trial.suggest_int("early_stopping_round", 1000, 2000),  # noqa: WPS432
         }
-
-        train_model: CatBoostRegressor = CatBoostRegressor(
-            **params,
-            loss_function="Quantile:alpha=0.5",
-            eval_metric="Quantile:alpha=0.5",
-            random_seed=_RANDOM_SEED,
-            custom_metric=["MAE"],
+        model: LGBMRegressor = LGBMRegressor(
+            **params, objective="mae", eval_metric="mae", random_seed=_RANDOM_SEED, metric=["mae"], verbosity=-1
         )
-        try:
-            train_model.fit(train_pool, eval_set=test_pool, use_best_model=True, verbose=False)
-        except CatboostError:
-            return 1
-        return float(train_model.get_best_score()["validation"]["MAE"])
+        model.fit(X=X_train, y=y_train, eval_set=[(X_test, y_test)])
+        return float(model.best_score_["valid_0"].get("l1"))
 
     study: Study = create_study(direction="minimize")
     study.optimize(objective, n_trials=10, gc_after_trial=True, show_progress_bar=True)
 
-    test_model: CatBoostRegressor = CatBoostRegressor(
-        **study.best_params,
-        loss_function="Quantile:alpha=0.5",
-        eval_metric="Quantile:alpha=0.5",
-        random_seed=_RANDOM_SEED,
-        use_best_model=True,
-        verbose=False,
+    test_model: LGBMRegressor = LGBMRegressor(
+        **study.best_params, objective="mae", eval_metric="mae", random_seed=_RANDOM_SEED, metric=["mae"], verbosity=-1
     )
-    test_model.fit(train_pool, eval_set=test_pool, use_best_model=True, verbose=False)
-    assert test_model.is_fitted()  # noqa: S101
+    test_model.fit(X=X_train, y=y_train, eval_set=[(X_test, y_test)])
 
-    predictions = test_model.predict(validation_pool)
+    validation["y"] = test_model.predict(validation[numerical_columns])
+    validation.to_csv("data.csv", index=False)
 
 
 # pylint: enable=duplicate-code,too-complex,cell-var-from-loop

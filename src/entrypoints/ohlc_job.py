@@ -6,7 +6,7 @@ from httpx import AsyncClient as HTTPAsyncClient
 from httpx import AsyncHTTPTransport
 
 from src.adapters.clients.binance import BinanceAPIClientBase, BinanceSpotAPIClient, BinanceUsdtmAPIClient
-from src.entrypoints.commmon.ohlc_base import main
+from src.entrypoints.common.ohlc_base import main
 from src.services.domain.binance import BinanceService
 from src.settings import settings
 
