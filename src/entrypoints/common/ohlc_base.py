@@ -15,7 +15,7 @@ from src.schemas.filters import (
     OHLCQueryParametersSchema,
 )
 from src.services.common.api_base import APIBaseService
-from src.services.s3 import OHLCService
+from src.services.domain.s3 import OHLCService
 from src.settings import settings
 
 _YEARS_IN_RETROSPECTIVE: int = settings.TRIGGER_DATE.year - 2010  # noqa: WPS432
