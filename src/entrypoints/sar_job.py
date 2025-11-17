@@ -170,7 +170,7 @@ if __name__ == "__main__":
     trials.drop_duplicates(inplace=True)
     trials.sort_values(by=["value"], ascending=False, inplace=True)
 
-    sar_service.load_dataframe_as_parquet(dataframe=trials, filename=f"{uuid1()}.parquet")
+    sar_service.load_sar(dataframe=trials, filename=f"{uuid1()}.parquet")
     sar_service.delete_object()
 
 

@@ -23,9 +23,7 @@ _YEARS_IN_RETROSPECTIVE: int = settings.TRIGGER_DATE.year - 2010  # noqa: WPS432
 
 def _determine_latest_timestamp(latest_timestamp: datetime | None) -> datetime:
     if latest_timestamp is None:
-        return settings.TRIGGER_DATE - timedelta(  # type: ignore[no-any-return]
-            days=settings.DAYS_IN_YEAR * _YEARS_IN_RETROSPECTIVE
-        )
+        return settings.TRIGGER_DATE - timedelta(days=settings.DAYS_IN_YEAR * _YEARS_IN_RETROSPECTIVE)
     return latest_timestamp + timedelta(seconds=1)
 
 
@@ -84,7 +82,7 @@ async def main(service: APIBaseService) -> None:
     candlesticks.drop_duplicates(inplace=True)
     candlesticks["exchange"] = settings.EXCHANGE
 
-    ohlc_service.load_dataframe_as_parquet(dataframe=candlesticks, filename=f"{uuid1()}.parquet")
+    ohlc_service.load_ohlc(dataframe=candlesticks, filename=f"{uuid1()}.parquet")
     ohlc_service.delete_object()
 
 

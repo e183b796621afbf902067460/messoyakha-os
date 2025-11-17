@@ -1,3 +1,5 @@
+from typing import Any
+
 from attr import attr, attrs
 from boto3 import Session
 from botocore.client import BaseClient
@@ -26,6 +28,9 @@ class S3Client:
             **self._client.list_objects_v2(Bucket=bucket, Prefix=prefix)
         )
         return list_objects_response_schema
+
+    def put_object(self, data: bytes, metadata: dict[str, Any], bucket: str, key: str) -> None:
+        self._client.put_object(Bucket=bucket, Key=key, Body=data, Metadata=metadata)
 
     def delete_object(self, bucket: str, key: str) -> None:
         self._client.delete_object(Bucket=bucket, Key=key)

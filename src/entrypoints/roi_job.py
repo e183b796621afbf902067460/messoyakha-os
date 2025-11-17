@@ -128,7 +128,7 @@ if __name__ == "__main__":
     trades["ticker"] = settings.TICKER
     trades["interval"] = settings.INTERVAL
 
-    roi_service.load_dataframe_as_parquet(dataframe=trades, filename=f"{uuid1()}.parquet")
+    roi_service.load_roi(dataframe=trades, filename=f"{uuid1()}.parquet")
     roi_service.delete_object()
 
 

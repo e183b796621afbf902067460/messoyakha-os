@@ -32,14 +32,6 @@ def weighted_average_by(
 
     combos: list[list[str]] = [list(combo) for combo in combinations(iterable=columns, r=multiplier)]
     for combo in combos:
-        average_column: str = f"{multiplier}_average_" + (
-            str(sorted(combo))
-            .replace("[", "")
-            .replace("]", "")
-            .replace("'", "")
-            .replace(",", "_")
-            .strip()  # noqa: WPS221
-        )
         weighted_average_column: str = f"{multiplier}_weighted_" + (
             str(sorted(combo))
             .replace("[", "")
@@ -48,19 +40,12 @@ def weighted_average_by(
             .replace(",", "_")
             .strip()  # noqa: WPS221
         )
-
-        average_expression: dict[str, IntoExpr] = {
-            average_column: (
-                sum_horizontal(col(column) for column in combo) / len([weights[column] for column in combo])
-            )
-        }
         weighted_average_expression: dict[str, IntoExpr] = {
             weighted_average_column: (
                 sum_horizontal(col(column) * weights[column] for column in combo)
                 / sum([weights[column] for column in combo])
             )
         }
-        dataframe = dataframe.lazy().with_columns(**average_expression)
         dataframe = dataframe.lazy().with_columns(**weighted_average_expression)
     return dataframe.collect().to_pandas()
 

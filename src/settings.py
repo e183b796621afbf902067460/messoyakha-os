@@ -9,11 +9,6 @@ class AppSettings(BaseSettings):
     APP_NAME: str = "candlesticks-pipelines"
     APP_VERSION: str = "v0.0.1-alpha"
 
-    IS_DEBUG: bool = True
-    IS_DEVELOPMENT: bool = True
-
-    LOGLEVEL: str = "INFO"
-
     S3_ACCESS_KEY_ID: str
     S3_SECRET_ACCESS_KEY: str
     S3_ENDPOINT_URL: HttpUrl = HttpUrl("https://s3.twcstorage.ru")

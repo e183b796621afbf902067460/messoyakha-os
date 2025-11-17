@@ -29,6 +29,10 @@ lightgbm = "^4.6.0"
 xgboost = "^3.1.1"
 collinearity = "^0.6.1"
 loguru = "^0.7.3"
+onnx = "^1.19.1"
+onnxconverter-common = "^1.16.0"
+skl2onnx = "^1.19.1"
+onnxmltools = "^1.14.0"
 
 [tool.poetry.group.linters.dependencies]
 pre-commit = "3.6.0"

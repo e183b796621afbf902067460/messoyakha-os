@@ -90,7 +90,7 @@ if __name__ == "__main__":
     candlesticks.rename(columns={"open_time": "datetime"}, inplace=True)
 
     moving_averages: DataFrame = candlesticks.copy(deep=True)
-    ma_service.load_dataframe_as_parquet(dataframe=moving_averages, filename=f"{uuid1()}.parquet")
+    ma_service.load_ma(dataframe=moving_averages, filename=f"{uuid1()}.parquet")
     ma_service.delete_object()
 
 

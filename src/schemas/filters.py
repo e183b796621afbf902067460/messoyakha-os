@@ -86,3 +86,11 @@ class TradeQueryParametersSchema(QueryParametersBaseSchema):
 
 class TradePathParametersSchema(PathParametersBaseSchema):
     """Path parameters to fetch trades."""
+
+
+class MLModelQueryParametersSchema(QueryParametersBaseSchema):
+    """Query parameters to fetch ML-model."""
+
+
+class MLModelPathParametersSchema(PathParametersBaseSchema):
+    """Path parameters to fetch ML-model."""

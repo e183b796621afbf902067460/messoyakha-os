@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from attr import attr, attrs
 from pandas import DataFrame
@@ -27,6 +28,8 @@ from src.schemas.filters import (
     LatestTimestampQueryParametersSchema,
     MAPathParametersSchema,
     MAQueryParametersSchema,
+    MLModelPathParametersSchema,
+    MLModelQueryParametersSchema,
     OHLCPathParametersSchema,
     OHLCQueryParametersSchema,
     PathParametersBaseSchema,
@@ -91,9 +94,6 @@ class _S3BaseService:
             f"{self._query_parameters.interval.lower()}"
         )
 
-    def load_dataframe_as_parquet(self, dataframe: DataFrame, filename: str) -> None:
-        self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
-
     def delete_object(self) -> None:
         if self._objects.filename:
             self._s3_client.delete_object(
@@ -128,6 +128,9 @@ class OHLCService(_S3BaseService):
             parameters_schema=self._query_parameters, path=self._formatted_path
         )
 
+    def load_ohlc(self, dataframe: DataFrame, filename: str) -> None:
+        self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
+
 
 class MAService(_S3BaseService):
     _repository: MARepository
@@ -139,6 +142,9 @@ class MAService(_S3BaseService):
         return self._repository.query_moving_averages(
             parameters_schema=self._query_parameters, path=self._formatted_path
         )
+
+    def load_ma(self, dataframe: DataFrame, filename: str) -> None:
+        self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
 
 
 class ADXService(_S3BaseService):
@@ -152,6 +158,9 @@ class ADXService(_S3BaseService):
             parameters_schema=self._query_parameters, path=self._formatted_path
         )
 
+    def load_adx(self, dataframe: DataFrame, filename: str) -> None:
+        self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
+
 
 class SARService(_S3BaseService):
     _repository: SARTrialsRepository
@@ -164,6 +173,9 @@ class SARService(_S3BaseService):
             parameters_schema=self._query_parameters, path=self._formatted_path
         )
 
+    def load_sar(self, dataframe: DataFrame, filename: str) -> None:
+        self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
+
 
 class ROIService(_S3BaseService):
     _repository: TradesRepository
@@ -173,6 +185,9 @@ class ROIService(_S3BaseService):
 
     def extract_roi(self) -> DataFrame | None:
         return self._repository.query_trades(parameters_schema=self._query_parameters, path=self._formatted_path)
+
+    def load_roi(self, dataframe: DataFrame, filename: str) -> None:
+        self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
 
 
 class AroonService(_S3BaseService):
@@ -184,6 +199,9 @@ class AroonService(_S3BaseService):
     def extract_aroon(self) -> DataFrame | None:
         return self._repository.query_aroons(parameters_schema=self._query_parameters, path=self._formatted_path)
 
+    def load_aroon(self, dataframe: DataFrame, filename: str) -> None:
+        self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
+
 
 class BinaryService(_S3BaseService):
     _repository: BinariesRepository
@@ -194,6 +212,9 @@ class BinaryService(_S3BaseService):
     def extract_binary(self) -> DataFrame | None:
         return self._repository.query_binaries(parameters_schema=self._query_parameters, path=self._formatted_path)
 
+    def load_binary(self, dataframe: DataFrame, filename: str) -> None:
+        self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
+
 
 class StreakService(_S3BaseService):
     _repository: StreaksRepository
@@ -203,3 +224,28 @@ class StreakService(_S3BaseService):
 
     def extract_streak(self) -> DataFrame | None:
         return self._repository.query_streaks(parameters_schema=self._query_parameters, path=self._formatted_path)
+
+    def load_streak(self, dataframe: DataFrame, filename: str) -> None:
+        self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
+
+
+@attrs(slots=True, auto_attribs=True, kw_only=True)
+class MLModelService(_S3BaseService):
+
+    _query_parameters: MLModelQueryParametersSchema
+    _path_parameters: MLModelPathParametersSchema
+
+    def extract_ml_model(self) -> None:
+        ...
+
+    def load_ml_model(self, data: bytes, metadata: dict[str, Any], filename: str) -> None:
+        self._s3_client.put_object(
+            data=data,
+            metadata=metadata,
+            bucket=self._path_parameters.bucket,
+            key=_format_s3_key(
+                query_parameters=self._query_parameters, directory=self._path_parameters.directory, filename=filename
+            ),
+        )
+
+    _repository: None = attr(init=False, default=None)
