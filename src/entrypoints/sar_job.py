@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     ohlc: DataFrame | None = ohlc_service.extract_ohlc()
     if ohlc is None:
-        raise FileNotFoundError("There is no moving averages data.")
+        raise FileNotFoundError("There is no candlesticks data.")
     ohlc.rename(
         mapper={"open": "Open", "high": "High", "low": "Low", "close": "Close", "open_time": "datetime"},
         axis=1,

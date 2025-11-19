@@ -16,7 +16,7 @@ from src.adapters.repositories.indicators import (
 )
 from src.adapters.repositories.trades import TradesRepository
 from src.adapters.repositories.trials import SARTrialsRepository
-from src.schemas.domain.s3 import ListObjectsResponseSchema
+from src.schemas.domain.s3 import GetObjectResponseSchema, ListObjectsResponseSchema
 from src.schemas.filters import (
     ADXPathParametersSchema,
     ADXQueryParametersSchema,
@@ -235,8 +235,15 @@ class MLModelService(_S3BaseService):
     _query_parameters: MLModelQueryParametersSchema
     _path_parameters: MLModelPathParametersSchema
 
-    def extract_ml_model(self) -> None:
-        ...
+    def extract_ml_model(self) -> GetObjectResponseSchema:
+        return self._s3_client.get_object(
+            bucket=self._path_parameters.bucket,
+            key=_format_s3_key(
+                query_parameters=self._query_parameters,
+                directory=self._path_parameters.directory,
+                filename=self._objects.filename,
+            ),
+        )
 
     def load_ml_model(self, data: bytes, metadata: dict[str, Any], filename: str) -> None:
         self._s3_client.put_object(

@@ -1,7 +1,10 @@
+from ast import literal_eval
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
-from pydantic import BaseModel, Field
+from botocore.response import StreamingBody
+from pydantic import BaseModel, Field, field_validator
 
 
 class _HTTPHeadersBaseSchema(BaseModel):
@@ -22,12 +25,18 @@ class _HTTPHeadersListObjectsResponseSchema(_HTTPHeadersBaseSchema):
     vary: str
 
 
+class _HTTPHeadersGetObjectResponseSchema(_HTTPHeadersBaseSchema):
+    """HTTP header for get object S3 method."""
+
+
 class _ResponseMetadataSchema(BaseModel):
     request_id: str = Field(alias="RequestId")
     host_id: str = Field(alias="HostId")
 
     http_status_code: int = Field(alias="HTTPStatusCode")
-    http_headers: _HTTPHeadersListObjectsResponseSchema = Field(alias="HTTPHeaders")
+    http_headers: _HTTPHeadersListObjectsResponseSchema | _HTTPHeadersGetObjectResponseSchema = Field(
+        alias="HTTPHeaders"
+    )
 
     retry_attempts: int = Field(alias="RetryAttempts")
 
@@ -70,3 +79,17 @@ class ListObjectsResponseSchema(BaseModel):
             assert len(contents) == 1  # noqa: S101
             filename = contents[0].key.name
         return filename
+
+
+class GetObjectResponseSchema(BaseModel):
+    body: StreamingBody = Field(alias="Body")
+    metadata: dict[str, Any] = Field(alias="Metadata")
+    response_metadata: _ResponseMetadataSchema = Field(alias="ResponseMetadata")
+
+    @field_validator("metadata", mode="after")  # type: ignore[misc]
+    @classmethod
+    def eval_metadata(cls, metadata: dict[str, Any]) -> dict[str, Any]:
+        return {key: literal_eval(node_or_string=value) for key, value in metadata.items()}
+
+    class Config:
+        arbitrary_types_allowed = True
