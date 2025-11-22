@@ -9,7 +9,7 @@ from collinearity import SelectNonCollinear
 from duckdb import DuckDBPyConnection
 from lightgbm import LGBMRegressor
 from loguru import logger
-from numpy import argsort, array, isnan, log1p, median, ndarray, vstack
+from numpy import argsort, array, exp, isnan, log1p, median, ndarray, vstack
 from numpy.ma import masked_invalid
 from onnx import ModelProto
 from onnxconverter_common.data_types import FloatTensorType
@@ -43,7 +43,7 @@ filterwarnings("ignore")
 _RANDOM_SEED: Final[int] = 42
 _TEST_SIZE: Final[float] = 0.2
 _CORRELATION_THRESHOLD: Final[float] = 0.99
-_QUANTILE_THRESHOLD: Final[float] = 0.075
+_QUANTILE_THRESHOLD: Final[float] = 0.05
 
 
 def _identify_nearest(value: float, values: list[float] | ndarray, rank: int = 0) -> float:
@@ -56,9 +56,9 @@ def _identify_nearest(value: float, values: list[float] | ndarray, rank: int = 0
     return float(values[indices[rank]])
 
 
-def _identify_rank(row: Series, quantile_columns: list[str]) -> str | None:
+def _identify_rank(row: Series, quantile_columns: list[str], rank_column: str = "rank") -> str | None:
     for quantile_column in quantile_columns:
-        if row["rank"] == row[quantile_column]:
+        if row[rank_column] == row[quantile_column]:
             return quantile_column
     return None
 
@@ -197,26 +197,49 @@ if __name__ == "__main__":
         selector.fit(X=collinear_values)
 
         feature_columns.extend(array(collinear_columns)[selector.get_support()].tolist())
-    feature_columns.extend(adx_columns)
+    feature_columns.extend(quantile_matched_columns)
     logger.info(f"Total number of features is {len(feature_columns)}.")
 
     X_train, X_test, y_train, y_test = train_test_split(
-        train[feature_columns],
+        train[feature_columns + ["rank"]],
         train[["rank"]],
         test_size=_TEST_SIZE,
         random_state=_RANDOM_SEED,
     )
 
+    weighted_columns: list[str] = [
+        weighted_column for weighted_column in X_train.columns.tolist() if "weighted" in weighted_column
+    ]
+    X_train["weighted_weights"] = X_train.apply(
+        lambda row: _identify_nearest(value=row["rank"], values=[row[feature] for feature in weighted_columns], rank=1),
+        axis=1,
+    )
+    X_train["weighted_weights"] = X_train.apply(
+        lambda row: _identify_rank(row=row, quantile_columns=weighted_columns, rank_column="weighted_weights"), axis=1
+    )
+    weighted_weights: dict[str, float] = X_train["weighted_weights"].value_counts().to_dict()
+    sample_weight: list[float] = [exp(weighted_weights[sample.weighted_weights]) for sample in X_train.itertuples()]
+    X_train.drop(
+        columns=["rank", "weighted_weights"],
+        axis=1,
+        inplace=True,
+    )
+    X_test.drop(
+        columns=["rank"],
+        axis=1,
+        inplace=True,
+    )
+
     def objective(trial: Trial) -> float:
         params = {
-            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.5, log=True),  # noqa: WPS432
+            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.75, log=True),  # noqa: WPS432
             "n_estimators": trial.suggest_int("n_estimators", 1000, 2000),  # noqa: WPS432
+            "max_depth": trial.suggest_int("max_depth", 12, 48),  # noqa: WPS432
             "eval_metric": trial.suggest_categorical("eval_metric", ["rmse", "mae"]),
             "reg_lambda": trial.suggest_float("reg_lambda", 0.01, 0.5, log=True),  # noqa: WPS432
-            "boosting_type": trial.suggest_categorical("boosting_type", ["gbdt", "dart"]),
         }
         optuna_model: LGBMRegressor = LGBMRegressor(**params, objective="rmse", random_seed=_RANDOM_SEED, verbosity=-1)
-        optuna_model.fit(X=X_train, y=y_train, eval_set=[(X_test, y_test)])
+        optuna_model.fit(X=X_train, y=y_train, eval_set=[(X_test, y_test)], sample_weight=sample_weight)
         return float(optuna_model.best_score_["valid_0"].get("rmse"))
 
     study: Study = create_study(direction="minimize")
