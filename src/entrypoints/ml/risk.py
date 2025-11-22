@@ -43,6 +43,7 @@ filterwarnings("ignore")
 _RANDOM_SEED: Final[int] = 42
 _TEST_SIZE: Final[float] = 0.2
 _CORRELATION_THRESHOLD: Final[float] = 0.99
+_QUANTILE_THRESHOLD: Final[float] = 0.075
 
 
 def _identify_nearest(value: float, values: list[float] | ndarray, rank: int = 0) -> float:
@@ -139,7 +140,7 @@ if __name__ == "__main__":
         divergences = concat(
             objs=[divergences, DataFrame(data=[{"column": adx_column, "divergence": float(median(a=divergence))}])]
         )
-    divergences.query(f"divergence < {divergences['divergence'].quantile(0.075)}", inplace=True)  # noqa: WPS432
+    divergences.query(f"divergence < {divergences['divergence'].quantile(_QUANTILE_THRESHOLD)}", inplace=True)
     quantile_matched_columns: list[str] = divergences["column"].values.tolist()
 
     train["qmf"] = quantile_matching_fit(
@@ -160,6 +161,7 @@ if __name__ == "__main__":
         ),
         axis=1,
     )
+    logger.info(f"Correlation between target and QMF is {train[['rank', 'ticks']].corr()['rank'].ticks}.")
 
     weights: dict[str, float] = (
         train.apply(lambda row: _identify_rank(row=row, quantile_columns=quantile_matched_columns), axis=1)
@@ -173,17 +175,13 @@ if __name__ == "__main__":
     logger.info(f"Multipliers are {multipliers}.")
 
     for multiplier in multipliers:
-        train = weighted_average_by(
-            dataframe=train, columns=list(weights.keys()), multiplier=multiplier, weights=weights
-        )
-        validation = weighted_average_by(
-            dataframe=validation, columns=list(weights.keys()), multiplier=multiplier, weights=weights
-        )
+        train = weighted_average_by(dataframe=train, multiplier=multiplier, weights=weights)
+        validation = weighted_average_by(dataframe=validation, multiplier=multiplier, weights=weights)
         logger.info(f"{multiplier} multiplier is ready.")
 
     feature_columns: list[str] = []
     for prefix, multiplier in product(  # noqa: WPS440
-        ["weighted", "inverse", "average"],
+        ["weighted"],
         multipliers if max(multipliers) != len(quantile_matched_columns) else multipliers[:-1],  # noqa: WPS504
     ):  # noqa: WPS335
         collinear_columns: list[str] = [
@@ -199,7 +197,7 @@ if __name__ == "__main__":
         selector.fit(X=collinear_values)
 
         feature_columns.extend(array(collinear_columns)[selector.get_support()].tolist())
-    feature_columns.extend(quantile_matched_columns)
+    feature_columns.extend(adx_columns)
     logger.info(f"Total number of features is {len(feature_columns)}.")
 
     X_train, X_test, y_train, y_test = train_test_split(
@@ -222,7 +220,7 @@ if __name__ == "__main__":
         return float(optuna_model.best_score_["valid_0"].get("rmse"))
 
     study: Study = create_study(direction="minimize")
-    study.optimize(func=objective, n_trials=1, gc_after_trial=True, show_progress_bar=True)
+    study.optimize(func=objective, n_trials=5, gc_after_trial=True, show_progress_bar=True)
 
     model: LGBMRegressor = LGBMRegressor(
         **study.best_params,
@@ -241,6 +239,9 @@ if __name__ == "__main__":
         "multipliers": str(multipliers),
         "columns": str(feature_columns),
     }
+
+    validation["y"] = model.predict(validation[feature_columns])
+    validation.to_csv("data.csv", index=False)
 
     ml_model_service.load_ml_model(data=serialized_proto, metadata=artifacts, filename=f"{uuid1()}.onnx")
 

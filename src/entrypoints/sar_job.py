@@ -128,7 +128,7 @@ if __name__ == "__main__":
         return cagr / abs(drawdown)
 
     study: Study = create_study(direction="maximize")
-    study.optimize(func=objective, n_trials=10_000, n_jobs=12, gc_after_trial=True)  # noqa: WPS432
+    study.optimize(func=objective, n_trials=1000, n_jobs=12, gc_after_trial=True)  # noqa: WPS432
     incoming_trials: DataFrame = study.trials_dataframe()
     incoming_trials = incoming_trials[
         [

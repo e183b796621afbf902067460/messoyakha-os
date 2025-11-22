@@ -6,7 +6,7 @@ from boto3 import Session
 from duckdb import DuckDBPyConnection
 from numpy import ndarray
 from pandas import DataFrame, Series
-from talib import EMA, KAMA, SMA, TRIMA
+from talib import EMA, KAMA, SMA, TEMA, TRIMA
 
 from src.adapters.clients.s3 import S3Client
 from src.adapters.connections.duckdb import get_duckdb_connection
@@ -77,8 +77,8 @@ if __name__ == "__main__":
         raise FileNotFoundError("There is no candlesticks data.")
     candlesticks.drop_duplicates(inplace=True)
 
-    moving_average_methods: list[Callable[[ndarray, int], ndarray]] = [TRIMA, SMA, EMA, KAMA]
-    moving_average_windows: list[int] = [2**2, 2**4, 2**6, 2**8]
+    moving_average_methods: list[Callable[[ndarray, int], ndarray]] = [TRIMA, SMA, EMA, TEMA, KAMA]
+    moving_average_windows: list[int] = [2**2, 2**4, 2**6, 2**8, 2**10]
     for moving_average_method in moving_average_methods:
         for moving_average_window in moving_average_windows:
             candlesticks = _compute_moving_average(

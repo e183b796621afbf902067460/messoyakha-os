@@ -1,9 +1,11 @@
 # pylint: disable=duplicate-code
-from secrets import randbelow
+from typing import Final
 from uuid import uuid1
+from warnings import filterwarnings
 
 from boto3 import Session
 from duckdb import DuckDBPyConnection
+from loguru import logger
 from pandas import DataFrame, Series, concat, to_datetime  # noqa: WPS347
 
 from src.adapters.clients.s3 import S3Client
@@ -26,6 +28,10 @@ from src.schemas.trials import SARParametersSchema
 from src.services.domain.s3 import MAService, OHLCService, ROIService, SARService
 from src.services.trend import backtest
 from src.settings import settings
+
+filterwarnings("ignore")
+
+_QUANTILE_THRESHOLD: Final[float] = 0.75
 
 if __name__ == "__main__":
     s3_client: S3Client = S3Client(
@@ -100,22 +106,27 @@ if __name__ == "__main__":
         raise FileNotFoundError("There is no trials data.")
     trials.drop_duplicates(inplace=True)
 
-    top_percentile: int = int(0.1 * len(trials))  # noqa: WPS432
-    stochastic_parameters_indexes: list[int] = [
-        randbelow(exclusive_upper_bound=top_percentile) for _ in range(int(top_percentile * 0.2))  # noqa: WPS432
-    ]
+    quantile_metric: float = trials["value"].quantile(_QUANTILE_THRESHOLD)
+    logger.info(f"Quantile metric is {quantile_metric}.")
+
+    trials.query(f"value > {quantile_metric}", inplace=True)
+    logger.info(f"Total unique parameters number is {len(trials)}.")
 
     trades: list[DataFrame] | DataFrame = []
-    for stochastic_parameters_index in stochastic_parameters_indexes:
-        parameters_schema: SARParametersSchema = SARParametersSchema(
-            **trials.iloc[stochastic_parameters_index].to_dict()
-        )
+    for row in trials.itertuples():
+        parameters_schema: SARParametersSchema = SARParametersSchema(**row._asdict())
         statistics: Series = backtest(data=ohlc, parameters_schema=parameters_schema)
         statistics["_trades"]["Ticks"] = statistics["_trades"]["ExitBar"] - statistics["_trades"]["EntryBar"]
         statistics["_trades"]["IsLong"] = (statistics["_trades"]["Size"] > 0).astype(int)
         trades.append(statistics["_trades"][["EntryTime", "ReturnPct", "Ticks", "IsLong"]])
+
+        cagr: float = statistics.iloc[11] / 10**2  # noqa: WPS432
+        drawdown: float = statistics.iloc[17] / 10**2  # noqa: WPS432
+
+        logger.info(f"Metric is {cagr / abs(drawdown)}.")
+
     trades = concat(trades)
-    trades.sort_values(by="ReturnPct")
+    trades.sort_values(by="ReturnPct", ascending=True, inplace=True)
     trades.drop_duplicates(subset="EntryTime", keep="first", inplace=True)
     trades.rename(
         mapper={"ReturnPct": "pct", "IsLong": "is_long", "Ticks": "ticks", "EntryTime": "datetime"},
