@@ -12,13 +12,15 @@ from talib import SAREXT
 from src.adapters.clients.s3 import S3Client
 from src.adapters.connections.duckdb import get_duckdb_connection
 from src.adapters.repositories.candlesticks import CandlesticksRepository
-from src.adapters.repositories.indicators import ADXRepository, MARepository
+from src.adapters.repositories.indicators import ADXRepository, AroonRepository, MARepository
 from src.adapters.repositories.trials import SARTrialsRepository
 from src.schemas.backtests import BacktestParametersSchema
 from src.schemas.domain.s3 import GetObjectResponseSchema
 from src.schemas.filters import (
     ADXPathParametersSchema,
     ADXQueryParametersSchema,
+    AroonPathParametersSchema,
+    AroonQueryParametersSchema,
     MAPathParametersSchema,
     MAQueryParametersSchema,
     MLModelPathParametersSchema,
@@ -29,11 +31,12 @@ from src.schemas.filters import (
     SARTrialQueryParametersSchema,
 )
 from src.schemas.trials import SARParametersSchema
-from src.services.domain.s3 import ADXService, MAService, MLModelService, OHLCService, SARService
+from src.services.domain.s3 import ADXService, AroonService, MAService, MLModelService, OHLCService, SARService
 from src.services.statistic import weighted_average_by
 from src.services.trend import MA, MLTrendStrategy
 from src.settings import settings
 
+# pylint: disable=too-complex
 if __name__ == "__main__":
     s3_client: S3Client = S3Client(
         session=Session(
@@ -64,6 +67,14 @@ if __name__ == "__main__":
         ),
         path_parameters=ADXPathParametersSchema(bucket=settings.S3_BUCKET, directory="average-directional-indexes"),
     )
+    aroon_service: AroonService = AroonService(
+        s3_client=s3_client,
+        repository=AroonRepository(connection=duckdb_connection),
+        query_parameters=AroonQueryParametersSchema(
+            ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
+        ),
+        path_parameters=AroonPathParametersSchema(bucket=settings.S3_BUCKET, directory="aroons"),
+    )
     ma_service: MAService = MAService(
         s3_client=s3_client,
         repository=MARepository(connection=duckdb_connection),
@@ -80,12 +91,12 @@ if __name__ == "__main__":
         ),
         path_parameters=SARTrialPathParametersSchema(bucket=settings.S3_BUCKET, directory="stop-and-reverse-trials"),
     )
-    ml_model_service: MLModelService = MLModelService(
+    regression_model_service: MLModelService = MLModelService(
         s3_client=s3_client,
         query_parameters=MLModelQueryParametersSchema(
             ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
         ),
-        path_parameters=MLModelPathParametersSchema(bucket=settings.S3_BUCKET, directory="models"),
+        path_parameters=MLModelPathParametersSchema(bucket=settings.S3_BUCKET, directory="regression"),
     )
 
     ohlc: DataFrame | None = ohlc_service.extract_ohlc()
@@ -109,6 +120,11 @@ if __name__ == "__main__":
         raise FileNotFoundError("There is no average directional indexes data.")
     average_directional_indexes.drop_duplicates(inplace=True)
 
+    aroons: DataFrame | None = aroon_service.extract_aroon()
+    if aroons is None:
+        raise FileNotFoundError("There is no aroons data.")
+    aroons.drop_duplicates(inplace=True)
+
     trials: DataFrame | None = sar_service.extract_sar()
     if trials is None:
         raise FileNotFoundError("There is no trials data.")
@@ -119,6 +135,7 @@ if __name__ == "__main__":
     ohlc = ohlc.merge(
         right=average_directional_indexes, how="left", on=["exchange", "section", "ticker", "interval", "datetime"]
     )
+    ohlc = ohlc.merge(right=aroons, how="left", on=["exchange", "section", "ticker", "interval", "datetime"])
     ohlc.dropna(
         subset=[
             f"{MA}_open",
@@ -128,6 +145,7 @@ if __name__ == "__main__":
         ],
         inplace=True,
     )
+    logger.info(f"The end of data is {ohlc['datetime'].max()}.")
 
     parameters_schema: SARParametersSchema = SARParametersSchema(**trials.iloc[stochastic_parameters_index].to_dict())
     ohlc["sar"] = SAREXT(
@@ -137,17 +155,22 @@ if __name__ == "__main__":
     )
     ohlc["sar"] = abs(ohlc["sar"])
 
-    ml_model_response_schema: GetObjectResponseSchema = ml_model_service.extract_ml_model()
-    ml_model_inference_session: InferenceSession = InferenceSession(ml_model_response_schema.body.read())
+    regression_model_response_schema: GetObjectResponseSchema = regression_model_service.extract_ml_model()
+    regression_model_inference_session: InferenceSession = InferenceSession(
+        regression_model_response_schema.body.read()
+    )
+    regression_model_response_schema.metadata = regression_model_response_schema.eval_metadata(
+        metadata=regression_model_inference_session.get_modelmeta().custom_metadata_map
+    )
 
-    for multiplier in ml_model_response_schema.metadata["multipliers"]:
-        ohlc = weighted_average_by(
-            dataframe=ohlc,
-            columns=list(ml_model_response_schema.metadata["weights"].keys()),
-            multiplier=multiplier,
-            weights=ml_model_response_schema.metadata["weights"],
-        )
-        logger.info(f"{multiplier} multiplier is ready.")
+    for rank in range(1, int(regression_model_response_schema.metadata["range"])):
+        for multiplier in regression_model_response_schema.metadata[f"{rank}_multipliers"]:
+            ohlc = weighted_average_by(
+                dataframe=ohlc,
+                multiplier=multiplier,
+                weights=regression_model_response_schema.metadata[f"{rank}_weights"],
+            )
+            logger.info(f"Regression {multiplier}-multiplier is ready.")
 
     ohlc["datetime"] = to_datetime(ohlc["datetime"])
     ohlc["year"] = ohlc["datetime"].dt.year
@@ -160,15 +183,14 @@ if __name__ == "__main__":
         strategy=MLTrendStrategy,
         trade_on_close=False,
         hedging=False,
-        finalize_trades=False,
+        finalize_trades=True,
         exclusive_orders=True,
         **BacktestParametersSchema().model_dump(),
     )
 
     # pylint: disable=protected-access
-    test._strategy.ml_model_inference_session = ml_model_inference_session
-    test._strategy.ml_model_response_schema = ml_model_response_schema
-
+    test._strategy.regression_model_inference_session = regression_model_inference_session
+    test._strategy.regression_model_response_schema = regression_model_response_schema
     # pylint: enable=protected-access
 
     statistics: Series = test.run(

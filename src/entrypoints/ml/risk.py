@@ -1,24 +1,21 @@
 # pylint: disable=duplicate-code
-from itertools import product
 from typing import Final
 from uuid import uuid1
 from warnings import filterwarnings
 
 from boto3 import Session
-from collinearity import SelectNonCollinear
 from duckdb import DuckDBPyConnection
 from lightgbm import LGBMRegressor
 from loguru import logger
-from numpy import argsort, array, exp, isnan, log1p, median, ndarray, vstack
+from numpy import log1p, median, ndarray, vstack
 from numpy.ma import masked_invalid
-from onnx import ModelProto
+from onnx import ModelProto, StringStringEntryProto
 from onnxconverter_common.data_types import FloatTensorType
 from onnxmltools import convert_lightgbm
 from optuna import Study, Trial, create_study
 from pandas import DataFrame, Series, concat, to_datetime  # noqa: WPS347
-from scipy.special import kl_div
+from scipy.special import inv_boxcox, kl_div
 from scipy.stats import boxcox
-from sklearn.feature_selection import f_regression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
@@ -35,32 +32,21 @@ from src.schemas.filters import (
     TradeQueryParametersSchema,
 )
 from src.services.domain.s3 import ADXService, MLModelService, ROIService
-from src.services.statistic import quantile_matching_fit, weighted_average_by
+from src.services.statistic import qq, weighted_average_by
+from src.services.target import TargetEngineeringService
 from src.settings import settings
 
 filterwarnings("ignore")
 
 _RANDOM_SEED: Final[int] = 42
 _TEST_SIZE: Final[float] = 0.2
-_CORRELATION_THRESHOLD: Final[float] = 0.99
-_QUANTILE_THRESHOLD: Final[float] = 0.05
 
+_DIVERGENCE_THRESHOLD: Final[float] = 0.1
+_CORRELATION_THRESHOLD: Final[float] = 0.5
+_RANGE: Final[int] = 3
 
-def _identify_nearest(value: float, values: list[float] | ndarray, rank: int = 0) -> float:
-    values = array(object=values)
-    values = values[~isnan(values)]
-
-    distances: ndarray = abs(values - value)  # type: ignore[operator, arg-type]
-    indices: ndarray = argsort(a=distances)
-
-    return float(values[indices[rank]])
-
-
-def _identify_rank(row: Series, quantile_columns: list[str], rank_column: str = "rank") -> str | None:
-    for quantile_column in quantile_columns:
-        if row[rank_column] == row[quantile_column]:
-            return quantile_column
-    return None
+_TICKS_WEIGHT: Final[int] = 10
+_RANK_WEIGHT: int = 100 - _TICKS_WEIGHT
 
 
 # pylint: disable=too-complex,cell-var-from-loop
@@ -99,7 +85,7 @@ if __name__ == "__main__":
         query_parameters=MLModelQueryParametersSchema(
             ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
         ),
-        path_parameters=MLModelPathParametersSchema(bucket=settings.S3_BUCKET, directory="models"),
+        path_parameters=MLModelPathParametersSchema(bucket=settings.S3_BUCKET, directory="regression"),
     )
 
     adx: DataFrame | None = adx_service.extract_adx()
@@ -112,6 +98,7 @@ if __name__ == "__main__":
     if roi is None:
         raise FileNotFoundError("There is no trades data.")
     roi.drop_duplicates(inplace=True)
+    logger.info(f"Shape of ROI is {roi.shape}.")
 
     roi = roi.merge(right=adx, how="left", on=["exchange", "section", "ticker", "interval", "datetime"])
     roi["datetime"] = to_datetime(roi["datetime"])
@@ -123,7 +110,7 @@ if __name__ == "__main__":
 
     target_scaler: MinMaxScaler = MinMaxScaler()
 
-    train["ticks"] = log1p(train["ticks"])
+    train["ticks"] = log1p(train["ticks"])  # noqa: WPS204
     validation["ticks"] = log1p(validation["ticks"])
 
     optimizer: float
@@ -131,7 +118,11 @@ if __name__ == "__main__":
     train["ticks"] = target_scaler.fit_transform(X=vstack(tup=train["ticks"])).flatten()
     validation["ticks"] = boxcox(x=validation["ticks"], lmbda=optimizer)
     validation["ticks"] = target_scaler.transform(X=vstack(tup=validation["ticks"])).flatten()
-    logger.info(f"Target median is {train.ticks.median()}.")
+
+    target_median: float = train.ticks.quantile(0.5)
+    target_median_unscaled: float = target_scaler.inverse_transform(X=vstack(tup=[target_median]))
+    target_median_inverse: float = inv_boxcox(target_median_unscaled, optimizer)[0][0]
+    logger.info(f"Target median is {target_median} ({target_median_inverse}).")
 
     divergences: DataFrame = DataFrame()
     for adx_column in adx_columns:  # noqa: WPS426
@@ -140,110 +131,91 @@ if __name__ == "__main__":
         divergences = concat(
             objs=[divergences, DataFrame(data=[{"column": adx_column, "divergence": float(median(a=divergence))}])]
         )
-    divergences.query(f"divergence < {divergences['divergence'].quantile(_QUANTILE_THRESHOLD)}", inplace=True)
-    quantile_matched_columns: list[str] = divergences["column"].values.tolist()
+    divergences.query(f"divergence < {divergences['divergence'].quantile(_DIVERGENCE_THRESHOLD)}", inplace=True)
+    rank_target_columns: list[str] = divergences["column"].values.tolist()
 
-    train["qmf"] = quantile_matching_fit(
-        a=train["ticks"].values, b=train[quantile_matched_columns].values.flatten().tolist()  # noqa: WPS221
-    )
-    validation["qmf"] = quantile_matching_fit(
-        a=validation["ticks"].values, b=train[quantile_matched_columns].values.flatten().tolist()  # noqa: WPS221
-    )
     train["rank"] = train.apply(
-        lambda row: _identify_nearest(
-            value=row["qmf"], values=[row[feature] for feature in quantile_matched_columns], rank=1
-        ),
+        lambda row: qq(tick=row["ticks"], ticks=train["ticks"], q=train[rank_target_columns], row=row),
         axis=1,
     )
     validation["rank"] = validation.apply(
-        lambda row: _identify_nearest(
-            value=row["qmf"], values=[row[feature] for feature in quantile_matched_columns], rank=1
-        ),
+        lambda row: qq(tick=row["ticks"], ticks=train["ticks"], q=validation[rank_target_columns], row=row),
         axis=1,
     )
     logger.info(f"Correlation between target and QMF is {train[['rank', 'ticks']].corr()['rank'].ticks}.")
 
-    weights: dict[str, float] = (
-        train.apply(lambda row: _identify_rank(row=row, quantile_columns=quantile_matched_columns), axis=1)
-        .value_counts()
-        .to_dict()
-    )
-    multipliers: list[int] = [
-        multiplier for multiplier in range(2, len(quantile_matched_columns) + 1) if multiplier % 2 == 0
-    ]
-    logger.info(f"Weights are {weights}.")
-    logger.info(f"Multipliers are {multipliers}.")
-
-    for multiplier in multipliers:
-        train = weighted_average_by(dataframe=train, multiplier=multiplier, weights=weights)
-        validation = weighted_average_by(dataframe=validation, multiplier=multiplier, weights=weights)
-        logger.info(f"{multiplier} multiplier is ready.")
-
-    feature_columns: list[str] = []
-    for prefix, multiplier in product(  # noqa: WPS440
-        ["weighted"],
-        multipliers if max(multipliers) != len(quantile_matched_columns) else multipliers[:-1],  # noqa: WPS504
-    ):  # noqa: WPS335
-        collinear_columns: list[str] = [
-            collinear_column
-            for collinear_column in train.columns.tolist()
-            if collinear_column.startswith(f"{multiplier}_{prefix}")
-        ]
-        collinear_values: ndarray = train[collinear_columns].values
-
-        selector: SelectNonCollinear = SelectNonCollinear(
-            correlation_threshold=_CORRELATION_THRESHOLD, scoring=f_regression
+    ranks: dict[int, TargetEngineeringService] = {}
+    for rank in range(1, _RANGE):  # noqa: WPS426
+        target_engineering_service: TargetEngineeringService = TargetEngineeringService(
+            target_data=train, target_columns=rank_target_columns
         )
-        selector.fit(X=collinear_values)
+        logger.info(f"({rank}) Weights are {target_engineering_service.weights}.")
+        logger.info(f"({rank}) Multipliers are {target_engineering_service.multipliers}.")
 
-        feature_columns.extend(array(collinear_columns)[selector.get_support()].tolist())
-    feature_columns.extend(quantile_matched_columns)
+        for multiplier in target_engineering_service.multipliers:
+            train = weighted_average_by(
+                dataframe=train, multiplier=multiplier, weights=target_engineering_service.weights
+            )
+            validation = weighted_average_by(
+                dataframe=validation, multiplier=multiplier, weights=target_engineering_service.weights
+            )
+            logger.info(f"Multiplier {multiplier} is ready.")
+
+        columns: list[str] = [column for column in train.columns.tolist() if "weighted" in column]
+        correlations: Series = train[columns + ["rank"]].corr(method="spearman")["rank"].sort_values()
+        threshold: float = correlations.quantile(_CORRELATION_THRESHOLD)
+        correlations = correlations[correlations > threshold]
+
+        rank_target_columns = correlations.index.tolist()
+        rank_target_columns.remove("rank")
+
+        train["rank"] = train.apply(
+            lambda row: qq(tick=row["ticks"], ticks=train["ticks"], q=train[rank_target_columns], row=row),
+            axis=1,
+        )
+        validation["rank"] = validation.apply(
+            lambda row: qq(tick=row["ticks"], ticks=train["ticks"], q=validation[rank_target_columns], row=row),
+            axis=1,
+        )
+        ranks.update({rank: target_engineering_service})
+
+        logger.info(f"({rank}) Correlation between target and QMF is {train[['rank', 'ticks']].corr()['rank'].ticks}.")
+
+    feature_columns: list[str] = adx_columns + [
+        weighted_column for weighted_column in train.columns.tolist() if "weighted" in weighted_column
+    ]
     logger.info(f"Total number of features is {len(feature_columns)}.")
 
+    train["rank"] = (train["rank"] * _RANK_WEIGHT + train["ticks"] * _TICKS_WEIGHT) / sum([_TICKS_WEIGHT, _RANK_WEIGHT])
+    validation["rank"] = (validation["rank"] * _RANK_WEIGHT + validation["ticks"] * _TICKS_WEIGHT) / sum(
+        [_TICKS_WEIGHT, _RANK_WEIGHT]
+    )
+    logger.info(f"Correlation between target and QMF is {train[['rank', 'ticks']].corr()['rank'].ticks}.")
+
     X_train, X_test, y_train, y_test = train_test_split(
-        train[feature_columns + ["rank"]],
+        train[feature_columns],
         train[["rank"]],
         test_size=_TEST_SIZE,
         random_state=_RANDOM_SEED,
     )
 
-    weighted_columns: list[str] = [
-        weighted_column for weighted_column in X_train.columns.tolist() if "weighted" in weighted_column
-    ]
-    X_train["weighted_weights"] = X_train.apply(
-        lambda row: _identify_nearest(value=row["rank"], values=[row[feature] for feature in weighted_columns], rank=1),
-        axis=1,
-    )
-    X_train["weighted_weights"] = X_train.apply(
-        lambda row: _identify_rank(row=row, quantile_columns=weighted_columns, rank_column="weighted_weights"), axis=1
-    )
-    weighted_weights: dict[str, float] = X_train["weighted_weights"].value_counts().to_dict()
-    sample_weight: list[float] = [exp(weighted_weights[sample.weighted_weights]) for sample in X_train.itertuples()]
-    X_train.drop(
-        columns=["rank", "weighted_weights"],
-        axis=1,
-        inplace=True,
-    )
-    X_test.drop(
-        columns=["rank"],
-        axis=1,
-        inplace=True,
-    )
-
     def objective(trial: Trial) -> float:
         params = {
-            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.75, log=True),  # noqa: WPS432
-            "n_estimators": trial.suggest_int("n_estimators", 1000, 2000),  # noqa: WPS432
-            "max_depth": trial.suggest_int("max_depth", 12, 48),  # noqa: WPS432
-            "eval_metric": trial.suggest_categorical("eval_metric", ["rmse", "mae"]),
+            "learning_rate": trial.suggest_float("learning_rate", 0.00001, 0.1, log=True),  # noqa: WPS432
+            "n_estimators": trial.suggest_int("n_estimators", 2**10, 2**12),  # noqa: WPS432
+            "max_depth": trial.suggest_int("max_depth", 2**4, 2**10),  # noqa: WPS432
+            "num_leaves": trial.suggest_int("num_leaves", 2**4, 2**10),  # noqa: WPS432
             "reg_lambda": trial.suggest_float("reg_lambda", 0.01, 0.5, log=True),  # noqa: WPS432
+            "reg_alpha": trial.suggest_float("reg_alpha", 0.01, 0.5, log=True),  # noqa: WPS432
+            "feature_fraction": trial.suggest_float("feature_fraction", 0.1, 0.5),  # noqa: WPS432
+            "boosting_type": trial.suggest_categorical("boosting_type", ["rf", "gbdt"]),
         }
         optuna_model: LGBMRegressor = LGBMRegressor(**params, objective="rmse", random_seed=_RANDOM_SEED, verbosity=-1)
-        optuna_model.fit(X=X_train, y=y_train, eval_set=[(X_test, y_test)], sample_weight=sample_weight)
+        optuna_model.fit(X=X_train, y=y_train, eval_set=[(X_test, y_test)])
         return float(optuna_model.best_score_["valid_0"].get("rmse"))
 
     study: Study = create_study(direction="minimize")
-    study.optimize(func=objective, n_trials=5, gc_after_trial=True, show_progress_bar=True)
+    study.optimize(func=objective, n_trials=10, gc_after_trial=True, show_progress_bar=True)
 
     model: LGBMRegressor = LGBMRegressor(
         **study.best_params,
@@ -252,21 +224,22 @@ if __name__ == "__main__":
         verbosity=-1,
     )
     model.fit(X=X_train, y=y_train, eval_set=[(X_test, y_test)])
+    feature_importance: DataFrame = DataFrame({"feature": feature_columns, "importance": model.feature_importances_})
+    feature_importance.to_csv("feature_importance.csv", index=False)
 
     proto: ModelProto = convert_lightgbm(
         model=model, initial_types=[("input", FloatTensorType([None, len(feature_columns)]))]
     )
+    for rank, service in ranks.items():  # noqa: WPS440
+        proto.metadata_props.append(StringStringEntryProto(key=f"{rank}_weights", value=str(service.weights)))
+        proto.metadata_props.append(StringStringEntryProto(key=f"{rank}_multipliers", value=str(service.multipliers)))
+    proto.metadata_props.append(StringStringEntryProto(key="range", value=str(_RANGE)))
+    proto.metadata_props.append(StringStringEntryProto(key="columns", value=str(feature_columns)))
     serialized_proto: bytes = proto.SerializeToString()
-    artifacts: dict[str, str | int | float | list[str | int]] = {
-        "weights": str(weights),
-        "multipliers": str(multipliers),
-        "columns": str(feature_columns),
-    }
 
     validation["y"] = model.predict(validation[feature_columns])
     validation.to_csv("data.csv", index=False)
 
-    ml_model_service.load_ml_model(data=serialized_proto, metadata=artifacts, filename=f"{uuid1()}.onnx")
-
+    ml_model_service.load_ml_model(data=serialized_proto, metadata=None, filename=f"{uuid1()}.onnx")
 
 # pylint: enable=duplicate-code,too-complex,cell-var-from-loop

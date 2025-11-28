@@ -245,7 +245,7 @@ class MLModelService(_S3BaseService):
             ),
         )
 
-    def load_ml_model(self, data: bytes, metadata: dict[str, Any], filename: str) -> None:
+    def load_ml_model(self, data: bytes, metadata: dict[str, Any] | None, filename: str) -> None:
         self._s3_client.put_object(
             data=data,
             metadata=metadata,

@@ -1,11 +1,15 @@
+# pylint: disable=duplicate-code
 from typing import Final
 from uuid import uuid1
 from warnings import filterwarnings
 
 from boto3 import Session
+from collinearity import SelectNonCollinear
 from duckdb import DuckDBPyConnection
-from numpy import log1p
+from loguru import logger
+from numpy import array, log1p, ndarray
 from pandas import DataFrame, concat
+from sklearn.feature_selection import f_regression
 from sklearn.preprocessing import MinMaxScaler
 from talib import AROONOSC
 
@@ -22,9 +26,11 @@ from src.schemas.filters import (
 from src.services.domain.s3 import AroonService, MAService
 from src.settings import settings
 
+# pylint: enable=duplicate-code
+
 filterwarnings("ignore")
 
-_CORRELATION_THRESHOLD: Final[float] = 0.99
+_CORRELATION_THRESHOLD: Final[float] = 0.9
 
 
 # pylint: disable=redefined-outer-name
@@ -78,6 +84,9 @@ if __name__ == "__main__":
         path_parameters=AroonPathParametersSchema(bucket=settings.S3_BUCKET, directory="aroons"),
     )
 
+    feature_selector: SelectNonCollinear = SelectNonCollinear(
+        correlation_threshold=_CORRELATION_THRESHOLD, scoring=f_regression
+    )
     feature_scaler: MinMaxScaler = MinMaxScaler()
 
     moving_averages: DataFrame | None = ma_service.extract_ma()
@@ -104,11 +113,22 @@ if __name__ == "__main__":
         axis=1,
         inplace=True,
     )
-    aroons: DataFrame = moving_averages.copy(deep=True)
+    moving_averages.dropna(inplace=True)
+
+    feature_columns: list[str] = [column for column in moving_averages.columns.tolist() if column.startswith("aroon")]
+    feature_values: ndarray = moving_averages[feature_columns].values
+
+    feature_selector.fit(X=feature_values)
+
+    aroon_columns: list[str] = array(feature_columns)[feature_selector.get_support()].tolist()
+    aroons: DataFrame = moving_averages[aroon_columns].copy(deep=True)
+
+    aroons["exchange"] = settings.EXCHANGE
+    aroons["section"] = settings.SECTION
+    aroons["ticker"] = settings.TICKER
+    aroons["interval"] = settings.INTERVAL
+    aroons["datetime"] = moving_averages["datetime"].values
     aroons["year"] = aroons["datetime"].dt.year
-    aroon_columns: list[str] = [
-        aroon_column for aroon_column in aroons.columns.tolist() if aroon_column.startswith("aroon")
-    ]
 
     train: DataFrame = aroons.query(f"year < {settings.TRIGGER_DATE.year - 1}")
     validation: DataFrame = aroons.query(f"year >= {settings.TRIGGER_DATE.year - 1}")
@@ -134,6 +154,8 @@ if __name__ == "__main__":
 
     aroons = concat(objs=[train, validation])
     aroons.sort_values(by="datetime", inplace=True)
+    logger.info(f"There are {len(aroon_columns)} features in total.")
+    logger.info(f"The features are: {aroon_columns}.")
 
     aroon_service.load_aroon(dataframe=aroons, filename=f"{uuid1()}.parquet")
     aroon_service.delete_object()

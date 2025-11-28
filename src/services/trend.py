@@ -10,25 +10,17 @@ from src.schemas.backtests import BacktestParametersSchema
 from src.schemas.domain.s3 import GetObjectResponseSchema
 from src.schemas.trials import SARParametersSchema
 
-MA: Literal["kama_64"] = "kama_64"
-
-
-def _leverage(risk: float) -> int:
-    if 0.5 <= risk < 0.625:  # noqa: WPS432
-        return 2
-    if 0.625 <= risk < 0.75:  # noqa: WPS432
-        return 4
-    if 0.75 <= risk < 0.875:  # noqa: WPS432
-        return 4
-    return 2
+MA: Literal["kama_4"] = "kama_4"
 
 
 class _MLStrategy(Strategy):
 
     # pylint: disable=attribute-defined-outside-init
     def init(self) -> None:
-        self._ml_model_inference_session: InferenceSession
-        self._ml_model_response_schema: GetObjectResponseSchema
+        self._regression_model_inference_session: InferenceSession
+        self._regression_model_response_schema: GetObjectResponseSchema
+
+        self._duration: int = 0
 
     # pylint: enable=attribute-defined-outside-init
 
@@ -36,18 +28,26 @@ class _MLStrategy(Strategy):
         ...
 
     @property
-    def _inference_features(self) -> ndarray:
+    def _regression_inference_features(self) -> ndarray:
         return array(  # type: ignore[no-any-return]
-            [[self.data[column][-1] for column in self.ml_model_response_schema.metadata["columns"]]], dtype=float32
+            [[self.data[column][-1] for column in self.regression_model_response_schema.metadata["columns"]]],
+            dtype=float32,
         )
 
     @property
-    def ml_model_inference_session(self) -> InferenceSession:
-        return self._ml_model_inference_session
+    def regression_model_inference_session(self) -> InferenceSession:
+        return self._regression_model_inference_session
 
     @property
-    def ml_model_response_schema(self) -> GetObjectResponseSchema:
-        return self._ml_model_response_schema
+    def regression_model_response_schema(self) -> GetObjectResponseSchema:
+        return self._regression_model_response_schema
+
+    def _estimate_risk(self) -> float:
+        return float(
+            self.regression_model_inference_session.run(
+                None, input_feed={"input": self._regression_inference_features}
+            )[0][0][0]
+        )
 
 
 class _BullishTrendStrategy(Strategy):
@@ -81,32 +81,6 @@ class _BullishTrendStrategy(Strategy):
                 self.buy(size=size)
             except ValueError:
                 ...  # noqa: WPS428
-
-    # pylint: enable=protected-access
-
-
-class _MLBullishTrendStrategy(_MLStrategy, _BullishTrendStrategy):
-    def init(self) -> None:
-        _MLStrategy.init(self=self)
-
-    # pylint: disable=protected-access
-    def next(self) -> None:
-        if self._is_bull_reversal() and not self.position.is_long:
-            self.position.close()
-
-            risk: float = float(
-                self.ml_model_inference_session.run(None, input_feed={"input": self._inference_features})[0][0][0]
-            )
-            leverage: int = _leverage(risk=risk)
-            size: int = int(ceil(self._broker._cash * risk / self.data.Close[-1]))  # noqa: WPS432
-
-            if risk > 0.5:
-                try:
-                    self.buy(size=size * leverage)
-                except ValueError:
-                    ...  # noqa: WPS428
-            else:
-                self.sell(size=size)
 
     # pylint: enable=protected-access
 
@@ -146,30 +120,60 @@ class _BearishTrendStrategy(Strategy):
     # pylint: enable=protected-access
 
 
-class _MLBearishTrendStrategy(_MLStrategy, _BearishTrendStrategy):
+class _MLBullishTrendStrategy(_MLStrategy, _BullishTrendStrategy):
+    @property
+    def _ma_high_on_bull_market(self) -> Any:
+        return self._data[f"{self.ma_on_bull_market_prefix}_high"]
+
     def init(self) -> None:
         _MLStrategy.init(self=self)
 
-    # pylint: disable=protected-access
+    # pylint: disable=protected-access, attribute-defined-outside-init
     def next(self) -> None:
-        if self._is_bear_reversal() and not self.position.is_short:
+        if self.position.is_long:
+            self._duration += 1
+            if self.data.Close[-1] < self._sar_on_bull_market[-1]:
+                self.position.close()
+
+        if self._is_bull_reversal():
             self.position.close()
 
-            risk: float = float(
-                self.ml_model_inference_session.run(None, input_feed={"input": self._inference_features})[0][0][0]
-            )
-            leverage: int = _leverage(risk=risk)
+            risk: float = self._estimate_risk()
             size: int = int(ceil(self._broker._cash * risk / self.data.Close[-1]))  # noqa: WPS432
 
             if risk > 0.5:
-                try:
-                    self.sell(size=size * leverage)
-                except ValueError:
-                    ...  # noqa: WPS428
-            else:
-                self.buy(size=size)
+                self.buy(size=size * 5)
+            self._duration = 1
 
-    # pylint: enable=protected-access
+    # pylint: enable=protected-access, attribute-defined-outside-init
+
+
+class _MLBearishTrendStrategy(_MLStrategy, _BearishTrendStrategy):
+    @property
+    def _ma_low_on_bear_market(self) -> Any:
+        return self._data[f"{self.ma_on_bear_market_prefix}_low"]
+
+    def init(self) -> None:
+        _MLStrategy.init(self=self)
+
+    # pylint: disable=protected-access, attribute-defined-outside-init
+    def next(self) -> None:
+        if self.position.is_short:
+            self._duration += 1
+            if self.data.Close[-1] > self._sar_on_bear_market[-1]:
+                self.position.close()
+
+        if self._is_bear_reversal():
+            self.position.close()
+
+            risk: float = self._estimate_risk()
+            size: int = int(ceil(self._broker._cash * risk / self.data.Close[-1]))  # noqa: WPS432
+
+            if risk > 0.5:
+                self.sell(size=size * 5)
+            self._duration = 1
+
+    # pylint: enable=protected-access, attribute-defined-outside-init
 
 
 class TrendStrategy(_BullishTrendStrategy, _BearishTrendStrategy):
@@ -182,18 +186,23 @@ class TrendStrategy(_BullishTrendStrategy, _BearishTrendStrategy):
         _BearishTrendStrategy.next(self=self)
 
 
-# pylint: disable=too-many-ancestors
+# pylint: disable=too-many-ancestors, attribute-defined-outside-init
 class MLTrendStrategy(_MLBullishTrendStrategy, _MLBearishTrendStrategy):
     def init(self) -> None:
         _MLBullishTrendStrategy.init(self=self)
         _MLBearishTrendStrategy.init(self=self)
+
+        self._sar: ndarray = self._sar_on_bull_market or self._sar_on_bear_market
+        self._sar_scatter: ndarray = self.I(
+            lambda value: value, self._sar, scatter=True, overlay=True, name="SAR", color="black"
+        )
 
     def next(self) -> None:
         _MLBullishTrendStrategy.next(self=self)
         _MLBearishTrendStrategy.next(self=self)
 
 
-# pylint: enable=too-many-ancestors
+# pylint: enable=too-many-ancestors, attribute-defined-outside-init
 
 
 def backtest(data: DataFrame, parameters_schema: SARParametersSchema) -> Series:

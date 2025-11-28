@@ -35,8 +35,8 @@ class S3Client:
         )
         return get_object_response_schema
 
-    def put_object(self, data: bytes, metadata: dict[str, Any], bucket: str, key: str) -> None:
-        self._client.put_object(Bucket=bucket, Key=key, Body=data, Metadata=metadata)
+    def put_object(self, data: bytes, metadata: dict[str, Any] | None, bucket: str, key: str) -> None:
+        self._client.put_object(Bucket=bucket, Key=key, Body=data, Metadata=metadata or {})
 
     def delete_object(self, bucket: str, key: str) -> None:
         self._client.delete_object(Bucket=bucket, Key=key)

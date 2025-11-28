@@ -4,7 +4,7 @@ from uuid import uuid1
 from boto3 import Session
 from duckdb import DuckDBPyConnection
 from optuna import Study, Trial, create_study
-from pandas import DataFrame, Series, concat, to_datetime  # noqa: WPS347
+from pandas import DataFrame, Series, to_datetime  # noqa: WPS347
 
 from src.adapters.clients.s3 import S3Client
 from src.adapters.connections.duckdb import get_duckdb_connection
@@ -129,8 +129,8 @@ if __name__ == "__main__":
 
     study: Study = create_study(direction="maximize")
     study.optimize(func=objective, n_trials=1000, n_jobs=12, gc_after_trial=True)  # noqa: WPS432
-    incoming_trials: DataFrame = study.trials_dataframe()
-    incoming_trials = incoming_trials[
+    trials: DataFrame = study.trials_dataframe()
+    trials = trials[
         [
             "value",
             "params_startvalue",
@@ -144,7 +144,7 @@ if __name__ == "__main__":
             "state",
         ]
     ]
-    incoming_trials.rename(
+    trials.rename(
         mapper={
             "params_startvalue": "startvalue",
             "params_offsetonreverse": "offsetonreverse",
@@ -158,15 +158,11 @@ if __name__ == "__main__":
         axis=1,
         inplace=True,
     )
-    incoming_trials["exchange"] = settings.EXCHANGE
-    incoming_trials["section"] = settings.SECTION
-    incoming_trials["ticker"] = settings.TICKER
-    incoming_trials["interval"] = settings.INTERVAL
+    trials["exchange"] = settings.EXCHANGE
+    trials["section"] = settings.SECTION
+    trials["ticker"] = settings.TICKER
+    trials["interval"] = settings.INTERVAL
 
-    existing_trials: DataFrame | None = sar_service.extract_sar()
-    trials: DataFrame = (
-        concat([existing_trials, incoming_trials]) if isinstance(existing_trials, DataFrame) else incoming_trials
-    )
     trials.drop_duplicates(inplace=True)
     trials.sort_values(by=["value"], ascending=False, inplace=True)
 

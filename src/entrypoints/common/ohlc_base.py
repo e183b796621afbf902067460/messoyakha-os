@@ -1,9 +1,13 @@
+from asyncio import run
 from datetime import datetime, timedelta
 from uuid import uuid1
 
 from boto3 import Session
+from httpx import AsyncClient as HTTPAsyncClient
+from httpx import AsyncHTTPTransport
 from pandas import DataFrame, concat
 
+from src.adapters.clients.binance import BinanceSpotAPIClient
 from src.adapters.clients.s3 import S3Client
 from src.adapters.connections.duckdb import get_duckdb_connection
 from src.adapters.repositories.candlesticks import CandlesticksRepository
@@ -15,6 +19,7 @@ from src.schemas.filters import (
     OHLCQueryParametersSchema,
 )
 from src.services.common.api_base import APIBaseService
+from src.services.domain.binance import BinanceService
 from src.services.domain.s3 import OHLCService
 from src.settings import settings
 
@@ -27,7 +32,7 @@ def _determine_latest_timestamp(latest_timestamp: datetime | None) -> datetime:
     return latest_timestamp + timedelta(seconds=1)
 
 
-# pylint: disable=too-many-locals, duplicate-code
+# pylint: disable=too-many-locals, duplicate-code, redefined-outer-name
 async def main(service: APIBaseService) -> None:
     latest_timestamp_query_parameters: LatestTimestampQueryParametersSchema = LatestTimestampQueryParametersSchema(
         ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
@@ -86,4 +91,17 @@ async def main(service: APIBaseService) -> None:
     ohlc_service.delete_object()
 
 
-# pylint: enable=too-many-locals, duplicate-code
+# pylint: enable=too-many-locals, duplicate-code, redefined-outer-name
+
+
+if __name__ == "__main__":
+    client: BinanceSpotAPIClient = BinanceSpotAPIClient(
+        session=HTTPAsyncClient(
+            base_url="https://api.binance.com",
+            timeout=60,
+            transport=AsyncHTTPTransport(retries=3, http2=True),
+            follow_redirects=True,
+        )
+    )
+    service: BinanceService = BinanceService(client=client)
+    run(main=main(service=service))

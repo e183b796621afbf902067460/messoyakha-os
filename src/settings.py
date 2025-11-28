@@ -9,8 +9,8 @@ class AppSettings(BaseSettings):
     APP_NAME: str = "candlesticks-pipelines"
     APP_VERSION: str = "v0.0.1-alpha"
 
-    S3_ACCESS_KEY_ID: str
-    S3_SECRET_ACCESS_KEY: str
+    S3_ACCESS_KEY_ID: str = "PRQF3B2VHJ0N77L2XTUH"
+    S3_SECRET_ACCESS_KEY: str = "HQBUH5l74bWvdGH8H5zhzOxfsfbUUEonIyrrN0T5"
     S3_ENDPOINT_URL: HttpUrl = HttpUrl("https://s3.twcstorage.ru")
     S3_REGION_NAME: str = "ru-1"
     S3_CLIENT_READ_TIMEOUT: int = 5 * 60

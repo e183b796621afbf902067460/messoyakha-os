@@ -1,3 +1,4 @@
+# pylint: disable=duplicate-code
 from typing import Final
 from uuid import uuid1
 from warnings import filterwarnings
@@ -25,9 +26,11 @@ from src.schemas.filters import (
 from src.services.domain.s3 import ADXService, MAService
 from src.settings import settings
 
+# pylint: enable=duplicate-code
+
 filterwarnings("ignore")
 
-_CORRELATION_THRESHOLD: Final[float] = 0.99
+_CORRELATION_THRESHOLD: Final[float] = 0.8
 
 
 # pylint: disable=redefined-outer-name
@@ -156,9 +159,7 @@ if __name__ == "__main__":
 
     average_directional_indexes = concat(objs=[train, validation])
     average_directional_indexes.sort_values(by="datetime", inplace=True)
-
     logger.info(f"There are {len(average_directional_index_columns)} features in total.")
-    logger.info(f"The features are: {average_directional_index_columns}.")
 
     adx_service.load_adx(dataframe=average_directional_indexes, filename=f"{uuid1()}.parquet")
     adx_service.delete_object()
