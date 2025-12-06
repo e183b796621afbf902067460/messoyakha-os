@@ -5,18 +5,17 @@ from warnings import filterwarnings
 
 from boto3 import Session
 from duckdb import DuckDBPyConnection
-from lightgbm import LGBMClassifier
+from lightgbm import LGBMRegressor
 from loguru import logger
-from numpy import average, log1p, median, ndarray, tanh, vstack
+from numpy import log1p, median, ndarray, vstack
 from numpy.ma import masked_invalid
 from onnx import ModelProto, StringStringEntryProto
+from onnxconverter_common.data_types import FloatTensorType
 from onnxmltools import convert_lightgbm
-from onnxmltools.convert.common.data_types import FloatTensorType
 from optuna import Study, Trial, create_study
 from pandas import DataFrame, Series, concat, to_datetime  # noqa: WPS347
-from scipy.special import kl_div
-from scipy.stats import percentileofscore
-from sklearn.metrics import fbeta_score
+from scipy.special import inv_boxcox, kl_div
+from scipy.stats import boxcox
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
@@ -35,7 +34,7 @@ from src.schemas.filters import (
     TradeQueryParametersSchema,
 )
 from src.services.domain.s3 import ADXService, MLModelService, RatioService, ROIService
-from src.services.statistic import adjust_random_variable, qq, weighted_average_by
+from src.services.statistic import qq, weighted_average_by
 from src.services.target import TargetEngineeringService
 from src.settings import settings
 
@@ -48,8 +47,8 @@ _DIVERGENCE_THRESHOLD: Final[float] = 0.1
 _CORRELATION_THRESHOLD: Final[float] = 0.5
 _RANGE: Final[int] = 3
 
-_PCT_WEIGHT: Final[int] = 20
-_RANK_WEIGHT: int = 100 - _PCT_WEIGHT
+_TICKS_WEIGHT: Final[int] = 10
+_RANK_WEIGHT: int = 100 - _TICKS_WEIGHT
 
 
 # pylint: disable=too-complex,cell-var-from-loop
@@ -96,7 +95,7 @@ if __name__ == "__main__":
         query_parameters=MLModelQueryParametersSchema(
             ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
         ),
-        path_parameters=MLModelPathParametersSchema(bucket=settings.S3_BUCKET, directory="risk"),
+        path_parameters=MLModelPathParametersSchema(bucket=settings.S3_BUCKET, directory="exposure"),
     )
 
     adx: DataFrame | None = adx_service.extract_adx()
@@ -110,7 +109,7 @@ if __name__ == "__main__":
         raise FileNotFoundError("There is no ratios data.")
     ratios.drop_duplicates(inplace=True)
     ratio_columns: list[str] = [
-        ratio_column for ratio_column in ratios.columns.tolist() if ratio_column.startswith("ratio")
+        ratio_column for ratio_column in adx.columns.tolist() if ratio_column.startswith("ratio")
     ]
 
     roi: DataFrame | None = roi_service.extract_roi()
@@ -123,39 +122,30 @@ if __name__ == "__main__":
     roi = roi.merge(right=ratios, how="left", on=["exchange", "section", "ticker", "interval", "datetime"])
     roi["datetime"] = to_datetime(roi["datetime"])
     roi["year"] = roi["datetime"].dt.year
-    roi["_pct"] = roi["pct"].values
     roi.dropna(inplace=True)
-    roi["pct"] = log1p(tanh(roi["pct"]))
 
     train: DataFrame = roi.query(f"year < {settings.TRIGGER_DATE.year - 1}")
     validation: DataFrame = roi.query(f"year >= {settings.TRIGGER_DATE.year - 1}")
 
     target_scaler: MinMaxScaler = MinMaxScaler()
 
-    for _ in range(5):  # noqa: WPS426
-        mean: float = train["pct"].mean()  # noqa: WPS204
-        std: float = train["pct"].std()
-        plus_sigma: float = mean + 3 * std
-        minus_sigma: float = mean - 3 * std
+    train["ticks"] = log1p(train["ticks"])  # noqa: WPS204
+    validation["ticks"] = log1p(validation["ticks"])
 
-        train["pct"] = train["pct"].apply(
-            lambda pct: adjust_random_variable(value=pct, std=std, plus_sigma=plus_sigma, minus_sigma=minus_sigma)
-        )
-        validation["pct"] = validation["pct"].apply(
-            lambda pct: adjust_random_variable(value=pct, std=std, plus_sigma=plus_sigma, minus_sigma=minus_sigma)
-        )
+    optimizer: float
+    train["ticks"], optimizer = boxcox(x=train["ticks"])  # noqa: WPS414
+    train["ticks"] = target_scaler.fit_transform(X=vstack(tup=train["ticks"])).flatten()
+    validation["ticks"] = boxcox(x=validation["ticks"], lmbda=optimizer)
+    validation["ticks"] = target_scaler.transform(X=vstack(tup=validation["ticks"])).flatten()
 
-    train["pct"] = target_scaler.fit_transform(X=vstack(tup=train["pct"])).flatten()
-    validation["pct"] = target_scaler.transform(X=vstack(tup=validation["pct"])).flatten()
-
-    singularity: float = percentileofscore(a=train["_pct"], score=0) / 10**2
-    separator: float = train["pct"].quantile(singularity)
-    centre: float = train["pct"].median()
-    logger.info(f"Separation value is {separator}; Median is {centre}.")
+    target_median: float = train.ticks.quantile(0.5)
+    target_median_unscaled: float = target_scaler.inverse_transform(X=vstack(tup=[target_median]))
+    target_median_inverse: float = inv_boxcox(target_median_unscaled, optimizer)[0][0]
+    logger.info(f"Target median is {target_median} ({target_median_inverse}).")
 
     divergences: DataFrame = DataFrame()
     for adx_column in adx_columns:  # noqa: WPS426
-        divergence: ndarray = kl_div(train["pct"].values, train[adx_column].values)
+        divergence: ndarray = kl_div(train["ticks"].values, train[adx_column].values)
         divergence = divergence[~masked_invalid(a=divergence).mask]  # type: ignore[no-untyped-call]
         divergences = concat(
             objs=[divergences, DataFrame(data=[{"column": adx_column, "divergence": float(median(a=divergence))}])]
@@ -164,14 +154,14 @@ if __name__ == "__main__":
     rank_target_columns: list[str] = divergences["column"].values.tolist()
 
     train["rank"] = train.apply(
-        lambda row: qq(tick=row["pct"], ticks=train["pct"], q=train[rank_target_columns], row=row),
+        lambda row: qq(tick=row["ticks"], ticks=train["ticks"], q=train[rank_target_columns], row=row),
         axis=1,
     )
     validation["rank"] = validation.apply(
-        lambda row: qq(tick=row["pct"], ticks=train["pct"], q=validation[rank_target_columns], row=row),
+        lambda row: qq(tick=row["ticks"], ticks=train["ticks"], q=validation[rank_target_columns], row=row),
         axis=1,
     )
-    logger.info(f"Correlation between target and QMF is {train[['rank', 'pct']].corr()['rank'].pct}.")
+    logger.info(f"Correlation between target and QMF is {train[['rank', 'ticks']].corr()['rank'].ticks}.")
 
     ranks: dict[int, TargetEngineeringService] = {}
     for rank in range(1, _RANGE):  # noqa: WPS426
@@ -199,16 +189,16 @@ if __name__ == "__main__":
         rank_target_columns.remove("rank")
 
         train["rank"] = train.apply(
-            lambda row: qq(tick=row["pct"], ticks=train["pct"], q=train[rank_target_columns], row=row),
+            lambda row: qq(tick=row["ticks"], ticks=train["ticks"], q=train[rank_target_columns], row=row),
             axis=1,
         )
         validation["rank"] = validation.apply(
-            lambda row: qq(tick=row["pct"], ticks=train["pct"], q=validation[rank_target_columns], row=row),
+            lambda row: qq(tick=row["ticks"], ticks=train["ticks"], q=validation[rank_target_columns], row=row),
             axis=1,
         )
         ranks.update({rank: target_engineering_service})
 
-        logger.info(f"({rank}) Correlation between target and QMF is {train[['rank', 'pct']].corr()['rank'].pct}.")
+        logger.info(f"({rank}) Correlation between target and QMF is {train[['rank', 'ticks']].corr()['rank'].ticks}.")
 
     feature_columns: list[str] = (
         adx_columns
@@ -217,17 +207,15 @@ if __name__ == "__main__":
     )
     logger.info(f"Total number of features is {len(feature_columns)}.")
 
-    train["rank"] = (train["rank"] * _RANK_WEIGHT + train["pct"] * _PCT_WEIGHT) / sum([_PCT_WEIGHT, _RANK_WEIGHT])
-    validation["rank"] = (validation["rank"] * _RANK_WEIGHT + validation["pct"] * _PCT_WEIGHT) / sum(
-        [_PCT_WEIGHT, _RANK_WEIGHT]
+    train["rank"] = (train["rank"] * _RANK_WEIGHT + train["ticks"] * _TICKS_WEIGHT) / sum([_TICKS_WEIGHT, _RANK_WEIGHT])
+    validation["rank"] = (validation["rank"] * _RANK_WEIGHT + validation["ticks"] * _TICKS_WEIGHT) / sum(
+        [_TICKS_WEIGHT, _RANK_WEIGHT]
     )
-    train["target"] = (train["rank"] > average([centre, separator])).astype(int)
-    validation["target"] = (validation["rank"] > average([centre, separator])).astype(int)
-    logger.info(f"Correlation between target and QMF is {train[['rank', 'pct']].corr()['rank'].pct}.")
+    logger.info(f"Correlation between target and QMF is {train[['rank', 'ticks']].corr()['rank'].ticks}.")
 
     X_train, X_test, y_train, y_test = train_test_split(
         train[feature_columns],
-        train[["target"]],
+        train[["rank"]],
         test_size=_TEST_SIZE,
         random_state=_RANDOM_SEED,
     )
@@ -243,20 +231,16 @@ if __name__ == "__main__":
             "feature_fraction": trial.suggest_float("feature_fraction", 0.1, 0.5),  # noqa: WPS432
             "boosting_type": trial.suggest_categorical("boosting_type", ["rf", "gbdt"]),
         }
-        optuna_model: LGBMClassifier = LGBMClassifier(
-            **params, objective="binary", class_weight="balanced", random_seed=_RANDOM_SEED, verbosity=-1
-        )
+        optuna_model: LGBMRegressor = LGBMRegressor(**params, objective="rmse", random_seed=_RANDOM_SEED, verbosity=-1)
         optuna_model.fit(X=X_train, y=y_train, eval_set=[(X_test, y_test)])
-        fbeta: float = fbeta_score(y_true=y_test, y_pred=optuna_model.predict(X_test), beta=2)
-        return fbeta
+        return float(optuna_model.best_score_["valid_0"].get("rmse"))
 
-    study: Study = create_study(direction="maximize")
+    study: Study = create_study(direction="minimize")
     study.optimize(func=objective, n_trials=100, gc_after_trial=True, show_progress_bar=True)
 
-    model: LGBMClassifier = LGBMClassifier(
+    model: LGBMRegressor = LGBMRegressor(
         **study.best_params,
-        objective="binary",
-        class_weight="balanced",
+        objective="rmse",
         random_seed=_RANDOM_SEED,
         verbosity=-1,
     )

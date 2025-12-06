@@ -12,6 +12,7 @@ from src.adapters.repositories.indicators import (
     AroonRepository,
     BinariesRepository,
     MARepository,
+    RatioRepository,
     StreaksRepository,
 )
 from src.adapters.repositories.trades import TradesRepository
@@ -34,6 +35,8 @@ from src.schemas.filters import (
     OHLCQueryParametersSchema,
     PathParametersBaseSchema,
     QueryParametersBaseSchema,
+    RatioPathParametersSchema,
+    RatioQueryParametersSchema,
     SARTrialPathParametersSchema,
     SARTrialQueryParametersSchema,
     StreakPathParametersSchema,
@@ -129,7 +132,9 @@ class OHLCService(_S3BaseService):
         )
 
     def load_ohlc(self, dataframe: DataFrame, filename: str) -> None:
-        self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
+        self._repository.insert_dataframe_as_parquet(  # noqa: WPS204
+            dataframe=dataframe, key=f"{self._path}/{filename}"
+        )
 
 
 class MAService(_S3BaseService):
@@ -187,6 +192,19 @@ class ROIService(_S3BaseService):
         return self._repository.query_trades(parameters_schema=self._query_parameters, path=self._formatted_path)
 
     def load_roi(self, dataframe: DataFrame, filename: str) -> None:
+        self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
+
+
+class RatioService(_S3BaseService):
+    _repository: RatioRepository
+
+    _query_parameters: RatioQueryParametersSchema
+    _path_parameters: RatioPathParametersSchema
+
+    def extract_ratio(self) -> DataFrame | None:
+        return self._repository.query_ratios(parameters_schema=self._query_parameters, path=self._formatted_path)
+
+    def load_ratio(self, dataframe: DataFrame, filename: str) -> None:
         self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
 
 

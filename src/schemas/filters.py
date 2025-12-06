@@ -48,6 +48,14 @@ class ADXPathParametersSchema(PathParametersBaseSchema):
     """Path parameters to fetch average directional indexes."""
 
 
+class RatioQueryParametersSchema(QueryParametersBaseSchema):
+    """Query parameters to fetch ratios."""
+
+
+class RatioPathParametersSchema(PathParametersBaseSchema):
+    """Path parameters to fetch ratios."""
+
+
 class AroonQueryParametersSchema(QueryParametersBaseSchema):
     """Query parameters to fetch aroons."""
 

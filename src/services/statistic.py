@@ -1,7 +1,7 @@
 from itertools import combinations
 from typing import Final
 
-from numpy import arange, argmin, array, ndarray, searchsorted, sort
+from numpy import arange, argmin, array, ndarray, random, searchsorted, sort
 from pandas import DataFrame, Series
 from polars import DataFrame as PolarsDataFrame
 from polars import col, from_pandas, sum_horizontal  # noqa: WPS347
@@ -90,3 +90,12 @@ def weighted_average_by(
 
 
 # pylint: enable=consider-using-generator
+
+
+def adjust_random_variable(value: float, std: float, plus_sigma: float, minus_sigma: float) -> float:
+    sample: float = value
+    if value > plus_sigma:
+        sample = abs(random.normal(loc=0, scale=std))
+    if value < minus_sigma:
+        sample = -abs(random.normal(loc=0, scale=std))
+    return sample

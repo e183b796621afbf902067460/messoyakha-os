@@ -12,26 +12,26 @@ from talib import SAREXT
 from src.adapters.clients.s3 import S3Client
 from src.adapters.connections.duckdb import get_duckdb_connection
 from src.adapters.repositories.candlesticks import CandlesticksRepository
-from src.adapters.repositories.indicators import ADXRepository, AroonRepository, MARepository
+from src.adapters.repositories.indicators import ADXRepository, MARepository, RatioRepository
 from src.adapters.repositories.trials import SARTrialsRepository
 from src.schemas.backtests import BacktestParametersSchema
 from src.schemas.domain.s3 import GetObjectResponseSchema
 from src.schemas.filters import (
     ADXPathParametersSchema,
     ADXQueryParametersSchema,
-    AroonPathParametersSchema,
-    AroonQueryParametersSchema,
     MAPathParametersSchema,
     MAQueryParametersSchema,
     MLModelPathParametersSchema,
     MLModelQueryParametersSchema,
     OHLCPathParametersSchema,
     OHLCQueryParametersSchema,
+    RatioPathParametersSchema,
+    RatioQueryParametersSchema,
     SARTrialPathParametersSchema,
     SARTrialQueryParametersSchema,
 )
 from src.schemas.trials import SARParametersSchema
-from src.services.domain.s3 import ADXService, AroonService, MAService, MLModelService, OHLCService, SARService
+from src.services.domain.s3 import ADXService, MAService, MLModelService, OHLCService, RatioService, SARService
 from src.services.statistic import weighted_average_by
 from src.services.trend import MA, MLTrendStrategy
 from src.settings import settings
@@ -67,13 +67,13 @@ if __name__ == "__main__":
         ),
         path_parameters=ADXPathParametersSchema(bucket=settings.S3_BUCKET, directory="average-directional-indexes"),
     )
-    aroon_service: AroonService = AroonService(
+    ratio_service: RatioService = RatioService(
         s3_client=s3_client,
-        repository=AroonRepository(connection=duckdb_connection),
-        query_parameters=AroonQueryParametersSchema(
+        repository=RatioRepository(connection=duckdb_connection),
+        query_parameters=RatioQueryParametersSchema(
             ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
         ),
-        path_parameters=AroonPathParametersSchema(bucket=settings.S3_BUCKET, directory="aroons"),
+        path_parameters=RatioPathParametersSchema(bucket=settings.S3_BUCKET, directory="ratios"),
     )
     ma_service: MAService = MAService(
         s3_client=s3_client,
@@ -91,12 +91,19 @@ if __name__ == "__main__":
         ),
         path_parameters=SARTrialPathParametersSchema(bucket=settings.S3_BUCKET, directory="stop-and-reverse-trials"),
     )
-    regression_model_service: MLModelService = MLModelService(
+    risk_model_service: MLModelService = MLModelService(
         s3_client=s3_client,
         query_parameters=MLModelQueryParametersSchema(
             ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
         ),
-        path_parameters=MLModelPathParametersSchema(bucket=settings.S3_BUCKET, directory="regression"),
+        path_parameters=MLModelPathParametersSchema(bucket=settings.S3_BUCKET, directory="risk"),
+    )
+    exposure_model_service: MLModelService = MLModelService(
+        s3_client=s3_client,
+        query_parameters=MLModelQueryParametersSchema(
+            ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
+        ),
+        path_parameters=MLModelPathParametersSchema(bucket=settings.S3_BUCKET, directory="exposure"),
     )
 
     ohlc: DataFrame | None = ohlc_service.extract_ohlc()
@@ -120,10 +127,10 @@ if __name__ == "__main__":
         raise FileNotFoundError("There is no average directional indexes data.")
     average_directional_indexes.drop_duplicates(inplace=True)
 
-    aroons: DataFrame | None = aroon_service.extract_aroon()
-    if aroons is None:
-        raise FileNotFoundError("There is no aroons data.")
-    aroons.drop_duplicates(inplace=True)
+    ratios: DataFrame | None = ratio_service.extract_ratio()
+    if ratios is None:
+        raise FileNotFoundError("There is no ratios data.")
+    ratios.drop_duplicates(inplace=True)
 
     trials: DataFrame | None = sar_service.extract_sar()
     if trials is None:
@@ -135,7 +142,7 @@ if __name__ == "__main__":
     ohlc = ohlc.merge(
         right=average_directional_indexes, how="left", on=["exchange", "section", "ticker", "interval", "datetime"]
     )
-    ohlc = ohlc.merge(right=aroons, how="left", on=["exchange", "section", "ticker", "interval", "datetime"])
+    ohlc = ohlc.merge(right=ratios, how="left", on=["exchange", "section", "ticker", "interval", "datetime"])
     ohlc.dropna(
         subset=[
             f"{MA}_open",
@@ -155,22 +162,35 @@ if __name__ == "__main__":
     )
     ohlc["sar"] = abs(ohlc["sar"])
 
-    regression_model_response_schema: GetObjectResponseSchema = regression_model_service.extract_ml_model()
-    regression_model_inference_session: InferenceSession = InferenceSession(
-        regression_model_response_schema.body.read()
-    )
-    regression_model_response_schema.metadata = regression_model_response_schema.eval_metadata(
-        metadata=regression_model_inference_session.get_modelmeta().custom_metadata_map
+    risk_model_response_schema: GetObjectResponseSchema = risk_model_service.extract_ml_model()
+    risk_model_inference_session: InferenceSession = InferenceSession(risk_model_response_schema.body.read())
+    risk_model_response_schema.metadata = risk_model_response_schema.eval_metadata(
+        metadata=risk_model_inference_session.get_modelmeta().custom_metadata_map
     )
 
-    for rank in range(1, int(regression_model_response_schema.metadata["range"])):
-        for multiplier in regression_model_response_schema.metadata[f"{rank}_multipliers"]:
+    for rank in range(1, int(risk_model_response_schema.metadata["range"])):
+        for multiplier in risk_model_response_schema.metadata[f"{rank}_multipliers"]:
             ohlc = weighted_average_by(
                 dataframe=ohlc,
                 multiplier=multiplier,
-                weights=regression_model_response_schema.metadata[f"{rank}_weights"],
+                weights=risk_model_response_schema.metadata[f"{rank}_weights"],
             )
-            logger.info(f"Regression {multiplier}-multiplier is ready.")
+            logger.info(f"Risk {multiplier}-multiplier is ready.")
+
+    exposure_model_response_schema: GetObjectResponseSchema = exposure_model_service.extract_ml_model()
+    exposure_model_inference_session: InferenceSession = InferenceSession(exposure_model_response_schema.body.read())
+    exposure_model_response_schema.metadata = exposure_model_response_schema.eval_metadata(
+        metadata=exposure_model_inference_session.get_modelmeta().custom_metadata_map
+    )
+
+    for rank in range(1, int(exposure_model_response_schema.metadata["range"])):  # noqa: WPS440
+        for multiplier in exposure_model_response_schema.metadata[f"{rank}_multipliers"]:  # noqa: WPS440
+            ohlc = weighted_average_by(
+                dataframe=ohlc,
+                multiplier=multiplier,
+                weights=exposure_model_response_schema.metadata[f"{rank}_weights"],
+            )
+            logger.info(f"Exposure {multiplier}-multiplier is ready.")
 
     ohlc["datetime"] = to_datetime(ohlc["datetime"])
     ohlc["year"] = ohlc["datetime"].dt.year
@@ -189,8 +209,11 @@ if __name__ == "__main__":
     )
 
     # pylint: disable=protected-access
-    test._strategy.regression_model_inference_session = regression_model_inference_session
-    test._strategy.regression_model_response_schema = regression_model_response_schema
+    test._strategy.risk_model_inference_session = risk_model_inference_session
+    test._strategy.risk_model_response_schema = risk_model_response_schema
+
+    test._strategy.exposure_model_inference_session = exposure_model_inference_session
+    test._strategy.exposure_model_response_schema = exposure_model_response_schema
     # pylint: enable=protected-access
 
     statistics: Series = test.run(
@@ -199,11 +222,14 @@ if __name__ == "__main__":
         sar_on_bear_market_prefix="sar",
         ma_on_bear_market_prefix=MA,
     )
-    statistics["_trades"]["Ticks"] = statistics["_trades"]["ExitBar"] - statistics["_trades"]["EntryBar"]
+    statistics["_trades"]["Ticks"] = (  # noqa: WPS204
+        statistics["_trades"]["ExitBar"] - statistics["_trades"]["EntryBar"]
+    )
     statistics["_trades"]["IsLong"] = (statistics["_trades"]["Size"] > 0).astype(int)
+    statistics["_trades"]["Pct"] = statistics["_trades"]["PnL"] / statistics["_trades"]["Tag"]
     statistics.to_csv("statistics.csv")
     statistics["_trades"].to_csv("trades.csv", index=False)
-    test.plot()
+    test.plot(filename="plot.html")
 
 
 # pylint: enable=duplicate-code

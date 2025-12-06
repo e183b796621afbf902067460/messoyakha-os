@@ -8,6 +8,7 @@ from src.schemas.filters import (
     BinaryQueryParametersSchema,
     MAQueryParametersSchema,
     QueryParametersBaseSchema,
+    RatioQueryParametersSchema,
     StreakQueryParametersSchema,
 )
 
@@ -56,6 +57,11 @@ class ADXRepository(IndicatorsBaseRepository):
     def query_average_directional_indexes(
         self, path: str, parameters_schema: ADXQueryParametersSchema
     ) -> DataFrame | None:
+        return self._query_indicators(path=path, parameters_schema=parameters_schema)
+
+
+class RatioRepository(IndicatorsBaseRepository):
+    def query_ratios(self, path: str, parameters_schema: RatioQueryParametersSchema) -> DataFrame | None:
         return self._query_indicators(path=path, parameters_schema=parameters_schema)
 
 

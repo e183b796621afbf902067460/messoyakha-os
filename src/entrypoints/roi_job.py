@@ -31,7 +31,7 @@ from src.settings import settings
 
 filterwarnings("ignore")
 
-_QUANTILE_THRESHOLD: Final[float] = 0.9
+_QUANTILE_THRESHOLD: Final[float] = 0.8
 
 if __name__ == "__main__":
     s3_client: S3Client = S3Client(

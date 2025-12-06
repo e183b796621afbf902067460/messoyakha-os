@@ -17,8 +17,11 @@ class _MLStrategy(Strategy):
 
     # pylint: disable=attribute-defined-outside-init
     def init(self) -> None:
-        self._regression_model_inference_session: InferenceSession
-        self._regression_model_response_schema: GetObjectResponseSchema
+        self._risk_model_inference_session: InferenceSession
+        self._risk_model_response_schema: GetObjectResponseSchema
+
+        self._exposure_model_inference_session: InferenceSession
+        self._exposure_model_response_schema: GetObjectResponseSchema
 
         self._duration: int = 0
 
@@ -28,25 +31,46 @@ class _MLStrategy(Strategy):
         ...
 
     @property
-    def _regression_inference_features(self) -> ndarray:
+    def _risk_inference_features(self) -> ndarray:
         return array(  # type: ignore[no-any-return]
-            [[self.data[column][-1] for column in self.regression_model_response_schema.metadata["columns"]]],
+            [[self.data[column][-1] for column in self.risk_model_response_schema.metadata["columns"]]],
             dtype=float32,
         )
 
     @property
-    def regression_model_inference_session(self) -> InferenceSession:
-        return self._regression_model_inference_session
+    def risk_model_inference_session(self) -> InferenceSession:
+        return self._risk_model_inference_session
 
     @property
-    def regression_model_response_schema(self) -> GetObjectResponseSchema:
-        return self._regression_model_response_schema
+    def risk_model_response_schema(self) -> GetObjectResponseSchema:
+        return self._risk_model_response_schema
 
-    def _estimate_risk(self) -> float:
+    def _estimate_risk(self) -> int:
+        inference: dict[int, float] = self.risk_model_inference_session.run(
+            None, input_feed={"input": self._risk_inference_features}
+        )[1][0]
+        return 0 if inference[0] > inference[1] else 1
+
+    @property
+    def _exposure_inference_features(self) -> ndarray:
+        return array(  # type: ignore[no-any-return]
+            [[self.data[column][-1] for column in self.exposure_model_response_schema.metadata["columns"]]],
+            dtype=float32,
+        )
+
+    @property
+    def exposure_model_inference_session(self) -> InferenceSession:
+        return self._exposure_model_inference_session
+
+    @property
+    def exposure_model_response_schema(self) -> GetObjectResponseSchema:
+        return self._exposure_model_response_schema
+
+    def _estimate_exposure(self) -> float:
         return float(
-            self.regression_model_inference_session.run(
-                None, input_feed={"input": self._regression_inference_features}
-            )[0][0][0]
+            self.exposure_model_inference_session.run(None, input_feed={"input": self._exposure_inference_features})[0][
+                0
+            ][0]
         )
 
 
@@ -132,18 +156,19 @@ class _MLBullishTrendStrategy(_MLStrategy, _BullishTrendStrategy):
     def next(self) -> None:
         if self.position.is_long:
             self._duration += 1
-            if self.data.Close[-1] < self._sar_on_bull_market[-1]:
-                self.position.close()
+            for trade in self._broker.trades:
+                trade.sl = self._sar_on_bull_market[-1]
 
         if self._is_bull_reversal():
             self.position.close()
-
-            risk: float = self._estimate_risk()
-            size: int = int(ceil(self._broker._cash * risk / self.data.Close[-1]))  # noqa: WPS432
-
-            if risk > 0.5:
-                self.buy(size=size * 5)
-            self._duration = 1
+            for order in self._broker.orders:
+                order.cancel()
+            risk: int = self._estimate_risk()
+            if risk:
+                exposure: float = self._estimate_exposure()
+                size: int = int(ceil(self._broker._cash * exposure / self.data.Close[-1]))  # noqa: WPS432
+                self.buy(size=size * 5, tag=self._broker._cash)
+                self._duration = 1
 
     # pylint: enable=protected-access, attribute-defined-outside-init
 
@@ -160,18 +185,19 @@ class _MLBearishTrendStrategy(_MLStrategy, _BearishTrendStrategy):
     def next(self) -> None:
         if self.position.is_short:
             self._duration += 1
-            if self.data.Close[-1] > self._sar_on_bear_market[-1]:
-                self.position.close()
+            for trade in self._broker.trades:
+                trade.sl = self._sar_on_bear_market[-1]
 
         if self._is_bear_reversal():
             self.position.close()
-
-            risk: float = self._estimate_risk()
-            size: int = int(ceil(self._broker._cash * risk / self.data.Close[-1]))  # noqa: WPS432
-
-            if risk > 0.5:
-                self.sell(size=size * 5)
-            self._duration = 1
+            for order in self._broker.orders:
+                order.cancel()
+            risk: int = self._estimate_risk()
+            if risk:
+                exposure: float = self._estimate_exposure()
+                size: int = int(ceil(self._broker._cash * exposure / self.data.Close[-1]))  # noqa: WPS432
+                self.sell(size=size * 5, tag=self._broker._cash)
+                self._duration = 1
 
     # pylint: enable=protected-access, attribute-defined-outside-init
 
