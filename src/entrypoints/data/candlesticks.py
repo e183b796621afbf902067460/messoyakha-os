@@ -41,11 +41,9 @@ async def main(service: APIBaseService) -> None:
         ticker=settings.TICKER, exchange=settings.EXCHANGE, section=settings.SECTION, interval=settings.INTERVAL
     )
     latest_timestamp_path_parameters: LatestTimestampPathParametersSchema = LatestTimestampPathParametersSchema(
-        bucket=settings.S3_BUCKET, directory="candlesticks"
+        bucket=settings.S3_BUCKET
     )
-    ohlc_path_parameters: OHLCPathParametersSchema = OHLCPathParametersSchema(
-        bucket=settings.S3_BUCKET, directory="candlesticks"
-    )
+    ohlc_path_parameters: OHLCPathParametersSchema = OHLCPathParametersSchema(bucket=settings.S3_BUCKET)
 
     ohlc_service: OHLCService = OHLCService(
         s3_client=S3Client(
@@ -67,9 +65,7 @@ async def main(service: APIBaseService) -> None:
         path_parameters=latest_timestamp_path_parameters or ohlc_path_parameters,
     )
 
-    latest_timestamp: datetime | None = ohlc_service.extract_latest_timestamp()
-    latest_timestamp = _determine_latest_timestamp(latest_timestamp=latest_timestamp)
-    existing_candlesticks: DataFrame | None = ohlc_service.extract_ohlc()
+    latest_timestamp = _determine_latest_timestamp(latest_timestamp=ohlc_service.latest_timestamp)
     incoming_candlesticks: DataFrame = await service.get_ohlc(
         input_schema=BinanceKlinesInputSchema(
             ticker=settings.TICKER,
@@ -80,8 +76,8 @@ async def main(service: APIBaseService) -> None:
         )
     )
     candlesticks: DataFrame = (
-        concat([existing_candlesticks, incoming_candlesticks])
-        if isinstance(existing_candlesticks, DataFrame)
+        concat([ohlc_service.ohlc, incoming_candlesticks])
+        if isinstance(ohlc_service.ohlc, DataFrame)
         else incoming_candlesticks
     )
     candlesticks.drop_duplicates(inplace=True)

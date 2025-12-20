@@ -16,8 +16,8 @@ class TradesRepository(DuckDBBaseRepository):
                 interval,
 
                 pct,
-                is_long,
                 ticks,
+                is_long,
 
                 datetime
             FROM

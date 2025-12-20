@@ -1,7 +1,10 @@
+# pylint: disable=too-many-lines, invalid-name
 from datetime import datetime
+from re import findall
 from typing import Any
 
 from attr import attr, attrs
+from botocore.errorfactory import ClientError
 from pandas import DataFrame
 
 from src.adapters.clients.s3 import S3Client
@@ -12,7 +15,7 @@ from src.adapters.repositories.indicators import (
     AroonRepository,
     BinariesRepository,
     MARepository,
-    RatioRepository,
+    RSIRepository,
     StreaksRepository,
 )
 from src.adapters.repositories.trades import TradesRepository
@@ -35,8 +38,8 @@ from src.schemas.filters import (
     OHLCQueryParametersSchema,
     PathParametersBaseSchema,
     QueryParametersBaseSchema,
-    RatioPathParametersSchema,
-    RatioQueryParametersSchema,
+    RSIPathParametersSchema,
+    RSIQueryParametersSchema,
     SARTrialPathParametersSchema,
     SARTrialQueryParametersSchema,
     StreakPathParametersSchema,
@@ -44,6 +47,17 @@ from src.schemas.filters import (
     TradePathParametersSchema,
     TradeQueryParametersSchema,
 )
+
+
+def _findall_prefixes(strings: list[str]) -> list[str]:
+    pattern: str = r"\b([a-zA-Z]+_\d+)_(?:open|high|low|close)\b"
+
+    prefixes: list[str] = []
+    for string in strings:
+        match: list[str] = findall(pattern=pattern, string=string)
+        if match and match[0] not in prefixes:
+            prefixes.append(match[0])
+    return prefixes
 
 
 def _format_s3_key(query_parameters: QueryParametersBaseSchema, directory: str, filename: str | None = None) -> str:
@@ -116,6 +130,7 @@ class _S3BaseService:
     _path: str = attr(init=False)
 
 
+@attrs(slots=True, auto_attribs=True, kw_only=True)
 class OHLCService(_S3BaseService):
 
     _repository: CandlesticksRepository
@@ -123,89 +138,188 @@ class OHLCService(_S3BaseService):
     _query_parameters: OHLCQueryParametersSchema | LatestTimestampQueryParametersSchema
     _path_parameters: OHLCPathParametersSchema | LatestTimestampPathParametersSchema
 
-    def extract_ohlc(self) -> DataFrame | None:
-        return self._repository.query_candlesticks(parameters_schema=self._query_parameters, path=self._formatted_path)
-
-    def extract_latest_timestamp(self) -> datetime | None:
-        return self._repository.query_latest_timestamp(  # type: ignore[no-any-return]
+    def __attrs_post_init__(self) -> None:
+        _S3BaseService.__attrs_post_init__(self=self)
+        self._ohlc: DataFrame | None = self._repository.query_candlesticks(
             parameters_schema=self._query_parameters, path=self._formatted_path
         )
+        self._latest_timestamp: datetime | None = self._repository.query_latest_timestamp(
+            parameters_schema=self._query_parameters, path=self._formatted_path
+        )
+        if isinstance(self._ohlc, DataFrame):
+            self._ohlc.drop_duplicates(inplace=True)
+
+    @property
+    def ohlc(self) -> DataFrame | None:
+        return self._ohlc
+
+    @ohlc.setter
+    def ohlc(self, ohlc: DataFrame) -> None:
+        self._ohlc = ohlc
+
+    @property
+    def latest_timestamp(self) -> DataFrame | None:
+        return self._latest_timestamp
 
     def load_ohlc(self, dataframe: DataFrame, filename: str) -> None:
         self._repository.insert_dataframe_as_parquet(  # noqa: WPS204
             dataframe=dataframe, key=f"{self._path}/{filename}"
         )
 
+    _ohlc: DataFrame | None = attr(init=False)
+    _latest_timestamp: datetime | None = attr(init=False)
 
+
+@attrs(slots=True, auto_attribs=True, kw_only=True)
 class MAService(_S3BaseService):
     _repository: MARepository
 
     _query_parameters: MAQueryParametersSchema
     _path_parameters: MAPathParametersSchema
 
-    def extract_ma(self) -> DataFrame | None:
-        return self._repository.query_moving_averages(
+    def __attrs_post_init__(self) -> None:
+        _S3BaseService.__attrs_post_init__(self=self)
+        self._ma: DataFrame | None = self._repository.query_ma(
             parameters_schema=self._query_parameters, path=self._formatted_path
         )
+        self._ma_prefixes: list[str] | None = None
+        if isinstance(self._ma, DataFrame):
+            self._ma_prefixes = _findall_prefixes(strings=self._ma.columns.to_list())
+            self._ma.drop_duplicates(inplace=True)
+
+    @property
+    def ma(self) -> DataFrame | None:
+        return self._ma
+
+    @ma.setter
+    def ma(self, ma: DataFrame) -> None:
+        self._ma = ma
+
+    @property
+    def ma_prefixes(self) -> list[str] | None:
+        return self._ma_prefixes
+
+    @staticmethod
+    def get_ma_booleans(ma: DataFrame) -> list[str]:
+        return [column for column in ma.columns.tolist() if column.startswith("is_")]
+
+    @staticmethod
+    def get_ma_ratios(ma: DataFrame) -> list[str]:
+        return [column for column in ma.columns.tolist() if column.startswith("r_")]
 
     def load_ma(self, dataframe: DataFrame, filename: str) -> None:
         self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
 
+    _ma: DataFrame | None = attr(init=False)
+    _ma_prefixes: list[str] | None = attr(init=False)
 
+
+@attrs(slots=True, auto_attribs=True, kw_only=True)
 class ADXService(_S3BaseService):
     _repository: ADXRepository
 
     _query_parameters: ADXQueryParametersSchema
     _path_parameters: ADXPathParametersSchema
 
-    def extract_adx(self) -> DataFrame | None:
-        return self._repository.query_average_directional_indexes(
+    def __attrs_post_init__(self) -> None:
+        _S3BaseService.__attrs_post_init__(self=self)
+        self._adx: DataFrame | None = self._repository.query_adx(
             parameters_schema=self._query_parameters, path=self._formatted_path
         )
+        if isinstance(self._adx, DataFrame):
+            self._adx.drop_duplicates(inplace=True)
+
+    @property
+    def adx(self) -> DataFrame | None:
+        return self._adx
+
+    @staticmethod
+    def get_adx_columns(columns: list[str]) -> list[str]:
+        return [column for column in columns if column.startswith("adx")]
 
     def load_adx(self, dataframe: DataFrame, filename: str) -> None:
         self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
 
+    _adx: DataFrame | None = attr(init=False)
 
+
+@attrs(slots=True, auto_attribs=True, kw_only=True)
 class SARService(_S3BaseService):
     _repository: SARTrialsRepository
 
     _query_parameters: SARTrialQueryParametersSchema
     _path_parameters: SARTrialPathParametersSchema
 
-    def extract_sar(self) -> DataFrame | None:
-        return self._repository.query_stop_and_reverse_trials(
+    def __attrs_post_init__(self) -> None:
+        _S3BaseService.__attrs_post_init__(self=self)
+        self._sar_trials: DataFrame | None = self._repository.query_sar_trials(
             parameters_schema=self._query_parameters, path=self._formatted_path
         )
+        if isinstance(self._sar_trials, DataFrame):
+            self._sar_trials.drop_duplicates(inplace=True)
 
-    def load_sar(self, dataframe: DataFrame, filename: str) -> None:
+    @property
+    def sar_trials(self) -> DataFrame | None:
+        return self._sar_trials
+
+    def load_sar_trials(self, dataframe: DataFrame, filename: str) -> None:
         self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
 
+    _sar_trials: DataFrame | None = attr(init=False)
 
-class ROIService(_S3BaseService):
+
+@attrs(slots=True, auto_attribs=True, kw_only=True)
+class EVService(_S3BaseService):
     _repository: TradesRepository
 
     _query_parameters: TradeQueryParametersSchema
     _path_parameters: TradePathParametersSchema
 
-    def extract_roi(self) -> DataFrame | None:
-        return self._repository.query_trades(parameters_schema=self._query_parameters, path=self._formatted_path)
+    def __attrs_post_init__(self) -> None:
+        _S3BaseService.__attrs_post_init__(self=self)
+        self._ev: DataFrame | None = self._repository.query_trades(
+            parameters_schema=self._query_parameters, path=self._formatted_path
+        )
+        if isinstance(self._ev, DataFrame):
+            self._ev.drop_duplicates(inplace=True)
 
-    def load_roi(self, dataframe: DataFrame, filename: str) -> None:
+    @property
+    def ev(self) -> DataFrame | None:
+        return self._ev
+
+    def load_ev(self, dataframe: DataFrame, filename: str) -> None:
         self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
 
+    _ev: DataFrame | None = attr(init=False)
 
-class RatioService(_S3BaseService):
-    _repository: RatioRepository
 
-    _query_parameters: RatioQueryParametersSchema
-    _path_parameters: RatioPathParametersSchema
+@attrs(slots=True, auto_attribs=True, kw_only=True)
+class RSIService(_S3BaseService):
+    _repository: RSIRepository
 
-    def extract_ratio(self) -> DataFrame | None:
-        return self._repository.query_ratios(parameters_schema=self._query_parameters, path=self._formatted_path)
+    _query_parameters: RSIQueryParametersSchema
+    _path_parameters: RSIPathParametersSchema
 
-    def load_ratio(self, dataframe: DataFrame, filename: str) -> None:
+    def __attrs_post_init__(self) -> None:
+        _S3BaseService.__attrs_post_init__(self=self)
+        self._rsi: DataFrame | None = self._repository.query_rsi(
+            parameters_schema=self._query_parameters, path=self._formatted_path
+        )
+        if isinstance(self._rsi, DataFrame):
+            self._rsi.drop_duplicates(inplace=True)
+
+    @property
+    def rsi(self) -> DataFrame | None:
+        return self._rsi
+
+    @staticmethod
+    def get_rsi_columns(columns: list[str]) -> list[str]:
+        return [column for column in columns if column.startswith("rsi")]
+
+    def load_rsi(self, dataframe: DataFrame, filename: str) -> None:
         self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
+
+    _rsi: DataFrame | None = attr(init=False)
 
 
 class AroonService(_S3BaseService):
@@ -214,13 +328,25 @@ class AroonService(_S3BaseService):
     _query_parameters: AroonQueryParametersSchema
     _path_parameters: AroonPathParametersSchema
 
-    def extract_aroon(self) -> DataFrame | None:
-        return self._repository.query_aroons(parameters_schema=self._query_parameters, path=self._formatted_path)
+    def __attrs_post_init__(self) -> None:
+        _S3BaseService.__attrs_post_init__(self=self)
+        self._aroon: DataFrame | None = self._repository.query_aroon(
+            parameters_schema=self._query_parameters, path=self._formatted_path
+        )
+        if isinstance(self._aroon, DataFrame):
+            self._aroon.drop_duplicates(inplace=True)
+
+    @property
+    def aroon(self) -> DataFrame | None:
+        return self._aroon
 
     def load_aroon(self, dataframe: DataFrame, filename: str) -> None:
         self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
 
+    _aroon: DataFrame | None = attr(init=False)
 
+
+# TODO: ...
 class BinaryService(_S3BaseService):
     _repository: BinariesRepository
 
@@ -234,6 +360,7 @@ class BinaryService(_S3BaseService):
         self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
 
 
+# TODO: ...
 class StreakService(_S3BaseService):
     _repository: StreaksRepository
 
@@ -253,15 +380,19 @@ class MLModelService(_S3BaseService):
     _query_parameters: MLModelQueryParametersSchema
     _path_parameters: MLModelPathParametersSchema
 
-    def extract_ml_model(self) -> GetObjectResponseSchema:
-        return self._s3_client.get_object(
-            bucket=self._path_parameters.bucket,
-            key=_format_s3_key(
-                query_parameters=self._query_parameters,
-                directory=self._path_parameters.directory,
-                filename=self._objects.filename,
-            ),
-        )
+    def __attrs_post_init__(self) -> None:
+        _S3BaseService.__attrs_post_init__(self=self)
+        try:
+            self._response_schema: GetObjectResponseSchema | None = self._s3_client.get_object(
+                bucket=self._path_parameters.bucket,
+                key=_format_s3_key(
+                    query_parameters=self._query_parameters,
+                    directory=self._path_parameters.directory,
+                    filename=self._objects.filename,
+                ),
+            )
+        except ClientError:
+            self._response_schema = None
 
     def load_ml_model(self, data: bytes, metadata: dict[str, Any] | None, filename: str) -> None:
         self._s3_client.put_object(
@@ -274,3 +405,4 @@ class MLModelService(_S3BaseService):
         )
 
     _repository: None = attr(init=False, default=None)
+    _response_schema: GetObjectResponseSchema | None = attr(init=False)

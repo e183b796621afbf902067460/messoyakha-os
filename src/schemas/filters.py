@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class QueryParametersBaseSchema(BaseModel):
@@ -13,7 +13,7 @@ class QueryParametersBaseSchema(BaseModel):
 
 class PathParametersBaseSchema(BaseModel):
     bucket: str
-    directory: str
+    directory: str = Field(init=False)
 
 
 class OHLCQueryParametersSchema(QueryParametersBaseSchema):
@@ -21,7 +21,7 @@ class OHLCQueryParametersSchema(QueryParametersBaseSchema):
 
 
 class OHLCPathParametersSchema(PathParametersBaseSchema):
-    """Path parameters to fetch OHLC data."""
+    directory: str = "candlesticks"
 
 
 class LatestTimestampQueryParametersSchema(QueryParametersBaseSchema):
@@ -29,7 +29,7 @@ class LatestTimestampQueryParametersSchema(QueryParametersBaseSchema):
 
 
 class LatestTimestampPathParametersSchema(PathParametersBaseSchema):
-    """Path parameters to fetch latest timestamp."""
+    directory: str = "candlesticks"
 
 
 class MAQueryParametersSchema(QueryParametersBaseSchema):
@@ -37,7 +37,7 @@ class MAQueryParametersSchema(QueryParametersBaseSchema):
 
 
 class MAPathParametersSchema(PathParametersBaseSchema):
-    """Path parameters to fetch moving averages."""
+    directory: str = "moving-averages"
 
 
 class ADXQueryParametersSchema(QueryParametersBaseSchema):
@@ -45,15 +45,15 @@ class ADXQueryParametersSchema(QueryParametersBaseSchema):
 
 
 class ADXPathParametersSchema(PathParametersBaseSchema):
-    """Path parameters to fetch average directional indexes."""
+    directory: str = "average-directional-indexes"
 
 
-class RatioQueryParametersSchema(QueryParametersBaseSchema):
+class RSIQueryParametersSchema(QueryParametersBaseSchema):
     """Query parameters to fetch ratios."""
 
 
-class RatioPathParametersSchema(PathParametersBaseSchema):
-    """Path parameters to fetch ratios."""
+class RSIPathParametersSchema(PathParametersBaseSchema):
+    directory: str = "rsi"
 
 
 class AroonQueryParametersSchema(QueryParametersBaseSchema):
@@ -61,7 +61,7 @@ class AroonQueryParametersSchema(QueryParametersBaseSchema):
 
 
 class AroonPathParametersSchema(PathParametersBaseSchema):
-    """Path parameters to fetch aroons."""
+    directory: str = "aroons"
 
 
 class BinaryQueryParametersSchema(QueryParametersBaseSchema):
@@ -69,7 +69,7 @@ class BinaryQueryParametersSchema(QueryParametersBaseSchema):
 
 
 class BinaryPathParametersSchema(PathParametersBaseSchema):
-    """Path parameters to fetch binaries."""
+    directory: str = "binaries"
 
 
 class StreakQueryParametersSchema(QueryParametersBaseSchema):
@@ -77,7 +77,7 @@ class StreakQueryParametersSchema(QueryParametersBaseSchema):
 
 
 class StreakPathParametersSchema(PathParametersBaseSchema):
-    """Path parameters to fetch streaks."""
+    directory: str = "streaks"
 
 
 class SARTrialQueryParametersSchema(QueryParametersBaseSchema):
@@ -85,7 +85,7 @@ class SARTrialQueryParametersSchema(QueryParametersBaseSchema):
 
 
 class SARTrialPathParametersSchema(PathParametersBaseSchema):
-    """Path parameters to fetch stops and reverses."""
+    directory: str = "stop-and-reverse-trials"
 
 
 class TradeQueryParametersSchema(QueryParametersBaseSchema):
@@ -93,7 +93,7 @@ class TradeQueryParametersSchema(QueryParametersBaseSchema):
 
 
 class TradePathParametersSchema(PathParametersBaseSchema):
-    """Path parameters to fetch trades."""
+    directory: str = "trades"
 
 
 class MLModelQueryParametersSchema(QueryParametersBaseSchema):
@@ -101,4 +101,4 @@ class MLModelQueryParametersSchema(QueryParametersBaseSchema):
 
 
 class MLModelPathParametersSchema(PathParametersBaseSchema):
-    """Path parameters to fetch ML-model."""
+    directory: str = Field(default=None)

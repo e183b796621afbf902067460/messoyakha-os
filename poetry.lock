@@ -1050,6 +1050,23 @@ files = [
 ]
 
 [[package]]
+name = "cmaes"
+version = "0.12.0"
+description = "Lightweight Covariance Matrix Adaptation Evolution Strategy (CMA-ES) implementation for Python 3."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "cmaes-0.12.0-py3-none-any.whl", hash = "sha256:d0e3e50ce28a36294bffa16a5626c15d23155824cf6b0a373db30dbbea9b2256"},
+    {file = "cmaes-0.12.0.tar.gz", hash = "sha256:6aab41eee2f38bf917560a7e7d1ba0060632cd44cdf7ac2a10704da994624182"},
+]
+
+[package.dependencies]
+numpy = "*"
+
+[package.extras]
+cmawm = ["scipy"]
+
+[[package]]
 name = "collinearity"
 version = "0.6.1"
 description = "A Python library for removing collinearity in machine learning datasets"
@@ -8162,4 +8179,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<4.0"
-content-hash = "e61550f8da27bb25f0f608cedfd970261ce6430c7f033e5c97dc2a3d004afb52"
+content-hash = "c9f7195c43f845b3b4bc99918514a94370acfa230f13ccfb7506a1be6d7762fb"

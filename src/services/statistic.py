@@ -1,101 +1,161 @@
-from itertools import combinations
-from typing import Final
-
-from numpy import arange, argmin, array, ndarray, random, searchsorted, sort
+from numpy import argmin, array, ndarray
 from pandas import DataFrame, Series
-from polars import DataFrame as PolarsDataFrame
-from polars import col, from_pandas, sum_horizontal  # noqa: WPS347
-from polars._typing import IntoExpr  # noqa: WPS436
-from scipy.interpolate import interp1d
-from scipy.stats import percentileofscore
 
-_Q_THRESHOLD: Final[float] = 0.05
+# TODO: simple multiplier means and weighted multiplier means
 
 
-# pylint: disable=disallowed-name
-def quantile_matching_fit(a: ndarray, b: ndarray) -> ndarray:  # noqa: WPS111
-    sorted_a: ndarray = sort(a=a)
-    sorted_b: ndarray = sort(a=b)
-
-    cdf: ndarray = arange(1, len(b) + 1) / (len(b) + 1)
-
-    fill_value: tuple[float, float] = (float(sorted_b[0]), float(sorted_b[-1]))
-    interpolation: interp1d = interp1d(x=cdf, y=sorted_b, bounds_error=False, fill_value=fill_value)
-
-    return interpolation(x=searchsorted(a=sorted_a, v=a, side="right") / (len(a) + 1))  # type: ignore[no-any-return]
+def _identify_target(row: Series, matching_columns: list[str], target_column: str = "rank") -> str | None:
+    for column in matching_columns:
+        if row[target_column] == row[column]:
+            return column
+    return None
 
 
-# pylint: enable=disallowed-name
-
-
-# pylint: disable=invalid-name, too-many-locals
-def qq(tick: float, ticks: Series, q: Series, row: Series) -> float:  # noqa: WPS111
-    percentile: float = percentileofscore(a=ticks, score=tick) / 100
-    quantile: Series = q.quantile(percentile)
-
-    q_percentiles: list[float] = []
-    q_values: list[float] = []
-    for index in quantile.index:
-        value: float = row[index]
-
-        q_percentile: float = percentileofscore(a=q[index], score=value) / 100
-        q_percentiles.append(q_percentile)
-        q_values.append(value)
-    q_argmin: int = int(argmin(abs(q_percentiles - percentile)))  # type: ignore[operator]
-    q_value: float = row[quantile.index[q_argmin]]
-
-    q_diff: float = abs(q_value - tick)
-    if q_diff > _Q_THRESHOLD:
-        abs_argmin: int = int(argmin(abs(array(q_values) - tick)))
-        abs_value: float = row[quantile.index[abs_argmin]]
-
-        abs_diff: float = abs(abs_value - tick)
-        q_value = q_value if q_diff < abs_diff else abs_value
-    return q_value
-
-
-# pylint: enable=invalid-name, too-many-locals
-
-
-# pylint: disable=consider-using-generator
-def weighted_average_by(
-    dataframe: DataFrame | PolarsDataFrame, weights: dict[str, float], multiplier: int
-) -> DataFrame:
-    combos: list[list[str]] = [list(combo) for combo in combinations(iterable=list(weights.keys()), r=multiplier)]
-    combos_length: int = len(combos)
-
-    step: int = (int(combos_length / len(weights))) - 1
-    combos = [combos[index] for index in range(0, combos_length, step if step > 0 else 1)]  # noqa: WPS509
-
-    if combos:
-        dataframe = from_pandas(data=dataframe)
-        for combo in combos:
-            weighted_average_column: str = f"{multiplier}_weighted_" + (
-                str(sorted(combo))
-                .replace("[", "")
-                .replace("]", "")
-                .replace("'", "")
-                .replace(",", "_")
-                .strip()  # noqa: WPS221
+def determine_matching_columns(row: Series, ma_prefixes: list[str], potential_columns: list[str]) -> list[str]:
+    matching_columns: list[str] = []
+    for ma_prefix in ma_prefixes:
+        is_long: int = row["is_long"]
+        is_ma_green_candle: int = row[f"is_{ma_prefix}_green_candle"]
+        if is_long and is_ma_green_candle:
+            matching_columns.extend(
+                [potential_column for potential_column in potential_columns if ma_prefix in potential_column]
             )
-            weighted_average_expression: dict[str, IntoExpr] = {
-                weighted_average_column: (
-                    sum_horizontal(col(column) * weights[column] for column in combo)
-                    / sum([weights[column] for column in combo])
-                )
-            }
-            dataframe = dataframe.lazy().with_columns(**weighted_average_expression)
-        return dataframe.collect().to_pandas()
-    return dataframe
+        if not is_long and not is_ma_green_candle:
+            matching_columns.extend(
+                [potential_column for potential_column in potential_columns if ma_prefix in potential_column]
+            )
+    return sorted(set(matching_columns))
 
 
-# pylint: enable=consider-using-generator
+def quantile_matching_fit(row: Series, target_column: str, matching_columns: list[str]) -> float | None:
+    fit: float | None = None
+    if not matching_columns:
+        return fit
+    values: ndarray = array([row[matching_column] for matching_column in matching_columns])
+    diff: ndarray = abs(row[target_column] - values)
+    fit = row[matching_columns[argmin(diff)]]
+    return fit
 
 
-def adjust_random_variable(value: float, std: float, plus_sigma: float, minus_sigma: float) -> float:
-    sample: float = value
-    if value > plus_sigma:
-        sample = abs(random.normal(loc=0, scale=std))
-    if value < minus_sigma:
-        sample = -abs(random.normal(loc=0, scale=std))
-    return sample
+# pylint: disable=unused-argument
+
+
+# TODO: ...
+def compute_global_weights(data: DataFrame, matching_columns: list[str], target_column: str = "rank") -> dict[str, int]:
+    global_weights: dict[str, int] = (
+        data.apply(
+            lambda row: _identify_target(
+                row=row, matching_columns=row["matching_columns"], target_column=target_column
+            ),
+            axis=1,
+        )
+        .value_counts()
+        .to_dict()
+    )
+    return global_weights
+
+
+# TODO: ...
+def compute_group_weights(
+    data: DataFrame, grouping_column: str, matching_columns: list[str], target_column: str = "rank"
+) -> dict[int, dict[str, int]]:
+    data["_identified_rank"] = data.apply(
+        lambda row: _identify_target(row=row, matching_columns=row["matching_columns"], target_column=target_column),
+        axis=1,
+    )
+    data["mock"] = 1
+    grouping: DataFrame = (
+        data.groupby(by=[grouping_column, "_identified_rank"], as_index=False)
+        .mock.count()
+        .sort_values(by=[grouping_column, "mock"], ascending=[False, False])
+    )
+    group_weights: dict[int, dict[str, int]] = (
+        grouping.groupby(grouping_column)
+        .apply(lambda nest: nest.set_index("_identified_rank")["mock"].to_dict())
+        .to_dict()
+    )
+    data.drop(columns=["_identified_rank", "mock"], inplace=True)
+    return group_weights
+
+
+# pylint: enable=unused-argument
+
+
+def matching_mean(row: Series, matching_columns: list[str]) -> float | None:
+    mean: float | None = None
+    if not matching_columns:
+        return mean
+
+    matching_length: int = len(matching_columns)
+
+    total_sum: int = 0
+    for matching_column in matching_columns:  # noqa: WPS519
+        total_sum += row[matching_column]
+    return total_sum / matching_length
+
+
+def matching_weighted_mean(row: Series, weights: dict[str, int], matching_columns: list[str]) -> float | None:
+    weighted_mean: float | None = None
+    if not matching_columns:
+        return weighted_mean
+
+    total_sum: int = 0
+    weights_total_sum: int = 0
+    for matching_column in matching_columns:
+        weight: int = weights[matching_column] if matching_column in weights.keys() else 0
+        total_sum += row[matching_column] * weight
+        weights_total_sum += weight
+    weighted_mean = total_sum / weights_total_sum if weights_total_sum else weighted_mean
+    return weighted_mean
+
+
+def matching_mean_by_weights(
+    row: Series,
+    weights: dict[int, dict[str, int]],
+    grouping_column: str,
+    matching_columns: list[str],
+) -> float | None:
+    mean_by_weights: float | None = None
+    if not matching_columns:
+        return mean_by_weights
+    weight_key: int = row[grouping_column]
+    if weight_key not in weights.keys():
+        return mean_by_weights
+    filtered_weights: dict[str, int] = {key: value for key, value in weights[weight_key].items() if value != 0}
+    if not filtered_weights:
+        return mean_by_weights
+
+    total_sum: float = 0
+    total_weights_sum: int = 0
+    for matching_column in matching_columns:
+        if matching_column in filtered_weights.keys():
+            total_sum += row[matching_column]
+            total_weights_sum += 1
+    mean_by_weights = total_sum / total_weights_sum if total_weights_sum else mean_by_weights
+    return mean_by_weights
+
+
+def matching_weighted_mean_by_weights(
+    row: Series,
+    weights: dict[int, dict[str, int]],
+    grouping_column: str,
+    matching_columns: list[str],
+) -> float | None:
+    weighted_mean_by_weights: float | None = None
+    if not matching_columns:
+        return weighted_mean_by_weights
+    weight_key: int = row[grouping_column]
+    if weight_key not in weights.keys():
+        return weighted_mean_by_weights
+    filtered_weights: dict[str, int] = {key: value for key, value in weights[weight_key].items() if value != 0}
+    if not filtered_weights:
+        return weighted_mean_by_weights
+
+    total_sum: float = 0
+    total_weights_sum: int = 0
+    for matching_column in matching_columns:
+        if matching_column in filtered_weights.keys():
+            total_sum += row[matching_column] * filtered_weights[matching_column]
+            total_weights_sum += filtered_weights[matching_column]
+    weighted_mean_by_weights = total_sum / total_weights_sum if total_weights_sum else weighted_mean_by_weights
+    return weighted_mean_by_weights

@@ -1,16 +1,8 @@
-from typing import Any, Literal
-
-from backtesting import Backtest, Strategy
+from backtesting import Strategy
 from numpy import array, ceil, float32, ndarray
 from onnxruntime import InferenceSession
-from pandas import DataFrame, Series
-from talib import SAREXT
 
-from src.schemas.backtests import BacktestParametersSchema
 from src.schemas.domain.s3 import GetObjectResponseSchema
-from src.schemas.trials import SARParametersSchema
-
-MA: Literal["kama_4"] = "kama_4"
 
 
 class _MLStrategy(Strategy):
@@ -75,26 +67,11 @@ class _MLStrategy(Strategy):
 
 
 class _BullishTrendStrategy(Strategy):
-
-    sar_on_bull_market_prefix: str | None = None
-    ma_on_bull_market_prefix: str | None = None
-
     def init(self) -> None:
         ...
 
-    @property
-    def _sar_on_bull_market(self) -> Any:
-        return self._data[self.sar_on_bull_market_prefix]
-
-    @property
-    def _ma_low_on_bull_market(self) -> Any:
-        return self._data[f"{self.ma_on_bull_market_prefix}_low"]
-
     def _is_bull_reversal(self) -> bool:
-        return bool(
-            self._ma_low_on_bull_market[-1] > self._sar_on_bull_market[-1]
-            and self._ma_low_on_bull_market[-2] < self._sar_on_bull_market[-2]
-        )
+        return bool(self.data.Low[-1] > self._data["sar"][-1] and self.data.Low[-2] < self._data["sar"][-2])
 
     # pylint: disable=protected-access
     def next(self) -> None:
@@ -110,26 +87,11 @@ class _BullishTrendStrategy(Strategy):
 
 
 class _BearishTrendStrategy(Strategy):
-
-    sar_on_bear_market_prefix: str | None = None
-    ma_on_bear_market_prefix: str | None = None
-
     def init(self) -> None:
         ...
 
-    @property
-    def _sar_on_bear_market(self) -> Any:
-        return self._data[self.sar_on_bear_market_prefix]
-
-    @property
-    def _ma_high_on_bear_market(self) -> Any:
-        return self._data[f"{self.ma_on_bear_market_prefix}_high"]
-
     def _is_bear_reversal(self) -> bool:
-        return bool(
-            self._ma_high_on_bear_market[-1] < self._sar_on_bear_market[-1]
-            and self._ma_high_on_bear_market[-2] > self._sar_on_bear_market[-2]
-        )
+        return bool(self.data.High[-1] < self._data["sar"][-1] and self.data.High[-2] > self._data["sar"][-2])
 
     # pylint: disable=protected-access
     def next(self) -> None:
@@ -145,10 +107,6 @@ class _BearishTrendStrategy(Strategy):
 
 
 class _MLBullishTrendStrategy(_MLStrategy, _BullishTrendStrategy):
-    @property
-    def _ma_high_on_bull_market(self) -> Any:
-        return self._data[f"{self.ma_on_bull_market_prefix}_high"]
-
     def init(self) -> None:
         _MLStrategy.init(self=self)
 
@@ -157,7 +115,7 @@ class _MLBullishTrendStrategy(_MLStrategy, _BullishTrendStrategy):
         if self.position.is_long:
             self._duration += 1
             for trade in self._broker.trades:
-                trade.sl = self._sar_on_bull_market[-1]
+                trade.sl = self._data["sar"][-1]
 
         if self._is_bull_reversal():
             self.position.close()
@@ -174,10 +132,6 @@ class _MLBullishTrendStrategy(_MLStrategy, _BullishTrendStrategy):
 
 
 class _MLBearishTrendStrategy(_MLStrategy, _BearishTrendStrategy):
-    @property
-    def _ma_low_on_bear_market(self) -> Any:
-        return self._data[f"{self.ma_on_bear_market_prefix}_low"]
-
     def init(self) -> None:
         _MLStrategy.init(self=self)
 
@@ -186,7 +140,7 @@ class _MLBearishTrendStrategy(_MLStrategy, _BearishTrendStrategy):
         if self.position.is_short:
             self._duration += 1
             for trade in self._broker.trades:
-                trade.sl = self._sar_on_bear_market[-1]
+                trade.sl = self._data["sar"][-1]
 
         if self._is_bear_reversal():
             self.position.close()
@@ -218,9 +172,8 @@ class MLTrendStrategy(_MLBullishTrendStrategy, _MLBearishTrendStrategy):
         _MLBullishTrendStrategy.init(self=self)
         _MLBearishTrendStrategy.init(self=self)
 
-        self._sar: ndarray = self._sar_on_bull_market or self._sar_on_bear_market
         self._sar_scatter: ndarray = self.I(
-            lambda value: value, self._sar, scatter=True, overlay=True, name="SAR", color="black"
+            lambda value: value, self._data["sar"], scatter=True, overlay=True, name="SAR", color="black"
         )
 
     def next(self) -> None:
@@ -229,29 +182,3 @@ class MLTrendStrategy(_MLBullishTrendStrategy, _MLBearishTrendStrategy):
 
 
 # pylint: enable=too-many-ancestors, attribute-defined-outside-init
-
-
-def backtest(data: DataFrame, parameters_schema: SARParametersSchema) -> Series:
-    data["sar"] = SAREXT(
-        high=data[f"{MA}_high"],
-        low=data[f"{MA}_low"],
-        **parameters_schema.model_dump(by_alias=True),
-    )
-    data["sar"] = abs(data["sar"])
-
-    test: Backtest = Backtest(
-        data=data,
-        strategy=TrendStrategy,
-        trade_on_close=True,
-        hedging=False,
-        finalize_trades=False,
-        exclusive_orders=True,
-        **BacktestParametersSchema().model_dump(),
-    )
-    statistics: Series = test.run(
-        sar_on_bull_market_prefix="sar",
-        ma_on_bull_market_prefix=MA,
-        sar_on_bear_market_prefix="sar",
-        ma_on_bear_market_prefix=MA,
-    )
-    return statistics

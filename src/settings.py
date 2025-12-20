@@ -22,6 +22,9 @@ class AppSettings(BaseSettings):
     TICKER: str = "BTCUSDT"
     INTERVAL: str = "4h"
 
+    TRAIN_SIZE: float = 0.8
+    RANDOM_STATE: int = 42
+
     TRIGGER_DATE: datetime = datetime.now()
 
     MILLISECONDS_IN_SECOND: int = 10**3

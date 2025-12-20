@@ -8,7 +8,7 @@ from src.schemas.filters import (
     BinaryQueryParametersSchema,
     MAQueryParametersSchema,
     QueryParametersBaseSchema,
-    RatioQueryParametersSchema,
+    RSIQueryParametersSchema,
     StreakQueryParametersSchema,
 )
 
@@ -49,24 +49,22 @@ class IndicatorsBaseRepository(DuckDBBaseRepository):
 
 
 class MARepository(IndicatorsBaseRepository):
-    def query_moving_averages(self, path: str, parameters_schema: MAQueryParametersSchema) -> DataFrame | None:
+    def query_ma(self, path: str, parameters_schema: MAQueryParametersSchema) -> DataFrame | None:
         return self._query_indicators(path=path, parameters_schema=parameters_schema)
 
 
 class ADXRepository(IndicatorsBaseRepository):
-    def query_average_directional_indexes(
-        self, path: str, parameters_schema: ADXQueryParametersSchema
-    ) -> DataFrame | None:
+    def query_adx(self, path: str, parameters_schema: ADXQueryParametersSchema) -> DataFrame | None:
         return self._query_indicators(path=path, parameters_schema=parameters_schema)
 
 
-class RatioRepository(IndicatorsBaseRepository):
-    def query_ratios(self, path: str, parameters_schema: RatioQueryParametersSchema) -> DataFrame | None:
+class RSIRepository(IndicatorsBaseRepository):
+    def query_rsi(self, path: str, parameters_schema: RSIQueryParametersSchema) -> DataFrame | None:
         return self._query_indicators(path=path, parameters_schema=parameters_schema)
 
 
 class AroonRepository(IndicatorsBaseRepository):
-    def query_aroons(self, path: str, parameters_schema: AroonQueryParametersSchema) -> DataFrame | None:
+    def query_aroon(self, path: str, parameters_schema: AroonQueryParametersSchema) -> DataFrame | None:
         return self._query_indicators(path=path, parameters_schema=parameters_schema)
 
 

@@ -7,9 +7,7 @@ from src.schemas.filters import SARTrialQueryParametersSchema
 
 # pylint: disable=duplicate-code
 class SARTrialsRepository(DuckDBBaseRepository):
-    def query_stop_and_reverse_trials(
-        self, path: str, parameters_schema: SARTrialQueryParametersSchema
-    ) -> DataFrame | None:
+    def query_sar_trials(self, path: str, parameters_schema: SARTrialQueryParametersSchema) -> DataFrame | None:
         query: str = f"""
             SELECT
                 exchange,
