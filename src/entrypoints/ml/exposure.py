@@ -91,12 +91,16 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     data.dropna(inplace=True)
 
     data["ticks"] = log1p(data["ticks"])  # noqa: WPS204
-    data["ticks"] = main_schema.scaler.fit_transform(X=vstack(tup=data["ticks"])).flatten()
+    _, _, train_rank, _ = train_test_split(
+        data, data[["ticks"]], train_size=settings.TRAIN_SIZE, random_state=settings.RANDOM_STATE, shuffle=False
+    )
+    main_schema.scaler.fit(X=vstack(tup=train_rank["ticks"]))
+    data["ticks"] = main_schema.scaler.transform(X=vstack(tup=data["ticks"])).flatten()
 
     data["matching_columns"] = data.apply(
         lambda row: determine_matching_columns(
             row=row,
-            ma_prefixes=main_schema.ma_service.ma_prefixes,  # type: ignore[arg-type]
+            ma_prefixes=main_schema.ma_service.ma_prefixes,
             potential_columns=adx_columns,
         ),
         axis=1,
@@ -130,15 +134,15 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     data.dropna(subset=["rank"], inplace=True)
     logger.info(f"R2 between target and QMF is {r2_score(y_true=data['ticks'], y_pred=data['rank'])} {data.shape}.")
 
-    train, _, _, _ = train_test_split(
+    train_data, _, _, _ = train_test_split(
         data, data[["rank"]], train_size=settings.TRAIN_SIZE, random_state=settings.RANDOM_STATE, shuffle=False
     )
-    global_weights: dict[str, int] = compute_global_weights(data=train, matching_columns=adx_columns)
+    global_weights: dict[str, int] = compute_global_weights(data=train_data, matching_columns=adx_columns)
     matching_encode_weights: dict[int, dict[str, int]] = compute_group_weights(
-        data=train, grouping_column="matching_columns_encoded", matching_columns=adx_columns
+        data=train_data, grouping_column="matching_columns_encoded", matching_columns=adx_columns
     )
     matching_length_weights: dict[int, dict[str, int]] = compute_group_weights(
-        data=train, grouping_column="matching_columns_length", matching_columns=adx_columns
+        data=train_data, grouping_column="matching_columns_length", matching_columns=adx_columns
     )
 
     data["matching_mean"] = data.apply(
@@ -247,6 +251,8 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
             "iterations": trial.suggest_int("iterations", 2**10, 2**12),  # noqa: WPS432
             "depth": trial.suggest_int("depth", 6, 12),  # noqa: WPS432
             "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 2**2, 2**4),
+            "rsm": trial.suggest_float("rsm", 1e-2, 5e-1, log=True),  # noqa: WPS432
+            "reg_lambda": trial.suggest_float("reg_lambda", 1e-2, 5e-1, log=True),  # noqa: WPS432
         }
         optuna_model: CatBoostRegressor = CatBoostRegressor(
             **params,
@@ -260,7 +266,7 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         return float(optuna_model.get_best_score()["validation"]["RMSE"])
 
     study: Study = create_study(direction="minimize", sampler=CmaEsSampler(seed=settings.RANDOM_STATE))
-    study.optimize(func=objective, n_trials=10, gc_after_trial=True, show_progress_bar=True)
+    study.optimize(func=objective, n_trials=5, gc_after_trial=True, show_progress_bar=True)
 
     model: CatBoostRegressor = CatBoostRegressor(
         **study.best_params,
