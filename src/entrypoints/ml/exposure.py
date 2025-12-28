@@ -12,6 +12,9 @@ from onnx import ModelProto, StringStringEntryProto, load_model
 from optuna import Study, Trial, create_study
 from optuna.samplers import CmaEsSampler
 from pandas import DataFrame, to_datetime  # noqa: WPS347
+from polars import DataFrame as PolarsDF
+from polars import all as all_columns
+from polars import col, struct
 from pydantic import BaseModel, Field
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
@@ -32,16 +35,7 @@ from src.schemas.filters import (
     TradeQueryParametersSchema,
 )
 from src.services.domain.s3 import ADXService, EVService, MAService, MLModelService
-from src.services.statistic import (
-    compute_global_weights,
-    compute_group_weights,
-    determine_matching_columns,
-    matching_mean,
-    matching_mean_by_weights,
-    matching_weighted_mean,
-    matching_weighted_mean_by_weights,
-    quantile_matching_fit,
-)
+from src.services.statistic import determine_matching_columns, matching_mean, quantile_matching_fit
 from src.settings import settings
 
 filterwarnings("ignore")
@@ -66,12 +60,16 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     if main_schema.ma_service.ma is None:
         raise FileNotFoundError("There is no moving averages data.")
     ma_booleans: list[str] = main_schema.ma_service.get_ma_booleans(ma=main_schema.ma_service.ma)
+    ma_streaks: list[str] = main_schema.ma_service.get_ma_streaks(ma=main_schema.ma_service.ma)
     main_schema.ma_service.ma = main_schema.ma_service.ma[
-        ["exchange", "section", "ticker", "interval", "datetime"] + ma_booleans
+        ["exchange", "section", "ticker", "interval", "datetime"] + ma_booleans + ma_streaks
     ]
 
     if main_schema.adx_service.adx is None:
         raise FileNotFoundError("There is no ADX data.")
+    adx_sma_columns: list[str] = [column for column in main_schema.adx_service.adx if column.startswith("mean")]
+    adx_std_columns: list[str] = [column for column in main_schema.adx_service.adx if column.startswith("std")]
+    adx_slope_columns: list[str] = [column for column in main_schema.adx_service.adx if column.startswith("slope")]
     adx_columns: list[str] = main_schema.adx_service.get_adx_columns(
         columns=main_schema.adx_service.adx.columns.tolist()
     )
@@ -80,7 +78,7 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         raise FileNotFoundError("There is no trades data.")
     logger.info(f"Shape of EV is {main_schema.ev_service.ev.shape}.")
 
-    data: DataFrame = main_schema.ev_service.ev.merge(
+    data: DataFrame | PolarsDF = main_schema.ev_service.ev.merge(
         right=main_schema.ma_service.ma, how="left", on=["exchange", "section", "ticker", "interval", "datetime"]
     )
     data = data.merge(
@@ -88,6 +86,7 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     )
     data["datetime"] = to_datetime(data["datetime"])
     data["year"] = data["datetime"].dt.year
+    data.query("ticks > 1", inplace=True)
     data.dropna(inplace=True)
 
     data["ticks"] = log1p(data["ticks"])  # noqa: WPS204
@@ -96,145 +95,70 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     )
     main_schema.scaler.fit(X=vstack(tup=train_rank["ticks"]))
     data["ticks"] = main_schema.scaler.transform(X=vstack(tup=data["ticks"])).flatten()
+    logger.info("Scaler is fitted.")
 
-    data["matching_columns"] = data.apply(
-        lambda row: determine_matching_columns(
-            row=row,
-            ma_prefixes=main_schema.ma_service.ma_prefixes,
-            potential_columns=adx_columns,
-        ),
-        axis=1,
-    )
-    data["matching_columns_encoded"] = data["matching_columns"].astype(str).astype("category")  # noqa: WPS204
-    data["matching_columns_length"] = data["matching_columns"].apply(len)
-    matching_columns_encoded: list[str] = sorted(data["matching_columns_encoded"].unique().tolist())
-    main_schema.encoder.fit(y=matching_columns_encoded)
-    encodes: dict[str, int] = {
-        matching_column_encoded: int(main_schema.encoder.transform(y=[matching_column_encoded])[0])
-        for matching_column_encoded in matching_columns_encoded
-    }
-    data["matching_columns_encoded"] = data["matching_columns_encoded"].apply(
-        lambda matching_column_encoded: encodes[matching_column_encoded]
-    )
-    data["matching_columns_encoded"] = data["matching_columns_encoded"].astype(int)
+    # ---
 
-    # pylint: disable=cell-var-from-loop
-    for adx_column in adx_columns:  # noqa: WPS426
-        data[f"is_{adx_column}"] = data["matching_columns"].apply(
-            lambda matching_columns: 1 if adx_column in matching_columns else 0
+    data = PolarsDF(data=data)
+    data = data.with_columns(
+        struct(all_columns())
+        .map_elements(
+            function=lambda row: determine_matching_columns(
+                row=row,
+                ma_prefixes=main_schema.ma_service.ma_prefixes,  # type: ignore[arg-type]
+                potential_columns=adx_sma_columns,  # TODO: ...
+            )
         )
-    # pylint: disable=cell-var-from-loop
+        .alias(name="matching_columns")
+    )
+    data = data.with_columns(matching_columns_length=col("matching_columns").list.len())
+    data = data.with_columns(
+        struct(all_columns())
+        .map_elements(function=lambda row: matching_mean(row=row, matching_columns=row["matching_columns"]))
+        .alias(name="matching_mean")
+    )
+    for adx_sma_column in adx_sma_columns:  # TODO: ...
+        data = data.with_columns(
+            col("matching_columns")
+            .list.contains(item=adx_sma_column)
+            .alias(name=f"is_{adx_sma_column}_in_matching_columns")
+        )
+    logger.info("Booleans computed.")
 
-    data["rank"] = data.apply(
-        lambda row: quantile_matching_fit(
-            row=row, target_column="ticks", matching_columns=row["matching_columns"]  # noqa: WPS204
-        ),
-        axis=1,
+    data = data.with_columns(
+        struct(all_columns())
+        .map_elements(
+            function=lambda row: quantile_matching_fit(
+                row=row, target_column="ticks", matching_columns=row["matching_columns"]
+            )
+        )
+        .alias(name="rank")
     )
-    data.dropna(subset=["rank"], inplace=True)
-    logger.info(f"R2 between target and QMF is {r2_score(y_true=data['ticks'], y_pred=data['rank'])} {data.shape}.")
-
-    train_data, _, _, _ = train_test_split(
-        data, data[["rank"]], train_size=settings.TRAIN_SIZE, random_state=settings.RANDOM_STATE, shuffle=False
-    )
-    global_weights: dict[str, int] = compute_global_weights(data=train_data, matching_columns=adx_columns)
-    matching_encode_weights: dict[int, dict[str, int]] = compute_group_weights(
-        data=train_data, grouping_column="matching_columns_encoded", matching_columns=adx_columns
-    )
-    matching_length_weights: dict[int, dict[str, int]] = compute_group_weights(
-        data=train_data, grouping_column="matching_columns_length", matching_columns=adx_columns
-    )
-
-    data["matching_mean"] = data.apply(
-        lambda row: matching_mean(row=row, matching_columns=row["matching_columns"]), axis=1
-    )
-    data["matching_weighted_mean"] = data.apply(
-        lambda row: matching_weighted_mean(
-            row=row,
-            weights=global_weights,
-            matching_columns=row["matching_columns"],
-        ),
-        axis=1,
+    data = data.drop_nulls(subset=["rank"])
+    logger.info(
+        f"R2 between target and QMF is {r2_score(y_true=data['ticks'].to_numpy(), y_pred=data['rank'].to_numpy())} "
+        f"{data.shape}."
     )
 
-    data["matching_mean_by_encode"] = data.apply(
-        lambda row: matching_mean_by_weights(
-            row=row,
-            weights=matching_encode_weights,
-            grouping_column="matching_columns_encoded",
-            matching_columns=row["matching_columns"],
-        ),
-        axis=1,
-    )
-    data["matching_weighted_mean_by_encode"] = data.apply(
-        lambda row: matching_weighted_mean_by_weights(
-            row=row,
-            weights=matching_encode_weights,
-            grouping_column="matching_columns_encoded",
-            matching_columns=row["matching_columns"],
-        ),
-        axis=1,
-    )
-
-    data["matching_mean_by_length"] = data.apply(
-        lambda row: matching_mean_by_weights(
-            row=row,
-            weights=matching_length_weights,
-            grouping_column="matching_columns_length",
-            matching_columns=row["matching_columns"],
-        ),
-        axis=1,
-    )
-    data["matching_weighted_mean_by_length"] = data.apply(
-        lambda row: matching_weighted_mean_by_weights(
-            row=row,
-            weights=matching_length_weights,
-            grouping_column="matching_columns_length",
-            matching_columns=row["matching_columns"],
-        ),
-        axis=1,
-    )
-
-    matching_aggregated_columns: list[str] = [
-        column for column in data.columns.tolist() if column.startswith("matching")
-    ]
-    matching_aggregated_columns.remove("matching_columns")
-    matching_aggregated_columns.remove("matching_columns_encoded")
-    matching_aggregated_columns.remove("matching_columns_length")
-    data["matching_aggregated_mean"] = data.apply(
-        lambda row: matching_mean(row=row, matching_columns=matching_aggregated_columns), axis=1
-    )
-
-    data["rank"] = data.apply(
-        lambda row: quantile_matching_fit(
-            row=row, target_column="ticks", matching_columns=matching_aggregated_columns + ["matching_aggregated_mean"]
-        ),
-        axis=1,
-    )
-    data.dropna(subset=["rank"], inplace=True)
-    logger.info(f"R2 between target and QMF is {r2_score(y_true=data['ticks'], y_pred=data['rank'])} {data.shape}.")
-
-    categorical_features: list[str] = [column for column in data.columns.tolist() if column.startswith("is")] + [
+    categorical_features: list[str] = [column for column in data.columns if column.startswith("is")] + [
         "matching_columns_length",
-        "matching_columns_encoded",
     ]
     feature_columns: list[str] = (
         adx_columns
+        + adx_sma_columns
+        + adx_std_columns
+        + adx_slope_columns
+        + ma_streaks
         + categorical_features
-        + [
-            "matching_mean",
-            "matching_weighted_mean",
-            "matching_mean_by_encode",
-            "matching_weighted_mean_by_encode",
-            "matching_mean_by_length",
-            "matching_weighted_mean_by_length",
-            "matching_aggregated_mean",
-        ]
+        + ["matching_mean"]
     )
-    data.dropna(subset=feature_columns, inplace=True)
+    data = data.drop_nulls(subset=feature_columns)
     logger.info(f"Shape of data is {data.shape}.")
     logger.info(f"Total number of features is {len(feature_columns)}.")
 
+    data = data.to_pandas()
+    for categorical_feature in categorical_features:
+        data[categorical_feature] = data[categorical_feature].astype(int)
     train_features, test_features, train_target, test_target = train_test_split(
         data[feature_columns],
         data[["rank"]],
@@ -242,8 +166,8 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         random_state=settings.RANDOM_STATE,
         shuffle=False,
     )
-    train_pool: Pool = Pool(data=train_features, label=train_target)
-    test_pool: Pool = Pool(data=test_features, label=test_target)
+    train_pool: Pool = Pool(data=train_features, label=train_target, cat_features=categorical_features)
+    test_pool: Pool = Pool(data=test_features, label=test_target, cat_features=categorical_features)
 
     def objective(trial: Trial) -> float:  # noqa: WPS430
         params = {
@@ -266,17 +190,20 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         return float(optuna_model.get_best_score()["validation"]["RMSE"])
 
     study: Study = create_study(direction="minimize", sampler=CmaEsSampler(seed=settings.RANDOM_STATE))
-    study.optimize(func=objective, n_trials=5, gc_after_trial=True, show_progress_bar=True)
+    study.optimize(func=objective, n_trials=3, gc_after_trial=True, show_progress_bar=True)
 
     model: CatBoostRegressor = CatBoostRegressor(
         **study.best_params,
         loss_function="RMSE",
         eval_metric="RMSE",
-        random_seed=settings.RANDOM_STATE,
-        use_best_model=True,
+        custom_metric=["RMSE"],
+        random_state=settings.RANDOM_STATE,
         verbose=False,
     )
     model.fit(X=train_pool, eval_set=test_pool, use_best_model=True, verbose=False)
+
+    data["y"] = model.predict(data[feature_columns])
+    data.to_csv("data.csv", index=False)
 
     filepath: Path = Path(f"{uuid1()}.onnx")
     model.save_model(fname=filepath.as_posix(), format="onnx", pool=train_pool)
@@ -284,11 +211,6 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     filepath.unlink()
 
     proto.metadata_props.append(StringStringEntryProto(key="columns", value=str(feature_columns)))
-    proto.metadata_props.append(StringStringEntryProto(key="encodes", value=str(encodes)))
-
-    proto.metadata_props.append(StringStringEntryProto(key="global_weights", value=str(global_weights)))
-    proto.metadata_props.append(StringStringEntryProto(key="encode_weights", value=str(matching_encode_weights)))
-    proto.metadata_props.append(StringStringEntryProto(key="length_weights", value=str(matching_length_weights)))
 
     serialized_proto: bytes = proto.SerializeToString()
     main_schema.ml_model_service.load_ml_model(data=serialized_proto, metadata=None, filename=filepath.as_posix())

@@ -1,4 +1,4 @@
-from numpy import argmin, array, ndarray
+from numpy import argmin, array, exp, ndarray
 from pandas import DataFrame, Series
 
 # TODO: simple multiplier means and weighted multiplier means
@@ -11,23 +11,25 @@ def _identify_target(row: Series, matching_columns: list[str], target_column: st
     return None
 
 
-def determine_matching_columns(row: Series, ma_prefixes: list[str], potential_columns: list[str]) -> list[str]:
+def determine_matching_columns(
+    row: dict[str, int | float], ma_prefixes: list[str], potential_columns: list[str]
+) -> list[str]:
     matching_columns: list[str] = []
     for ma_prefix in ma_prefixes:
-        is_long: int = row["is_long"]
-        is_ma_green_candle: int = row[f"is_{ma_prefix}_green_candle"]
-        if is_long and is_ma_green_candle:
+        is_long: int = int(row["is_long"])
+        is_ma_green_candle: int = int(row[f"is_{ma_prefix}_green_candle"])
+        if is_long and is_ma_green_candle and row[f"streak_is_{ma_prefix}_green_candle"] > 1:
             matching_columns.extend(
                 [potential_column for potential_column in potential_columns if ma_prefix in potential_column]
             )
-        if not is_long and not is_ma_green_candle:
+        if not is_long and not is_ma_green_candle and row[f"streak_is_{ma_prefix}_green_candle"] > 1:
             matching_columns.extend(
                 [potential_column for potential_column in potential_columns if ma_prefix in potential_column]
             )
     return sorted(set(matching_columns))
 
 
-def quantile_matching_fit(row: Series, target_column: str, matching_columns: list[str]) -> float | None:
+def quantile_matching_fit(row: dict[str, float], target_column: str, matching_columns: list[str]) -> float | None:
     fit: float | None = None
     if not matching_columns:
         return fit
@@ -81,7 +83,7 @@ def compute_group_weights(
 # pylint: enable=unused-argument
 
 
-def matching_mean(row: Series, matching_columns: list[str]) -> float | None:
+def matching_mean(row: dict[str, float], matching_columns: list[str]) -> float | None:
     mean: float | None = None
     if not matching_columns:
         return mean
@@ -90,11 +92,13 @@ def matching_mean(row: Series, matching_columns: list[str]) -> float | None:
 
     total_sum: int = 0
     for matching_column in matching_columns:  # noqa: WPS519
-        total_sum += row[matching_column]
+        total_sum += int(row[matching_column])
     return total_sum / matching_length
 
 
-def matching_weighted_mean(row: Series, weights: dict[str, int], matching_columns: list[str]) -> float | None:
+def matching_weighted_mean(
+    row: dict[str, float], weights: dict[str, int], matching_columns: list[str], *, is_exp: bool = False
+) -> float | None:
     weighted_mean: float | None = None
     if not matching_columns:
         return weighted_mean
@@ -103,14 +107,15 @@ def matching_weighted_mean(row: Series, weights: dict[str, int], matching_column
     weights_total_sum: int = 0
     for matching_column in matching_columns:
         weight: int = weights[matching_column] if matching_column in weights.keys() else 0
-        total_sum += row[matching_column] * weight
+        weight = weight ** exp(2) if is_exp else weight
+        total_sum += int(row[matching_column]) * weight
         weights_total_sum += weight
     weighted_mean = total_sum / weights_total_sum if weights_total_sum else weighted_mean
     return weighted_mean
 
 
 def matching_mean_by_weights(
-    row: Series,
+    row: dict[str, int | float],
     weights: dict[int, dict[str, int]],
     grouping_column: str,
     matching_columns: list[str],
@@ -118,7 +123,7 @@ def matching_mean_by_weights(
     mean_by_weights: float | None = None
     if not matching_columns:
         return mean_by_weights
-    weight_key: int = row[grouping_column]
+    weight_key: int = int(row[grouping_column])
     if weight_key not in weights.keys():
         return mean_by_weights
     filtered_weights: dict[str, int] = {key: value for key, value in weights[weight_key].items() if value != 0}
@@ -135,16 +140,19 @@ def matching_mean_by_weights(
     return mean_by_weights
 
 
+# pylint: disable=too-many-locals
 def matching_weighted_mean_by_weights(
-    row: Series,
+    row: dict[str, int | float],
     weights: dict[int, dict[str, int]],
     grouping_column: str,
     matching_columns: list[str],
+    *,
+    is_exp: bool = False,
 ) -> float | None:
     weighted_mean_by_weights: float | None = None
     if not matching_columns:
         return weighted_mean_by_weights
-    weight_key: int = row[grouping_column]
+    weight_key: int = int(row[grouping_column])
     if weight_key not in weights.keys():
         return weighted_mean_by_weights
     filtered_weights: dict[str, int] = {key: value for key, value in weights[weight_key].items() if value != 0}
@@ -155,7 +163,11 @@ def matching_weighted_mean_by_weights(
     total_weights_sum: int = 0
     for matching_column in matching_columns:
         if matching_column in filtered_weights.keys():
-            total_sum += row[matching_column] * filtered_weights[matching_column]
-            total_weights_sum += filtered_weights[matching_column]
+            weight = filtered_weights[matching_column] ** exp(2) if is_exp else filtered_weights[matching_column]
+            total_sum += row[matching_column] * weight
+            total_weights_sum += weight
     weighted_mean_by_weights = total_sum / total_weights_sum if total_weights_sum else weighted_mean_by_weights
     return weighted_mean_by_weights
+
+
+# pylint: enable=too-many-locals

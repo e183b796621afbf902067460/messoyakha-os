@@ -35,6 +35,8 @@ skl2onnx = "^1.19.1"
 onnxmltools = "^1.14.0"
 onnxruntime = "^1.23.2"
 cmaes = "^0.12.0"
+numba = "^0.63.1"
+pandarallel = "^1.6.5"
 
 [tool.poetry.group.linters.dependencies]
 pre-commit = "3.6.0"

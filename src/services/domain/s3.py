@@ -204,8 +204,8 @@ class MAService(_S3BaseService):
         return [column for column in ma.columns.tolist() if column.startswith("is_")]
 
     @staticmethod
-    def get_ma_ratios(ma: DataFrame) -> list[str]:
-        return [column for column in ma.columns.tolist() if column.startswith("r_")]
+    def get_ma_streaks(ma: DataFrame) -> list[str]:
+        return [column for column in ma.columns.tolist() if column.startswith("streak_")]
 
     def load_ma(self, dataframe: DataFrame, filename: str) -> None:
         self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
