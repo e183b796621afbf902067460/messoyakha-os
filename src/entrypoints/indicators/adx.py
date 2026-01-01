@@ -12,7 +12,7 @@ from numpy import array, ndarray
 from pandas import DataFrame
 from pydantic import BaseModel
 from sklearn.feature_selection import f_regression
-from talib import ADX, SMA, STDDEV
+from talib import ADX
 
 from src.adapters.clients.s3 import S3Client
 from src.adapters.connections.duckdb import get_duckdb_connection
@@ -31,7 +31,7 @@ from src.settings import settings
 filterwarnings("ignore")
 
 
-_CORRELATION_THRESHOLD: Final[float] = 0.6
+_CORRELATION_THRESHOLD: Final[float] = 0.75
 
 
 class _MainSchema(BaseModel):
@@ -62,7 +62,7 @@ def _main(main_schema: _MainSchema) -> None:
     if main_schema.ma_service.ma is None:
         raise FileNotFoundError("There is no moving averages data.")
 
-    adx_windows: list[int] = [2**3, 2**4, 2**5]
+    adx_windows: list[int] = [2**2, 2**3, 2**4, 2**5]
     for ma_prefix, adx_window in product(main_schema.ma_service.ma_prefixes, adx_windows):  # type: ignore[arg-type]
         main_schema.ma_service.ma = compute_adx(
             data=main_schema.ma_service.ma,
@@ -97,39 +97,6 @@ def _main(main_schema: _MainSchema) -> None:
     adx["year"] = adx["datetime"].dt.year
     adx.sort_values(by="datetime", inplace=True)
     logger.info(f"There are {len(selected_columns)} features in total.")
-
-    windows: list[int] = [2**2, 2**3, 2**4]
-    for selected_column, window in product(selected_columns, windows):
-        adx_sma_column: str = f"mean_{window}_{selected_column}"
-        adx[adx_sma_column] = SMA(adx[selected_column], window)  # noqa: WPS204
-
-        std_one_column: str = f"std_1_{window}_{selected_column}"
-        adx[std_one_column] = STDDEV(real=adx[selected_column], timeperiod=window, nbdev=1)
-        std_two_column: str = f"std_2_{window}_{selected_column}"
-        adx[std_two_column] = STDDEV(real=adx[selected_column], timeperiod=window, nbdev=2)
-        std_three_column: str = f"std_3_{window}_{selected_column}"
-        adx[std_three_column] = STDDEV(real=adx[selected_column], timeperiod=window, nbdev=3)
-
-        adx[f"is_{selected_column}_above_1_std_{window}_plus"] = adx[selected_column] > (
-            adx[adx_sma_column] + adx[std_one_column]
-        )
-        adx[f"is_{selected_column}_below_1_std_{window}_minus"] = adx[selected_column] < (
-            adx[adx_sma_column] - adx[std_one_column]
-        )
-        adx[f"is_{selected_column}_above_2_std_{window}_plus"] = adx[selected_column] > (
-            adx[adx_sma_column] + adx[std_two_column]
-        )
-        adx[f"is_{selected_column}_below_2_std_{window}_minus"] = adx[selected_column] < (
-            adx[adx_sma_column] - adx[std_two_column]
-        )
-        adx[f"is_{selected_column}_above_3_std_{window}_plus"] = adx[selected_column] > (
-            adx[adx_sma_column] + adx[std_three_column]
-        )
-        adx[f"is_{selected_column}_below_3_std_{window}_minus"] = adx[selected_column] < (
-            adx[adx_sma_column] - adx[std_three_column]
-        )
-
-        adx[f"slope_{window}_{selected_column}"] = adx[selected_column].diff(window)
 
     main_schema.adx_service.load_adx(dataframe=adx, filename=f"{uuid1()}.parquet")
     main_schema.adx_service.delete_object()

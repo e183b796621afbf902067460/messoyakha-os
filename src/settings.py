@@ -20,7 +20,7 @@ class AppSettings(BaseSettings):
     EXCHANGE: str = "Binance"
     SECTION: str = "SPOT"
     TICKER: str = "BTCUSDT"
-    INTERVAL: str = "30m"
+    INTERVAL: str = "4h"
 
     TRAIN_SIZE: float = 0.8
     RANDOM_STATE: int = 42

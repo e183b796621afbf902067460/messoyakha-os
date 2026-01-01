@@ -1,4 +1,5 @@
 # pylint: disable=duplicate-code, too-many-lines
+from itertools import combinations
 from pathlib import Path
 from uuid import uuid1
 from warnings import filterwarnings
@@ -14,7 +15,7 @@ from optuna.samplers import CmaEsSampler
 from pandas import DataFrame, to_datetime  # noqa: WPS347
 from polars import DataFrame as PolarsDF
 from polars import all as all_columns
-from polars import col, struct
+from polars import col, mean_horizontal, struct
 from pydantic import BaseModel, Field
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
@@ -35,7 +36,15 @@ from src.schemas.filters import (
     TradeQueryParametersSchema,
 )
 from src.services.domain.s3 import ADXService, EVService, MAService, MLModelService
-from src.services.statistic import determine_matching_columns, matching_mean, quantile_matching_fit
+from src.services.statistic import (
+    determine_matching_columns,
+    is_mean_horizontal_in_matching_columns,
+    matching_max,
+    matching_mean,
+    matching_min,
+    quantile_matching_fit,
+    set_market_regime,
+)
 from src.settings import settings
 
 filterwarnings("ignore")
@@ -55,7 +64,7 @@ class _MainSchema(BaseModel):
         arbitrary_types_allowed = True
 
 
-# pylint: disable=too-many-locals, too-many-statements
+# pylint: disable=too-many-locals, too-many-statements, too-complex, cell-var-from-loop
 def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     if main_schema.ma_service.ma is None:
         raise FileNotFoundError("There is no moving averages data.")
@@ -67,9 +76,6 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
 
     if main_schema.adx_service.adx is None:
         raise FileNotFoundError("There is no ADX data.")
-    adx_sma_columns: list[str] = [column for column in main_schema.adx_service.adx if column.startswith("mean")]
-    adx_std_columns: list[str] = [column for column in main_schema.adx_service.adx if column.startswith("std")]
-    adx_slope_columns: list[str] = [column for column in main_schema.adx_service.adx if column.startswith("slope")]
     adx_columns: list[str] = main_schema.adx_service.get_adx_columns(
         columns=main_schema.adx_service.adx.columns.tolist()
     )
@@ -100,28 +106,62 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     # ---
 
     data = PolarsDF(data=data)
+    for first, second in combinations(iterable=adx_columns, r=2):
+        data = data.with_columns(mean_horizontal(first, second).alias(name=f"mean_horizontal_{first}_{second}"))
+    mean_adx_columns: list[str] = [column for column in data.columns if column.startswith("mean_horizontal")]
+
     data = data.with_columns(
-        struct(all_columns())
+        struct(all_columns())  # noqa: WPS204
         .map_elements(
             function=lambda row: determine_matching_columns(
                 row=row,
                 ma_prefixes=main_schema.ma_service.ma_prefixes,  # type: ignore[arg-type]
-                potential_columns=adx_sma_columns,  # TODO: ...
+                potential_columns=adx_columns,
             )
         )
         .alias(name="matching_columns")
     )
     data = data.with_columns(matching_columns_length=col("matching_columns").list.len())
+    data = data.filter((col("matching_columns_length") > 1))
+
+    data = data.with_columns(
+        struct(all_columns())
+        .map_elements(
+            function=lambda row: matching_min(row=row, matching_columns=row["matching_columns"])  # noqa: WPS204
+        )
+        .alias(name="matching_min")
+    )
+    data = data.with_columns(
+        struct(all_columns())
+        .map_elements(function=lambda row: matching_max(row=row, matching_columns=row["matching_columns"]))
+        .alias(name="matching_max")
+    )
     data = data.with_columns(
         struct(all_columns())
         .map_elements(function=lambda row: matching_mean(row=row, matching_columns=row["matching_columns"]))
         .alias(name="matching_mean")
     )
-    for adx_sma_column in adx_sma_columns:  # TODO: ...
+    data = data.with_columns(mean_horizontal("matching_min", "matching_max").alias(name="matching_minmax_mean"))
+    data = data.with_columns(matching_minmax_delta=col("matching_max") - col("matching_min"))
+    data = data.with_columns(
+        struct(all_columns())
+        .map_elements(function=lambda row: set_market_regime(delta=row["matching_minmax_delta"]))
+        .alias(name="market_regime")
+    )
+
+    for adx_column in adx_columns:
         data = data.with_columns(
-            col("matching_columns")
-            .list.contains(item=adx_sma_column)
-            .alias(name=f"is_{adx_sma_column}_in_matching_columns")
+            col("matching_columns").list.contains(item=adx_column).alias(name=f"is_{adx_column}_in_matching_columns")
+        )
+    for first, second in combinations(iterable=adx_columns, r=2):  # noqa: WPS426 WPS440
+        data = data.with_columns(
+            struct(all_columns())
+            .map_elements(
+                function=lambda row: is_mean_horizontal_in_matching_columns(
+                    first=first, second=second, matching_columns=row["matching_columns"]
+                )
+            )
+            .alias(name=f"is_mean_horizontal_{first}_{second}_in_matching_columns")
         )
     logger.info("Booleans computed.")
 
@@ -133,8 +173,7 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
             )
         )
         .alias(name="rank")
-    )
-    data = data.drop_nulls(subset=["rank"])
+    ).drop_nulls(subset=["rank"])
     logger.info(
         f"R2 between target and QMF is {r2_score(y_true=data['ticks'].to_numpy(), y_pred=data['rank'].to_numpy())} "
         f"{data.shape}."
@@ -142,15 +181,14 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
 
     categorical_features: list[str] = [column for column in data.columns if column.startswith("is")] + [
         "matching_columns_length",
+        "market_regime",
     ]
     feature_columns: list[str] = (
         adx_columns
-        + adx_sma_columns
-        + adx_std_columns
-        + adx_slope_columns
+        + mean_adx_columns
+        + ["matching_min", "matching_max", "matching_mean", "matching_minmax_mean", "matching_minmax_delta"]
         + ma_streaks
         + categorical_features
-        + ["matching_mean"]
     )
     data = data.drop_nulls(subset=feature_columns)
     logger.info(f"Shape of data is {data.shape}.")
@@ -166,44 +204,41 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         random_state=settings.RANDOM_STATE,
         shuffle=False,
     )
-    train_pool: Pool = Pool(data=train_features, label=train_target, cat_features=categorical_features)
-    test_pool: Pool = Pool(data=test_features, label=test_target, cat_features=categorical_features)
+    train_pool: Pool = Pool(data=train_features, label=train_target)
+    test_pool: Pool = Pool(data=test_features, label=test_target)
 
     def objective(trial: Trial) -> float:  # noqa: WPS430
         params = {
-            "learning_rate": trial.suggest_float("learning_rate", 1e-3, 1e-1, log=True),  # noqa: WPS432
-            "iterations": trial.suggest_int("iterations", 2**10, 2**12),  # noqa: WPS432
-            "depth": trial.suggest_int("depth", 6, 12),  # noqa: WPS432
-            "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 2**2, 2**4),
-            "rsm": trial.suggest_float("rsm", 1e-2, 5e-1, log=True),  # noqa: WPS432
-            "reg_lambda": trial.suggest_float("reg_lambda", 1e-2, 5e-1, log=True),  # noqa: WPS432
+            "learning_rate": trial.suggest_float("learning_rate", 1e-3, 5e-1, log=True),  # noqa: WPS432
+            "iterations": trial.suggest_int("iterations", 2**8, 2**12),  # noqa: WPS432
+            "depth": trial.suggest_int("depth", 2, 12),  # noqa: WPS432
+            "max_ctr_complexity": trial.suggest_int("max_ctr_complexity", 2, 12),  # noqa: WPS432
+            "reg_lambda": trial.suggest_float("reg_lambda", 5e-2, 5e-1, log=True),  # noqa: WPS432
+            "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 2**2, 2**6),  # noqa: WPS432
         }
         optuna_model: CatBoostRegressor = CatBoostRegressor(
             **params,
-            loss_function="RMSE",
-            eval_metric="RMSE",
-            custom_metric=["RMSE"],
+            loss_function="MAE",
+            eval_metric="MAE",
+            custom_metric=["MAE"],
             random_state=settings.RANDOM_STATE,
             verbose=False,
         )
         optuna_model.fit(X=train_pool, eval_set=test_pool, use_best_model=True, verbose=False)
-        return float(optuna_model.get_best_score()["validation"]["RMSE"])
+        return float(optuna_model.score(X=test_pool))
 
-    study: Study = create_study(direction="minimize", sampler=CmaEsSampler(seed=settings.RANDOM_STATE))
-    study.optimize(func=objective, n_trials=3, gc_after_trial=True, show_progress_bar=True)
+    study: Study = create_study(direction="maximize", sampler=CmaEsSampler(seed=settings.RANDOM_STATE))
+    study.optimize(func=objective, n_trials=10, gc_after_trial=True, show_progress_bar=True)
 
     model: CatBoostRegressor = CatBoostRegressor(
         **study.best_params,
-        loss_function="RMSE",
-        eval_metric="RMSE",
-        custom_metric=["RMSE"],
+        loss_function="MAE",
+        eval_metric="MAE",
+        custom_metric=["MAE"],
         random_state=settings.RANDOM_STATE,
         verbose=False,
     )
     model.fit(X=train_pool, eval_set=test_pool, use_best_model=True, verbose=False)
-
-    data["y"] = model.predict(data[feature_columns])
-    data.to_csv("data.csv", index=False)
 
     filepath: Path = Path(f"{uuid1()}.onnx")
     model.save_model(fname=filepath.as_posix(), format="onnx", pool=train_pool)
@@ -216,7 +251,7 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     main_schema.ml_model_service.load_ml_model(data=serialized_proto, metadata=None, filename=filepath.as_posix())
 
 
-# pylint: enable=too-many-locals, too-many-statements
+# pylint: enable=too-many-locals, too-many-statements, too-complex, cell-var-from-loop
 
 
 if __name__ == "__main__":

@@ -235,7 +235,7 @@ class ADXService(_S3BaseService):
 
     @staticmethod
     def get_adx_columns(columns: list[str]) -> list[str]:
-        return [column for column in columns if column.startswith("adx")]
+        return sorted([column for column in columns if column.startswith("adx")])
 
     def load_adx(self, dataframe: DataFrame, filename: str) -> None:
         self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")

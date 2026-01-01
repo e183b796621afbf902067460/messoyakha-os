@@ -10,7 +10,7 @@ from loguru import logger
 from numpy import ndarray
 from pandas import DataFrame, Series
 from pydantic import BaseModel
-from talib import EMA, KAMA, SMA, TEMA, TRIMA
+from talib import EMA, KAMA, SMA, TEMA
 
 from src.adapters.clients.s3 import S3Client
 from src.adapters.connections.duckdb import get_duckdb_connection
@@ -61,20 +61,18 @@ def _main(main_schema: _MainSchema) -> None:
     if main_schema.ohlc_service.ohlc is None:
         raise FileNotFoundError("There is no candlesticks data.")
 
-    smooths: list[Callable[[ndarray, int], ndarray]] = [TRIMA, SMA, EMA, TEMA, KAMA]
-    windows: list[int] = [2**2, 2**3, 2**4, 2**5, 2**6, 2**7, 2**8]
+    smooths: list[Callable[[ndarray, int], ndarray]] = [SMA, EMA, TEMA, KAMA]
+    windows: list[int] = [2**2, 2**3, 2**4, 2**5]
     for smooth, window in product(smooths, windows):
         prefix: str = f"{smooth.__name__.lower()}_{window}"
         main_schema.ohlc_service.ohlc = compute_ma(
             data=main_schema.ohlc_service.ohlc, ma_method=smooth, ma_window=window, prefix=prefix
         )
-
-        is_ma_green_candle_column: str = f"is_{prefix}_green_candle"
-        main_schema.ohlc_service.ohlc[is_ma_green_candle_column] = (
+        main_schema.ohlc_service.ohlc[f"is_{prefix}_green_candle"] = (
             main_schema.ohlc_service.ohlc[f"{prefix}_close"] > main_schema.ohlc_service.ohlc[f"{prefix}_open"]
         ).astype(int)
         main_schema.ohlc_service.ohlc = _compute_streak(
-            data=main_schema.ohlc_service.ohlc, is_ma_green_candle_column=is_ma_green_candle_column
+            data=main_schema.ohlc_service.ohlc, is_ma_green_candle_column=f"is_{prefix}_green_candle"
         )
         logger.info(f"{smooth.__name__}({window}) is ready.")
     main_schema.ohlc_service.ohlc.drop(columns=["open", "high", "low", "close", "close_time"], axis=1, inplace=True)
