@@ -19,7 +19,7 @@ from polars import col, mean_horizontal, struct
 from pydantic import BaseModel, Field
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler
 
 from src.adapters.clients.s3 import S3Client
 from src.adapters.connections.duckdb import get_duckdb_connection
@@ -37,13 +37,13 @@ from src.schemas.filters import (
 )
 from src.services.domain.s3 import ADXService, EVService, MAService, MLModelService
 from src.services.statistic import (
-    determine_matching_columns,
-    is_mean_horizontal_in_matching_columns,
-    matching_max,
-    matching_mean,
-    matching_min,
+    capture_matchings,
+    is_mean_horizontal_in_matchings,
+    max_by_matchings,
+    mean_by_matchings,
+    min_by_matchings,
     quantile_matching_fit,
-    set_market_regime,
+    set_confidence_degree,
 )
 from src.settings import settings
 
@@ -58,7 +58,6 @@ class _MainSchema(BaseModel):
     ml_model_service: MLModelService
 
     scaler: MinMaxScaler = Field(default_factory=MinMaxScaler)
-    encoder: LabelEncoder = Field(default_factory=LabelEncoder)
 
     class Config:
         arbitrary_types_allowed = True
@@ -106,62 +105,72 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     # ---
 
     data = PolarsDF(data=data)
+
+    # TODO: r=3, r=4 etc. and add them to QMF-function
     for first, second in combinations(iterable=adx_columns, r=2):
         data = data.with_columns(mean_horizontal(first, second).alias(name=f"mean_horizontal_{first}_{second}"))
-    mean_adx_columns: list[str] = [column for column in data.columns if column.startswith("mean_horizontal")]
+    mean_horizontal_adx_columns: list[str] = [
+        column for column in data.columns if column.startswith("mean_horizontal_adx")
+    ]
 
     data = data.with_columns(
         struct(all_columns())  # noqa: WPS204
         .map_elements(
-            function=lambda row: determine_matching_columns(
+            function=lambda row: capture_matchings(
                 row=row,
                 ma_prefixes=main_schema.ma_service.ma_prefixes,  # type: ignore[arg-type]
-                potential_columns=adx_columns,
+                potentials=adx_columns,
             )
         )
-        .alias(name="matching_columns")
+        .alias(name="adx_matchings")
     )
-    data = data.with_columns(matching_columns_length=col("matching_columns").list.len())
-    data = data.filter((col("matching_columns_length") > 1))
+    data = data.with_columns(length_adx_matchings=col("adx_matchings").list.len())
+    data = data.filter((col("length_adx_matchings") > 1))
 
     data = data.with_columns(
         struct(all_columns())
-        .map_elements(
-            function=lambda row: matching_min(row=row, matching_columns=row["matching_columns"])  # noqa: WPS204
-        )
-        .alias(name="matching_min")
+        .map_elements(function=lambda row: min_by_matchings(row=row, matchings=row["adx_matchings"]))  # noqa: WPS204
+        .alias(name="min_adx_matchings")
     )
     data = data.with_columns(
         struct(all_columns())
-        .map_elements(function=lambda row: matching_max(row=row, matching_columns=row["matching_columns"]))
-        .alias(name="matching_max")
+        .map_elements(function=lambda row: max_by_matchings(row=row, matchings=row["adx_matchings"]))
+        .alias(name="max_adx_matchings")
     )
     data = data.with_columns(
         struct(all_columns())
-        .map_elements(function=lambda row: matching_mean(row=row, matching_columns=row["matching_columns"]))
-        .alias(name="matching_mean")
+        .map_elements(function=lambda row: mean_by_matchings(row=row, matchings=row["adx_matchings"]))
+        .alias(name="mean_adx_matchings")
     )
-    data = data.with_columns(mean_horizontal("matching_min", "matching_max").alias(name="matching_minmax_mean"))
-    data = data.with_columns(matching_minmax_delta=col("matching_max") - col("matching_min"))
     data = data.with_columns(
-        struct(all_columns())
-        .map_elements(function=lambda row: set_market_regime(delta=row["matching_minmax_delta"]))
-        .alias(name="market_regime")
+        mean_horizontal("min_adx_matchings", "max_adx_matchings").alias(name="mean_adx_minmax_matchings")
     )
 
+    # TODO: calculate percent of deltas in particular category for each indicator's pair?
+    data = data.with_columns(delta_adx_minmax_matchings=col("max_adx_matchings") - col("min_adx_matchings"))
+    data = data.with_columns(
+        struct(all_columns())
+        .map_elements(function=lambda row: set_confidence_degree(delta=row["delta_adx_minmax_matchings"]))
+        .alias(name="confidence_degree_adx_matchings")
+    )
+    data = data.with_columns(
+        scaled_delta_adx_minmax_matchings=col("delta_adx_minmax_matchings") / col("length_adx_matchings")
+    )
+
+    # TODO: set indicator category? calculate percent of indicators in particular category?
     for adx_column in adx_columns:
         data = data.with_columns(
-            col("matching_columns").list.contains(item=adx_column).alias(name=f"is_{adx_column}_in_matching_columns")
+            col("adx_matchings").list.contains(item=adx_column).alias(name=f"is_{adx_column}_in_matchings")
         )
     for first, second in combinations(iterable=adx_columns, r=2):  # noqa: WPS426 WPS440
         data = data.with_columns(
             struct(all_columns())
             .map_elements(
-                function=lambda row: is_mean_horizontal_in_matching_columns(
-                    first=first, second=second, matching_columns=row["matching_columns"]
+                function=lambda row: is_mean_horizontal_in_matchings(
+                    first=first, second=second, matchings=row["adx_matchings"]
                 )
             )
-            .alias(name=f"is_mean_horizontal_{first}_{second}_in_matching_columns")
+            .alias(name=f"is_mean_horizontal_{first}_{second}_in_matchings")
         )
     logger.info("Booleans computed.")
 
@@ -169,7 +178,7 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         struct(all_columns())
         .map_elements(
             function=lambda row: quantile_matching_fit(
-                row=row, target_column="ticks", matching_columns=row["matching_columns"]
+                row=row, target="ticks", indicator="adx", matchings=row["adx_matchings"]
             )
         )
         .alias(name="rank")
@@ -179,15 +188,20 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         f"{data.shape}."
     )
 
-    categorical_features: list[str] = [column for column in data.columns if column.startswith("is")] + [
-        "matching_columns_length",
-        "market_regime",
-    ]
+    categorical_features: list[str] = [
+        column for column in data.columns if column.startswith("is_adx") or column.startswith("is_mean_horizontal_adx")
+    ] + ["length_adx_matchings", "confidence_degree_adx_matchings"]
     feature_columns: list[str] = (
         adx_columns
-        + mean_adx_columns
-        + ["matching_min", "matching_max", "matching_mean", "matching_minmax_mean", "matching_minmax_delta"]
-        + ma_streaks
+        + mean_horizontal_adx_columns
+        + [
+            "min_adx_matchings",
+            "max_adx_matchings",
+            "mean_adx_matchings",
+            "mean_adx_minmax_matchings",
+            "delta_adx_minmax_matchings",
+            "scaled_delta_adx_minmax_matchings",
+        ]
         + categorical_features
     )
     data = data.drop_nulls(subset=feature_columns)
@@ -204,8 +218,12 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         random_state=settings.RANDOM_STATE,
         shuffle=False,
     )
-    train_pool: Pool = Pool(data=train_features, label=train_target)
-    test_pool: Pool = Pool(data=test_features, label=test_target)
+    train_pool: Pool = Pool(
+        data=train_features, label=train_target, weight=1 - train_features["delta_adx_minmax_matchings"]
+    )
+    test_pool: Pool = Pool(
+        data=test_features, label=test_target, weight=1 - test_features["delta_adx_minmax_matchings"]
+    )
 
     def objective(trial: Trial) -> float:  # noqa: WPS430
         params = {
@@ -218,14 +236,14 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         }
         optuna_model: CatBoostRegressor = CatBoostRegressor(
             **params,
-            loss_function="MAE",
+            loss_function="MAE",  # TODO: create custom loss function to make model more robust
             eval_metric="MAE",
-            custom_metric=["MAE"],
+            custom_metric=["R2"],
             random_state=settings.RANDOM_STATE,
             verbose=False,
         )
         optuna_model.fit(X=train_pool, eval_set=test_pool, use_best_model=True, verbose=False)
-        return float(optuna_model.score(X=test_pool))
+        return float(optuna_model.get_best_score()["validation"]["R2:use_weights=true"])
 
     study: Study = create_study(direction="maximize", sampler=CmaEsSampler(seed=settings.RANDOM_STATE))
     study.optimize(func=objective, n_trials=10, gc_after_trial=True, show_progress_bar=True)
@@ -234,7 +252,6 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         **study.best_params,
         loss_function="MAE",
         eval_metric="MAE",
-        custom_metric=["MAE"],
         random_state=settings.RANDOM_STATE,
         verbose=False,
     )

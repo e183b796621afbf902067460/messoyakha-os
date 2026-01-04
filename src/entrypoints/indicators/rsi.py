@@ -31,7 +31,7 @@ from src.settings import settings
 filterwarnings("ignore")
 
 
-_CORRELATION_THRESHOLD: Final[float] = 0.9
+_CORRELATION_THRESHOLD: Final[float] = 0.95
 
 
 class _MainSchema(BaseModel):
@@ -58,7 +58,7 @@ def _main(main_schema: _MainSchema) -> None:
     if main_schema.ma_service.ma is None:
         raise FileNotFoundError("There is no moving averages data.")
 
-    rsi_windows: list[int] = [2**3, 2**4, 2**5, 2**6, 2**7, 2**8]
+    rsi_windows: list[int] = [2**2, 2**3, 2**4, 2**5]
     for ma_prefix, rsi_window in product(main_schema.ma_service.ma_prefixes, rsi_windows):  # type: ignore[arg-type]
         main_schema.ma_service.ma = compute_rsi(
             data=main_schema.ma_service.ma, ma_prefix=ma_prefix, rsi_window=rsi_window

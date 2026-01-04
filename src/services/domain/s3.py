@@ -314,7 +314,7 @@ class RSIService(_S3BaseService):
 
     @staticmethod
     def get_rsi_columns(columns: list[str]) -> list[str]:
-        return [column for column in columns if column.startswith("rsi")]
+        return sorted([column for column in columns if column.startswith("rsi")])
 
     def load_rsi(self, dataframe: DataFrame, filename: str) -> None:
         self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
