@@ -30,7 +30,7 @@ from src.schemas.filters import (
 )
 from src.schemas.trials import SARParametersSchema
 from src.services.domain.s3 import EVService, MAService, OHLCService, SARService
-from src.services.trend import TrendStrategy
+from src.services.trends import TrendStrategy
 from src.settings import settings
 
 filterwarnings("ignore")

@@ -32,11 +32,11 @@ def capture_matchings(  # noqa: WPS231
 # pylint: enable=too-complex
 
 
-def set_confidence_degree(delta: float | None) -> int | None:
+def set_confidence_degree(delta: float | None, multiplier: int = 10) -> int | None:
     confidence_degree: int | None = None
     if not delta:
         return confidence_degree
-    confidence_degree = int(floor(delta) * 10)
+    confidence_degree = int(floor(delta) * multiplier)
     return confidence_degree
 
 
@@ -49,25 +49,28 @@ def quantile_matching_fit(row: dict[str, float], target: str, indicator: str, ma
     if n == 1:
         fit = row[matchings[0]]
         return fit
-    max_weight_per_matching: float = 1 / n
+    max_weight_best_fit: float = 1 / n
 
     for first, second in combinations(iterable=matchings, r=2):
         matchings.append(f"mean_horizontal_{first}_{second}")
     matchings.append(f"mean_{indicator}_matchings")
-    matchings.append(f"mean_{indicator}_minmax_matchings")
 
     matchings = sorted(set(matchings))
 
     values: ndarray = array([row[matching] for matching in matchings])
     diff: ndarray = abs(row[target] - values)
 
-    best_fit: float = row[matchings[argmin(diff)]]
+    # TODO: use assume instead of mean
+    best_fit: float = (
+        row[matchings[argmin(diff)]] * (1 - row[f"delta_{indicator}_minmax_matchings"])
+        + row[f"mean_{indicator}_matchings"] * row[f"delta_{indicator}_minmax_matchings"]
+    )
     best_fit_diff: float = min(diff)
 
     n = len(matchings)  # noqa: WPS111
     k: int = numpy_sum(diff == best_fit_diff)  # noqa: WPS111
 
-    best_fit_weight: float = max_weight_per_matching + ((1 - max_weight_per_matching) * (1 / (n - (k - 1))))
+    best_fit_weight: float = max_weight_best_fit + ((1 - max_weight_best_fit) * (1 / (n - (k - 1))))
     if k > 1:
         best_fit_weight = best_fit_weight / k  # noqa: WPS350
 
@@ -89,7 +92,80 @@ def quantile_matching_fit(row: dict[str, float], target: str, indicator: str, ma
     return fit
 
 
-# pylint: enable=too-many-locals, too-many-statements, disallowed-name
+def assume_fit(row: dict[str, float], assume: str, indicator: str, matchings: list[str]) -> float | None:
+    fit: float | None = None
+    if not matchings:
+        return fit
+    n: int = len(matchings)  # noqa: WPS111
+    if n == 1:
+        fit = row[matchings[0]]
+        return fit
+    max_weight_best_fit: float = 1 / n
+
+    for first, second in combinations(iterable=matchings, r=2):
+        matchings.append(f"mean_horizontal_{first}_{second}")
+    matchings.append(f"mean_{indicator}_matchings")
+
+    matchings = sorted(set(matchings))
+
+    values: ndarray = array([row[matching] for matching in matchings])
+    nearest: float = row[assume] if assume in matchings else row[matchings[argmin(abs(row[assume] - values))]]
+    diff: ndarray = abs(nearest - values)
+
+    n = len(matchings)  # noqa: WPS111
+    k: int = numpy_sum(diff == 0)  # noqa: WPS111
+
+    best_fit_weight: float = max_weight_best_fit + ((1 - max_weight_best_fit) * (1 / (n - (k - 1))))
+    if k > 1:
+        best_fit_weight = best_fit_weight / k  # noqa: WPS350
+
+    best_mask = diff == 0
+    non_best_mask = diff > 0
+
+    weights: ndarray = zeros(n)
+    weights[best_mask] = best_fit_weight
+
+    # TODO: use assume instead of mean
+    nearest = (
+        nearest * (1 - row[f"delta_{indicator}_minmax_matchings"])
+        + row[f"mean_{indicator}_matchings"] * row[f"delta_{indicator}_minmax_matchings"]
+    )
+
+    remaining_weight: float = 1 - best_fit_weight * k
+    if remaining_weight > 0 and numpy_any(non_best_mask):
+        non_best_diff: ndarray = abs(values[non_best_mask] - nearest)
+
+        inverse_weights: ndarray = 1 / non_best_diff
+        inverse_weights = inverse_weights / numpy_sum(inverse_weights) * remaining_weight
+
+        weights[non_best_mask] = inverse_weights
+    fit = float(numpy_sum(weights * values))
+    return fit
+
+
+# pylint: enable=too-many-locals, too-many-statements
+
+
+def percents_separated(row: dict[str, float], separator: float, indicator: str, matchings: list[str]) -> float | None:
+    percents: float | None = None
+    if not matchings:
+        return percents
+    for first, second in combinations(iterable=matchings, r=2):
+        matchings.append(f"mean_horizontal_{first}_{second}")
+    matchings.append(f"mean_{indicator}_matchings")
+
+    matchings = sorted(set(matchings))
+    n: int = len(matchings)  # noqa: WPS111
+
+    separated_count: int = 0
+    for matching in matchings:
+        if row[matching] > separator:
+            separated_count += 1
+    percents = separated_count / n
+    return percents
+
+
+# pylint: enable=disallowed-name
 
 
 def min_by_matchings(row: dict[str, float], matchings: list[str]) -> float | None:

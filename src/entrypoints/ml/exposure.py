@@ -9,7 +9,6 @@ from catboost import CatBoostRegressor, Pool
 from duckdb import DuckDBPyConnection
 from loguru import logger
 from numpy import log1p, vstack
-from onnx import ModelProto, StringStringEntryProto, load_model
 from optuna import Study, Trial, create_study
 from optuna.samplers import CmaEsSampler
 from pandas import DataFrame, to_datetime  # noqa: WPS347
@@ -36,7 +35,8 @@ from src.schemas.filters import (
     TradeQueryParametersSchema,
 )
 from src.services.domain.s3 import ADXService, EVService, MAService, MLModelService
-from src.services.statistic import (
+from src.services.statistics import (
+    assume_fit,
     capture_matchings,
     is_mean_horizontal_in_matchings,
     max_by_matchings,
@@ -63,7 +63,7 @@ class _MainSchema(BaseModel):
         arbitrary_types_allowed = True
 
 
-# pylint: disable=too-many-locals, too-many-statements, too-complex, cell-var-from-loop
+# pylint: disable=too-many-locals, too-many-statements, too-complex, cell-var-from-loop, protected-access
 def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     if main_schema.ma_service.ma is None:
         raise FileNotFoundError("There is no moving averages data.")
@@ -118,7 +118,7 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         .map_elements(
             function=lambda row: capture_matchings(
                 row=row,
-                ma_prefixes=main_schema.ma_service.ma_prefixes,  # type: ignore[arg-type]
+                ma_prefixes=main_schema.ma_service.ma_prefixes,
                 potentials=adx_columns,
             )
         )
@@ -158,9 +158,18 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     )
 
     # TODO: set indicator category? calculate percent of indicators in particular category?
-    for adx_column in adx_columns:
+    for adx_column in adx_columns:  # noqa: WPS426
         data = data.with_columns(
             col("adx_matchings").list.contains(item=adx_column).alias(name=f"is_{adx_column}_in_matchings")
+        )
+        data = data.with_columns(
+            struct(all_columns())
+            .map_elements(
+                function=lambda row: assume_fit(
+                    row=row, assume=adx_column, indicator="adx", matchings=row["adx_matchings"]
+                )
+            )
+            .alias(name=f"assume_{adx_column}_is_target")
         )
     for first, second in combinations(iterable=adx_columns, r=2):  # noqa: WPS426 WPS440
         data = data.with_columns(
@@ -172,6 +181,16 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
             )
             .alias(name=f"is_mean_horizontal_{first}_{second}_in_matchings")
         )
+        data = data.with_columns(
+            struct(all_columns())
+            .map_elements(
+                function=lambda row: assume_fit(
+                    row=row, assume=f"mean_horizontal_{first}_{second}", indicator="adx", matchings=row["adx_matchings"]
+                )
+            )
+            .alias(name=f"assume_adx_mean_horizontal_{first}_{second}_is_target")
+        )
+    assume_adx_columns: list[str] = [column for column in data.columns if column.startswith("assume_adx")]
     logger.info("Booleans computed.")
 
     data = data.with_columns(
@@ -194,6 +213,7 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     feature_columns: list[str] = (
         adx_columns
         + mean_horizontal_adx_columns
+        + assume_adx_columns
         + [
             "min_adx_matchings",
             "max_adx_matchings",
@@ -219,10 +239,16 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         shuffle=False,
     )
     train_pool: Pool = Pool(
-        data=train_features, label=train_target, weight=1 - train_features["delta_adx_minmax_matchings"]
+        data=train_features,
+        label=train_target,
+        cat_features=categorical_features,
+        weight=train_features["delta_adx_minmax_matchings"],
     )
     test_pool: Pool = Pool(
-        data=test_features, label=test_target, weight=1 - test_features["delta_adx_minmax_matchings"]
+        data=test_features,
+        label=test_target,
+        cat_features=categorical_features,
+        weight=test_features["delta_adx_minmax_matchings"],
     )
 
     def objective(trial: Trial) -> float:  # noqa: WPS430
@@ -231,44 +257,46 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
             "iterations": trial.suggest_int("iterations", 2**8, 2**12),  # noqa: WPS432
             "depth": trial.suggest_int("depth", 2, 12),  # noqa: WPS432
             "max_ctr_complexity": trial.suggest_int("max_ctr_complexity", 2, 12),  # noqa: WPS432
+            "rsm": trial.suggest_float("rsm", 5e-2, 9e-1, log=True),  # noqa: WPS432
             "reg_lambda": trial.suggest_float("reg_lambda", 5e-2, 5e-1, log=True),  # noqa: WPS432
-            "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 2**2, 2**6),  # noqa: WPS432
+            "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 2**4, 2**8),  # noqa: WPS432
         }
         optuna_model: CatBoostRegressor = CatBoostRegressor(
             **params,
-            loss_function="MAE",  # TODO: create custom loss function to make model more robust
-            eval_metric="MAE",
-            custom_metric=["R2"],
+            loss_function="MAE",
             random_state=settings.RANDOM_STATE,
             verbose=False,
         )
         optuna_model.fit(X=train_pool, eval_set=test_pool, use_best_model=True, verbose=False)
-        return float(optuna_model.get_best_score()["validation"]["R2:use_weights=true"])
+
+        test_features["y"] = optuna_model.predict(data=test_pool)
+        test_features.loc[test_features["y"] > test_features["max_adx_matchings"], "y"] = test_features[
+            "mean_adx_matchings"
+        ]
+        test_features.loc[test_features["y"] < test_features["min_adx_matchings"], "y"] = test_features[
+            "mean_adx_matchings"
+        ]
+
+        return float(r2_score(y_true=test_target, y_pred=test_features["y"]))
 
     study: Study = create_study(direction="maximize", sampler=CmaEsSampler(seed=settings.RANDOM_STATE))
-    study.optimize(func=objective, n_trials=10, gc_after_trial=True, show_progress_bar=True)
+    study.optimize(func=objective, n_trials=100, gc_after_trial=True, show_progress_bar=True)
 
+    filepath: Path = Path(f"{uuid1()}.cbm")
     model: CatBoostRegressor = CatBoostRegressor(
         **study.best_params,
         loss_function="MAE",
-        eval_metric="MAE",
+        metadata={"columns": str(feature_columns)},
         random_state=settings.RANDOM_STATE,
         verbose=False,
     )
     model.fit(X=train_pool, eval_set=test_pool, use_best_model=True, verbose=False)
-
-    filepath: Path = Path(f"{uuid1()}.onnx")
-    model.save_model(fname=filepath.as_posix(), format="onnx", pool=train_pool)
-    proto: ModelProto = load_model(f=filepath.as_posix())
-    filepath.unlink()
-
-    proto.metadata_props.append(StringStringEntryProto(key="columns", value=str(feature_columns)))
-
-    serialized_proto: bytes = proto.SerializeToString()
-    main_schema.ml_model_service.load_ml_model(data=serialized_proto, metadata=None, filename=filepath.as_posix())
+    main_schema.ml_model_service.load_ml_model(
+        data=model._serialize_model(), metadata=None, filename=filepath.as_posix()
+    )
 
 
-# pylint: enable=too-many-locals, too-many-statements, too-complex, cell-var-from-loop
+# pylint: enable=too-many-locals, too-many-statements, too-complex, cell-var-from-loop, protected-access
 
 
 if __name__ == "__main__":
