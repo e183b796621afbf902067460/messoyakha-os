@@ -7,6 +7,8 @@ from src.schemas.filters import (
     AroonQueryParametersSchema,
     BinaryQueryParametersSchema,
     MAQueryParametersSchema,
+    MDIQueryParametersSchema,
+    PDIQueryParametersSchema,
     QueryParametersBaseSchema,
     RSIQueryParametersSchema,
     StreakQueryParametersSchema,
@@ -55,6 +57,16 @@ class MARepository(IndicatorsBaseRepository):
 
 class ADXRepository(IndicatorsBaseRepository):
     def query_adx(self, path: str, parameters_schema: ADXQueryParametersSchema) -> DataFrame | None:
+        return self._query_indicators(path=path, parameters_schema=parameters_schema)
+
+
+class MDIRepository(IndicatorsBaseRepository):
+    def query_mdi(self, path: str, parameters_schema: MDIQueryParametersSchema) -> DataFrame | None:
+        return self._query_indicators(path=path, parameters_schema=parameters_schema)
+
+
+class PDIRepository(IndicatorsBaseRepository):
+    def query_pdi(self, path: str, parameters_schema: PDIQueryParametersSchema) -> DataFrame | None:
         return self._query_indicators(path=path, parameters_schema=parameters_schema)
 
 

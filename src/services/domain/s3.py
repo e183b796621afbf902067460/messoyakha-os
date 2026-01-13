@@ -15,6 +15,8 @@ from src.adapters.repositories.indicators import (
     AroonRepository,
     BinariesRepository,
     MARepository,
+    MDIRepository,
+    PDIRepository,
     RSIRepository,
     StreaksRepository,
 )
@@ -32,11 +34,15 @@ from src.schemas.filters import (
     LatestTimestampQueryParametersSchema,
     MAPathParametersSchema,
     MAQueryParametersSchema,
+    MDIPathParametersSchema,
+    MDIQueryParametersSchema,
     MLModelPathParametersSchema,
     MLModelQueryParametersSchema,
     OHLCPathParametersSchema,
     OHLCQueryParametersSchema,
     PathParametersBaseSchema,
+    PDIPathParametersSchema,
+    PDIQueryParametersSchema,
     QueryParametersBaseSchema,
     RSIPathParametersSchema,
     RSIQueryParametersSchema,
@@ -139,7 +145,7 @@ class OHLCService(_S3BaseService):
     _path_parameters: OHLCPathParametersSchema | LatestTimestampPathParametersSchema
 
     def __attrs_post_init__(self) -> None:
-        _S3BaseService.__attrs_post_init__(self=self)
+        _S3BaseService.__attrs_post_init__(self=self)  # noqa: WPS204
         self._ohlc: DataFrame | None = self._repository.query_candlesticks(
             parameters_schema=self._query_parameters, path=self._formatted_path
         )
@@ -241,6 +247,64 @@ class ADXService(_S3BaseService):
         self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
 
     _adx: DataFrame | None = attr(init=False)
+
+
+@attrs(slots=True, auto_attribs=True, kw_only=True)
+class MDIService(_S3BaseService):
+    _repository: MDIRepository
+
+    _query_parameters: MDIQueryParametersSchema
+    _path_parameters: MDIPathParametersSchema
+
+    def __attrs_post_init__(self) -> None:
+        _S3BaseService.__attrs_post_init__(self=self)
+        self._mdi: DataFrame | None = self._repository.query_mdi(
+            parameters_schema=self._query_parameters, path=self._formatted_path
+        )
+        if isinstance(self._mdi, DataFrame):
+            self._mdi.drop_duplicates(inplace=True)
+
+    @property
+    def mdi(self) -> DataFrame | None:
+        return self._mdi
+
+    @staticmethod
+    def get_mdi_columns(columns: list[str]) -> list[str]:
+        return sorted([column for column in columns if column.startswith("mdi")])
+
+    def load_mdi(self, dataframe: DataFrame, filename: str) -> None:
+        self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
+
+    _mdi: DataFrame | None = attr(init=False)
+
+
+@attrs(slots=True, auto_attribs=True, kw_only=True)
+class PDIService(_S3BaseService):
+    _repository: PDIRepository
+
+    _query_parameters: PDIQueryParametersSchema
+    _path_parameters: PDIPathParametersSchema
+
+    def __attrs_post_init__(self) -> None:
+        _S3BaseService.__attrs_post_init__(self=self)
+        self._pdi: DataFrame | None = self._repository.query_pdi(
+            parameters_schema=self._query_parameters, path=self._formatted_path
+        )
+        if isinstance(self._pdi, DataFrame):
+            self._pdi.drop_duplicates(inplace=True)
+
+    @property
+    def pdi(self) -> DataFrame | None:
+        return self._pdi
+
+    @staticmethod
+    def get_pdi_columns(columns: list[str]) -> list[str]:
+        return sorted([column for column in columns if column.startswith("pdi")])
+
+    def load_pdi(self, dataframe: DataFrame, filename: str) -> None:
+        self._repository.insert_dataframe_as_parquet(dataframe=dataframe, key=f"{self._path}/{filename}")
+
+    _pdi: DataFrame | None = attr(init=False)
 
 
 @attrs(slots=True, auto_attribs=True, kw_only=True)

@@ -48,6 +48,22 @@ class ADXPathParametersSchema(PathParametersBaseSchema):
     directory: str = "average-directional-indexes"
 
 
+class PDIQueryParametersSchema(QueryParametersBaseSchema):
+    """Query parameters to fetch average directional indexes."""
+
+
+class PDIPathParametersSchema(PathParametersBaseSchema):
+    directory: str = "plus-directional-indexes"
+
+
+class MDIQueryParametersSchema(QueryParametersBaseSchema):
+    """Query parameters to fetch average directional indexes."""
+
+
+class MDIPathParametersSchema(PathParametersBaseSchema):
+    directory: str = "minus-directional-indexes"
+
+
 class RSIQueryParametersSchema(QueryParametersBaseSchema):
     """Query parameters to fetch ratios."""
 

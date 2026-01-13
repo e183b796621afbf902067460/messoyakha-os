@@ -10,8 +10,10 @@ from duckdb import DuckDBPyConnection
 from loguru import logger
 from numpy import array, ndarray
 from pandas import DataFrame
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sklearn.feature_selection import f_regression
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
 from talib import ADX
 
 from src.adapters.clients.s3 import S3Client
@@ -39,6 +41,7 @@ class _MainSchema(BaseModel):
     adx_service: ADXService
 
     selector: SelectNonCollinear
+    scaler: MinMaxScaler = Field(default_factory=MinMaxScaler)
 
     class Config:
         arbitrary_types_allowed = True
@@ -97,6 +100,12 @@ def _main(main_schema: _MainSchema) -> None:
     adx["year"] = adx["datetime"].dt.year
     adx.sort_values(by="datetime", inplace=True)
     logger.info(f"There are {len(selected_columns)} features in total.")
+
+    train_adx, _, _, _ = train_test_split(
+        adx, adx[["ticker"]], train_size=settings.TRAIN_SIZE, random_state=settings.RANDOM_STATE, shuffle=False
+    )
+    main_schema.scaler.fit(X=train_adx[selected_columns])
+    adx[selected_columns] = main_schema.scaler.transform(X=adx[selected_columns])
 
     main_schema.adx_service.load_adx(dataframe=adx, filename=f"{uuid1()}.parquet")
     main_schema.adx_service.delete_object()
