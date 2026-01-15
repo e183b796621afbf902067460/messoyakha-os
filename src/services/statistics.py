@@ -1,7 +1,7 @@
+# pylint: disable=too-many-lines
 from itertools import combinations
 
 from numpy import mean, median, quantile
-from sklearn.decomposition import PCA
 
 
 # pylint: disable=too-complex
@@ -27,10 +27,7 @@ def capture_matchings(  # noqa: WPS231
     return sorted(set(matchings))
 
 
-# pylint: enable=too-complex
-
-
-# pylint: disable=too-many-locals, too-many-statements, disallowed-name, too-complex, invalid-name
+# pylint: disable=too-many-locals, too-many-statements, disallowed-name, invalid-name, too-many-branches
 def qmf(row: dict[str, float], target: str, indicator: str, matchings: list[str]) -> float | None:  # noqa: WPS231
     fit: float | None = None
     if not matchings:  # noqa: WPS204
@@ -39,51 +36,94 @@ def qmf(row: dict[str, float], target: str, indicator: str, matchings: list[str]
     if n == 1:
         fit = row[matchings[0]]
         return fit
-    max_weight_best_fit: float = 1 / n
 
     for first, second in combinations(iterable=matchings, r=2):
         matchings.append(f"mean_horizontal_{first}_{second}")
-    matchings.append(f"mean_{indicator}_matchings")
+    matchings.append(f"quantile_{indicator}_matchings_low")
+    matchings.append(f"quantile_{indicator}_matchings_half_low")
+    matchings.append(f"median_{indicator}_matchings")
+    matchings.append(f"quantile_{indicator}_matchings_half_high")
+    matchings.append(f"quantile_{indicator}_matchings_high")
 
     matchings = sorted(set(matchings))
 
-    low: float = row[f"quantile_{indicator}_matchings_low"]
-    high: float = row[f"quantile_{indicator}_matchings_high"]
+    low_quantile: float = row[f"quantile_{indicator}_matchings_low"]
+    low_half_quantile: float = row[f"quantile_{indicator}_matchings_half_low"]
+    median_quantile: float = row[f"median_{indicator}_matchings"]
+    high_half_quantile: float = row[f"quantile_{indicator}_matchings_half_high"]
+    high_quantile: float = row[f"quantile_{indicator}_matchings_high"]
 
     values: list[float] = []
     valid_matchings: list[str] = []
     for matching in matchings:
         match: float = row[matching]  # noqa: WPS204
-        if low < match < high:
-            values.append(row[f"assume_{matching}_is_target"])
+        if low_quantile <= match <= high_quantile and match not in values:
+            values.append(match)
             valid_matchings.append(matching)
 
     if not values:
         return fit
 
     target_value = row[target]
-    diff: list[float] = [abs(target_value - val) for val in values]
 
-    best_fit_diff: float = min(diff)
-    best_fit_idx: int = diff.index(best_fit_diff)
-    best_fit_indicator: str = valid_matchings[best_fit_idx]
-    best_fit_value: float = row[f"assume_{best_fit_indicator}_is_target"]
+    diff: list[float] = [target_value - value for value in values]
+    absolute_diff: list[float] = [abs(diff_value) for diff_value in diff]
+    absolute_median_diff: float = float(median(a=absolute_diff))
 
-    k: int = diff.count(best_fit_diff)  # noqa: WPS111
+    best_fit_diff: float = min(absolute_diff)
 
-    best_fit_weight: float = max_weight_best_fit + ((1 - max_weight_best_fit) * (1 / (len(values) - (k - 1))))
+    low_half_quantile_diff: float = target_value - low_half_quantile
+    median_fit_diff: float = target_value - median_quantile
+    high_half_quantile_diff: float = target_value - high_half_quantile
+
+    best_fit_index: int = absolute_diff.index(best_fit_diff)
+    best_fit_indicator: str = valid_matchings[best_fit_index]
+    best_fit_value: float = row[best_fit_indicator]
+
+    if abs(median_fit_diff) < absolute_median_diff:
+        max_weight_best_fit: float = 1 - 1 / n
+
+        fits: list[float] = (
+            [abs(low_half_quantile_diff), abs(median_fit_diff)]
+            if median_fit_diff < 0
+            else [abs(high_half_quantile_diff), abs(median_fit_diff)]
+        )
+        best_fit_diff = min(fits)
+        poor_fit_diff: float = max(fits)
+
+        best_fit_index = absolute_diff.index(best_fit_diff)
+        poor_fit_index: int = absolute_diff.index(poor_fit_diff)
+
+        best_fit_indicator = valid_matchings[best_fit_index]
+        poor_fit_indicator: str = valid_matchings[poor_fit_index]
+
+        best_fit_value = (
+            row[best_fit_indicator]
+            if row[best_fit_indicator] == median_quantile
+            else row[best_fit_indicator] * max_weight_best_fit + row[poor_fit_indicator] * (1 - max_weight_best_fit)
+        )
+    else:
+        max_weight_best_fit = 1 / n * (1 - (high_quantile - low_quantile))
+
+    k: int = max(absolute_diff.count(best_fit_diff), 1)  # noqa: WPS111
+
+    best_fit_weight: float = (
+        max_weight_best_fit + ((1 - max_weight_best_fit) * (1 / (len(values) - (k - 1))))
+        if k > 1
+        else max_weight_best_fit
+    )
     if k > 1:
-        best_fit_weight = best_fit_weight / k  # noqa: WPS350
+        max_weight_best_fit = best_fit_weight / k  # noqa: WPS350
 
     weights: list[float] = [0.0] * len(values)  # noqa: WPS435
-    for index, diff_value in enumerate(diff):
+    for index, diff_value in enumerate(absolute_diff):
         if diff_value == best_fit_diff:
-            weights[index] = best_fit_weight
+            weights[index] = max_weight_best_fit
 
-    remaining_weight: float = 1 - best_fit_weight * k
+    remaining_weight: float = 1 - max_weight_best_fit * k
     if remaining_weight > 0:
         non_best_indices = [
-            index for index, diff_value in enumerate(diff) if diff_value > best_fit_diff  # noqa: WPS441
+            index for index, diff_value in enumerate(absolute_diff) if diff_value > best_fit_diff  # noqa: WPS441
         ]
         if non_best_indices:
             non_best_values = [values[index] for index in non_best_indices]  # noqa: WPS441
@@ -100,7 +140,9 @@ def qmf(row: dict[str, float], target: str, indicator: str, matchings: list[str]
     return fit
 
 
-def af(row: dict[str, float], assume: str, indicator: str, matchings: list[str]) -> float | None:  # noqa: WPS231
+def af(  # noqa: WPS231
+    row: dict[str, float], assume: str, indicator: str, matchings: list[str], *, is_reversed: bool = False
+) -> float | None:
     fit: float | None = None
     if not matchings:
         return fit
@@ -112,7 +154,11 @@ def af(row: dict[str, float], assume: str, indicator: str, matchings: list[str])
 
     for first, second in combinations(iterable=matchings, r=2):
         matchings.append(f"mean_horizontal_{first}_{second}")
-    matchings.append(f"mean_{indicator}_matchings")
+    matchings.append(f"quantile_{indicator}_matchings_low")
+    matchings.append(f"quantile_{indicator}_matchings_half_low")
+    matchings.append(f"median_{indicator}_matchings")
+    matchings.append(f"quantile_{indicator}_matchings_half_high")
+    matchings.append(f"quantile_{indicator}_matchings_high")
 
     matchings = sorted(set(matchings))
 
@@ -123,7 +169,7 @@ def af(row: dict[str, float], assume: str, indicator: str, matchings: list[str])
     valid_matchings: list[str] = []
     for matching in matchings:
         match: float = row[matching]
-        if low < match < high:
+        if low <= match <= high:
             values.append(match)
             valid_matchings.append(matching)
 
@@ -155,9 +201,14 @@ def af(row: dict[str, float], assume: str, indicator: str, matchings: list[str])
             non_zero_values = [values[index] for index in non_zero_indices]  # noqa: WPS441
             non_zero_diff = [abs(non_zero_value - nearest) for non_zero_value in non_zero_values]
 
-            inverse_weights = [1 / diff_value for diff_value in non_zero_diff]  # noqa: WPS441
+            # TODO: add mode where error made above/below while median > (<) 0.5 are higher/lower than otherwise
+            inverse_weights = (
+                non_zero_diff if is_reversed else [1 / diff_value for diff_value in non_zero_diff]  # noqa: WPS441
+            )
             sum_inverse_weights = sum(inverse_weights)
-            normalized_weights = [weight / sum_inverse_weights * remaining_weight for weight in inverse_weights]
+            normalized_weights = [
+                inverse_weight / sum_inverse_weights * remaining_weight for inverse_weight in inverse_weights
+            ]
             for index, weight in zip(non_zero_indices, normalized_weights, strict=True):  # noqa: WPS440
                 weights[index] = weight
     fit = float(sum(weight * value for weight, value in zip(weights, values, strict=True)))  # noqa: WPS441
@@ -173,7 +224,7 @@ def percents_separated(row: dict[str, float], separator: float, indicator: str, 
         return percents
     for first, second in combinations(iterable=matchings, r=2):
         matchings.append(f"mean_horizontal_{first}_{second}")
-    matchings.append(f"mean_{indicator}_matchings")
+    matchings.append(f"median_{indicator}_matchings")
 
     matchings = sorted(set(matchings))
     n: int = len(matchings)  # noqa: WPS111
@@ -217,62 +268,64 @@ def mean_by_matchings(row: dict[str, float], matchings: list[str]) -> float | No
     return fit
 
 
-def bounded_mean_by_matchings(row: dict[str, float], matchings: list[str], indicator: str) -> float | None:
+def median_low_spread_by_matchings(row: dict[str, float], matchings: list[str], indicator: str) -> float | None:
     fit: float | None = None
     if not matchings:
         return fit
-    for first, second in combinations(iterable=matchings, r=2):
-        matchings.append(f"mean_horizontal_{first}_{second}")
 
-    low: float = row[f"quantile_{indicator}_matchings_low"]
-    high: float = row[f"quantile_{indicator}_matchings_high"]
-    matchings = [matching for matching in matchings if low < row[matching] < high]
-    if not matchings:
-        return fit
-
-    values: list[float] = [float(row[matching]) for matching in matchings]
-    fit = float(mean(a=values))
+    values: list[float] = [
+        float(row[matching]) - row[f"quantile_assume_{indicator}_matchings_low"] for matching in matchings
+    ]
+    values = sorted(set(values))
+    fit = float(median(a=values))
     return fit
 
 
-def median_by_matchings(row: dict[str, float], matchings: list[str]) -> float | None:
+def median_high_spread_by_matchings(row: dict[str, float], matchings: list[str], indicator: str) -> float | None:
     fit: float | None = None
     if not matchings:
         return fit
-    for first, second in combinations(iterable=matchings, r=2):
-        matchings.append(f"mean_horizontal_{first}_{second}")
+
+    values: list[float] = [
+        float(row[matching]) - row[f"quantile_assume_{indicator}_matchings_high"] for matching in matchings
+    ]
+    values = sorted(set(values))
+    fit = float(median(a=values))
+    return fit
+
+
+def median_by_matchings(row: dict[str, float], matchings: list[str], *, is_assume: bool = False) -> float | None:
+    fit: float | None = None
+    if not matchings:
+        return fit
+    if not is_assume:
+        for first, second in combinations(iterable=matchings, r=2):
+            matchings.append(f"mean_horizontal_{first}_{second}")
 
     values: list[float] = [float(row[matching]) for matching in matchings]
+    values = sorted(set(values))
     fit = float(median(a=values))
     return fit
 
 
 # pylint: disable=invalid-name
-def quantile_by_matchings(row: dict[str, float], matchings: list[str], q: float = 0.5) -> float | None:  # noqa: WPS111
+def quantile_by_matchings(
+    row: dict[str, float], matchings: list[str], q: float = 0.5, *, is_assume: bool = False  # noqa: WPS111
+) -> float | None:
     fit: float | None = None
     if not matchings:
         return fit
-    for first, second in combinations(iterable=matchings, r=2):
-        matchings.append(f"mean_horizontal_{first}_{second}")
+    if not is_assume:
+        for first, second in combinations(iterable=matchings, r=2):
+            matchings.append(f"mean_horizontal_{first}_{second}")
 
     values: list[float] = [float(row[matching]) for matching in matchings]
+    values = sorted(set(values))
     fit = float(quantile(a=values, q=q))
     return fit
 
 
 # pylint: enable=invalid-name
-
-
-def pca_by_matchings(row: dict[str, float], matchings: list[str]) -> float | None:
-    fit: float | None = None
-    if not matchings:
-        return fit
-
-    pca: PCA = PCA(n_components=1)
-    values: list[list[float]] = [[float(row[matching])] for matching in matchings]
-    pca.fit(X=values)
-    fit = float(pca.singular_values_[0])
-    return fit
 
 
 def is_mean_horizontal_in_matchings(first: str, second: str, matchings: list[str]) -> int:

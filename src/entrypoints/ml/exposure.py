@@ -38,11 +38,11 @@ from src.schemas.filters import (
 from src.services.domain.s3 import ADXService, EVService, MAService, MLModelService
 from src.services.statistics import (
     af,
-    bounded_mean_by_matchings,
     capture_matchings,
     is_mean_horizontal_in_matchings,
-    mean_by_matchings,
     median_by_matchings,
+    median_high_spread_by_matchings,
+    median_low_spread_by_matchings,
     qmf,
     quantile_by_matchings,
 )
@@ -52,6 +52,8 @@ filterwarnings("ignore")
 
 
 _LOWEST_QUANTILE: Final[float] = 0.2
+_LOWEST_HALF_QUANTILE: Final[float] = 0.35
+_HIGHEST_HALF_QUANTILE: Final[float] = 0.65
 _HIGHEST_QUANTILE: Final[float] = 0.8
 
 
@@ -134,15 +136,19 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
 
     data = data.with_columns(
         struct(all_columns())
-        .map_elements(function=lambda row: mean_by_matchings(row=row, matchings=row["adx_matchings"]))  # noqa: WPS204
-        .alias(name="mean_adx_matchings")
+        .map_elements(
+            function=lambda row: quantile_by_matchings(
+                row=row, matchings=row["adx_matchings"], q=_LOWEST_QUANTILE  # noqa: WPS204
+            )
+        )
+        .alias(name="quantile_adx_matchings_low")
     )
     data = data.with_columns(
         struct(all_columns())
         .map_elements(
-            function=lambda row: quantile_by_matchings(row=row, matchings=row["adx_matchings"], q=_LOWEST_QUANTILE)
+            function=lambda row: quantile_by_matchings(row=row, matchings=row["adx_matchings"], q=_LOWEST_HALF_QUANTILE)
         )
-        .alias(name="quantile_adx_matchings_low")
+        .alias(name="quantile_adx_matchings_half_low")
     )
     data = data.with_columns(
         struct(all_columns())
@@ -152,21 +158,18 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     data = data.with_columns(
         struct(all_columns())
         .map_elements(
-            function=lambda row: quantile_by_matchings(row=row, matchings=row["adx_matchings"], q=_HIGHEST_QUANTILE)
+            function=lambda row: quantile_by_matchings(
+                row=row, matchings=row["adx_matchings"], q=_HIGHEST_HALF_QUANTILE
+            )
         )
-        .alias(name="quantile_adx_matchings_high")
+        .alias(name="quantile_adx_matchings_half_high")
     )
     data = data.with_columns(
         struct(all_columns())
         .map_elements(
-            function=lambda row: bounded_mean_by_matchings(row=row, matchings=row["adx_matchings"], indicator="adx")
+            function=lambda row: quantile_by_matchings(row=row, matchings=row["adx_matchings"], q=_HIGHEST_QUANTILE)
         )
-        .alias(name="bounded_mean_adx_matchings")
-    )
-    data = data.with_columns(
-        mean_horizontal("quantile_adx_matchings_high", "quantile_adx_matchings_low").alias(
-            name="mean_adx_quantile_matchings"
-        )
+        .alias(name="quantile_adx_matchings_high")
     )
     data = data.with_columns(
         delta_adx_quantile_matchings=col("quantile_adx_matchings_high") - col("quantile_adx_matchings_low")
@@ -175,7 +178,13 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         scaled_delta_adx_quantile_matchings=col("delta_adx_quantile_matchings") / col("length_adx_matchings")
     )
 
-    for adx_column in adx_columns + ["mean_adx_matchings"]:  # noqa: WPS426
+    for adx_column in adx_columns + [  # noqa: WPS426
+        "quantile_adx_matchings_low",
+        "quantile_adx_matchings_half_low",
+        "median_adx_matchings",
+        "quantile_adx_matchings_half_high",
+        "quantile_adx_matchings_high",
+    ]:  # noqa: WPS426
         data = data.with_columns(
             col("adx_matchings").list.contains(item=adx_column).alias(name=f"is_{adx_column}_in_matchings")
         )
@@ -185,6 +194,15 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
                 function=lambda row: af(row=row, assume=adx_column, indicator="adx", matchings=row["adx_matchings"])
             )
             .alias(name=f"assume_{adx_column}_is_target")
+        )
+        data = data.with_columns(
+            struct(all_columns())
+            .map_elements(
+                function=lambda row: af(
+                    row=row, assume=adx_column, indicator="adx", matchings=row["adx_matchings"], is_reversed=True
+                )
+            )
+            .alias(name=f"reversed_assume_{adx_column}_is_target")
         )
     for first, second in combinations(iterable=adx_columns, r=2):  # noqa: WPS426 WPS440
         data = data.with_columns(
@@ -205,8 +223,96 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
             )
             .alias(name=f"assume_mean_horizontal_{first}_{second}_is_target")
         )
-    assume_adx_columns: list[str] = [column for column in data.columns if column.startswith("assume_adx")]
-    logger.info("Booleans computed.")
+        data = data.with_columns(
+            struct(all_columns())
+            .map_elements(
+                function=lambda row: af(
+                    row=row,
+                    assume=f"mean_horizontal_{first}_{second}",
+                    indicator="adx",
+                    matchings=row["adx_matchings"],
+                    is_reversed=True,
+                )
+            )
+            .alias(name=f"reversed_assume_mean_horizontal_{first}_{second}_is_target")
+        )
+    assume_adx_columns: list[str] = [column for column in data.columns if column.startswith("assume")]
+    reversed_assume_adx_columns: list[str] = [column for column in data.columns if column.startswith("reversed_assume")]
+    logger.info("Booleans and assumes computed.")
+
+    # TODO: [assume_adx_columns, reversed_assume_adx_columns]
+    data = data.with_columns(
+        struct(all_columns())
+        .map_elements(
+            function=lambda row: quantile_by_matchings(
+                row=row, matchings=assume_adx_columns, q=_LOWEST_QUANTILE, is_assume=True
+            )
+        )
+        .alias(name="quantile_assume_adx_matchings_low")
+    )
+    data = data.with_columns(
+        struct(all_columns())
+        .map_elements(
+            function=lambda row: quantile_by_matchings(
+                row=row, matchings=assume_adx_columns, q=_LOWEST_HALF_QUANTILE, is_assume=True
+            )
+        )
+        .alias(name="quantile_assume_adx_matchings_half_low")
+    )
+    data = data.with_columns(
+        struct(all_columns())
+        .map_elements(function=lambda row: median_by_matchings(row=row, matchings=assume_adx_columns, is_assume=True))
+        .alias(name="median_assume_adx_matchings")
+    )
+    data = data.with_columns(
+        struct(all_columns())
+        .map_elements(
+            function=lambda row: quantile_by_matchings(
+                row=row, matchings=assume_adx_columns, q=_HIGHEST_HALF_QUANTILE, is_assume=True
+            )
+        )
+        .alias(name="quantile_assume_adx_matchings_half_high")
+    )
+    data = data.with_columns(
+        struct(all_columns())
+        .map_elements(
+            function=lambda row: quantile_by_matchings(
+                row=row, matchings=assume_adx_columns, q=_HIGHEST_QUANTILE, is_assume=True
+            )
+        )
+        .alias(name="quantile_assume_adx_matchings_high")
+    )
+    data = data.with_columns(
+        delta_quantile_adx_quantile_matchings=(
+            col("quantile_assume_adx_matchings_high") - col("quantile_assume_adx_matchings_low")
+        )
+    )
+    data = data.with_columns(
+        scaled_delta_quantile_adx_quantile_matchings=(
+            col("delta_quantile_adx_quantile_matchings") / col("length_adx_matchings")
+        )
+    )
+    quantile_assume_adx_columns: list[str] = [
+        column
+        for column in data.columns
+        if column.startswith("quantile_assume_adx") or column.startswith("median_assume_adx")
+    ]
+    logger.info("Quantile assumes computed.")
+
+    data = data.with_columns(
+        struct(all_columns())
+        .map_elements(
+            function=lambda row: median_low_spread_by_matchings(row=row, matchings=assume_adx_columns, indicator="adx")
+        )
+        .alias(name="spread_low_adx_matchings")
+    )
+    data = data.with_columns(
+        struct(all_columns())
+        .map_elements(
+            function=lambda row: median_high_spread_by_matchings(row=row, matchings=assume_adx_columns, indicator="adx")
+        )
+        .alias(name="spread_high_adx_matchings")
+    )
 
     data = (
         data.with_columns(
@@ -230,17 +336,22 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     feature_columns: list[str] = (
         adx_columns
         + mean_horizontal_adx_columns
-        + assume_adx_columns
         + [
-            "mean_adx_matchings",
             "quantile_adx_matchings_low",
-            "bounded_mean_adx_matchings",
+            "quantile_adx_matchings_half_low",
             "median_adx_matchings",
-            "mean_adx_quantile_matchings",
+            "quantile_adx_matchings_half_high",
             "quantile_adx_matchings_high",
             "delta_adx_quantile_matchings",
             "scaled_delta_adx_quantile_matchings",
+            "delta_quantile_adx_quantile_matchings",
+            "scaled_delta_quantile_adx_quantile_matchings",
+            "spread_low_adx_matchings",
+            "spread_high_adx_matchings",
         ]
+        + assume_adx_columns
+        + quantile_assume_adx_columns
+        + reversed_assume_adx_columns
         + categorical_features
     )
     data = data.drop_nulls(subset=feature_columns)
@@ -261,33 +372,35 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         data=train_features,
         label=train_target,
         cat_features=categorical_features,
+        weight=train_features["delta_quantile_adx_quantile_matchings"],
     )
     test_pool: Pool = Pool(
         data=test_features,
         label=test_target,
         cat_features=categorical_features,
+        weight=test_features["delta_quantile_adx_quantile_matchings"],
     )
 
-    # TODO: sum_models with different ignored features
+    # TODO: sum_models with different loss functions
     def objective(trial: Trial) -> float:  # noqa: WPS430
         params = {
             "learning_rate": trial.suggest_float("learning_rate", 1e-3, 5e-1, log=True),  # noqa: WPS432
             "iterations": trial.suggest_int("iterations", 2**4, 2**12),  # noqa: WPS432
             "depth": trial.suggest_int("depth", 2, 12),  # noqa: WPS432
             "max_ctr_complexity": trial.suggest_int("max_ctr_complexity", 2, 12),  # noqa: WPS432
-            "rsm": trial.suggest_float("rsm", 5e-2, 9e-1, log=True),  # noqa: WPS432
+            "rsm": trial.suggest_float("rsm", 1e-1, 9e-1, log=True),  # noqa: WPS432
             "reg_lambda": trial.suggest_float("reg_lambda", 5e-2, 5e-1, log=True),  # noqa: WPS432
             "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 2**4, 2**8),  # noqa: WPS432
         }
         optuna_model: CatBoostRegressor = CatBoostRegressor(
             **params,
-            loss_function="MAE",
-            ignored_features=["median_adx_matchings"],
+            loss_function="RMSE",
+            custom_metric=["R2"],
             random_state=settings.RANDOM_STATE,
             verbose=False,
         )
         optuna_model.fit(X=train_pool, eval_set=test_pool, use_best_model=True, verbose=False)
-        return float(r2_score(y_true=test_target, y_pred=test_features["y"]))
+        return float(optuna_model.get_best_score()["validation"]["R2:use_weights=true"])
 
     study: Study = create_study(direction="maximize", sampler=CmaEsSampler(seed=settings.RANDOM_STATE))
     study.optimize(func=objective, n_trials=10, gc_after_trial=True, show_progress_bar=True)
@@ -295,8 +408,7 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     filepath: Path = Path(f"{uuid1()}.cbm")
     model: CatBoostRegressor = CatBoostRegressor(
         **study.best_params,
-        loss_function="MAE",
-        ignored_features=["median_adx_matchings"],
+        loss_function="RMSE",
         metadata={"columns": str(feature_columns)},
         random_state=settings.RANDOM_STATE,
         verbose=False,
