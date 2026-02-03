@@ -83,6 +83,8 @@ async def main(service: APIBaseService) -> None:
     candlesticks.drop_duplicates(inplace=True)
     candlesticks["exchange"] = settings.EXCHANGE
 
+    candlesticks.to_csv("candlesticks.csv", index=False)
+
     ohlc_service.load_ohlc(dataframe=candlesticks, filename=f"{uuid1()}.parquet")
     ohlc_service.delete_object()
 

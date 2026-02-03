@@ -5,6 +5,7 @@ from typing import Any
 
 from attr import attr, attrs
 from botocore.errorfactory import ClientError
+from catboost import CatBoostRegressor
 from pandas import DataFrame
 
 from src.adapters.clients.s3 import S3Client
@@ -457,6 +458,15 @@ class MLModelService(_S3BaseService):
             )
         except ClientError:
             self._response_schema = None
+        self._ml_model: CatBoostRegressor | None = (
+            CatBoostRegressor().load_model(blob=self._response_schema.body.read())
+            if self._response_schema
+            else None
+        )
+
+    @property
+    def ml_model(self) -> CatBoostRegressor | None:
+        return self._ml_model
 
     def load_ml_model(self, data: bytes, metadata: dict[str, Any] | None, filename: str) -> None:
         self._s3_client.put_object(
@@ -470,3 +480,4 @@ class MLModelService(_S3BaseService):
 
     _repository: None = attr(init=False, default=None)
     _response_schema: GetObjectResponseSchema | None = attr(init=False)
+    _ml_model: CatBoostRegressor | None = attr(init=False)

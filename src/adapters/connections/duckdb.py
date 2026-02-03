@@ -14,4 +14,7 @@ def get_duckdb_connection(
     duckdb_connection.execute(query=f"SET s3_endpoint={s3_endpoint_url!r};")
     duckdb_connection.execute(query=f"SET s3_region={s3_region_name!r};")
 
+    # duckdb_connection.execute(query="SET threads=12;")
+    # duckdb_connection.execute(query="SET enable_object_cache=true;")
+
     return duckdb_connection

@@ -184,7 +184,7 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         "median_adx_matchings",
         "quantile_adx_matchings_half_high",
         "quantile_adx_matchings_high",
-    ]:  # noqa: WPS426
+    ]:
         data = data.with_columns(
             col("adx_matchings").list.contains(item=adx_column).alias(name=f"is_{adx_column}_in_matchings")
         )
@@ -330,7 +330,7 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         f"{data.shape}."
     )
 
-    categorical_features: list[str] = [
+    categorical_columns: list[str] = [
         column for column in data.columns if column.startswith("is_adx") or column.startswith("is_mean_horizontal_adx")
     ] + ["is_long", "length_adx_matchings"]
     feature_columns: list[str] = (
@@ -352,15 +352,15 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         + assume_adx_columns
         + quantile_assume_adx_columns
         + reversed_assume_adx_columns
-        + categorical_features
+        + categorical_columns
     )
     data = data.drop_nulls(subset=feature_columns)
     logger.info(f"Shape of data is {data.shape}.")
     logger.info(f"Total number of features is {len(feature_columns)}.")
 
     data = data.to_pandas()
-    for categorical_feature in categorical_features:
-        data[categorical_feature] = data[categorical_feature].astype(int)
+    for categorical_column in categorical_columns:
+        data[categorical_column] = data[categorical_column].astype(int)
     train_features, test_features, train_target, test_target = train_test_split(
         data[feature_columns],
         data[["rank"]],
@@ -371,13 +371,13 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
     train_pool: Pool = Pool(
         data=train_features,
         label=train_target,
-        cat_features=categorical_features,
+        cat_features=categorical_columns,
         weight=train_features["delta_quantile_adx_quantile_matchings"],
     )
     test_pool: Pool = Pool(
         data=test_features,
         label=test_target,
-        cat_features=categorical_features,
+        cat_features=categorical_columns,
         weight=test_features["delta_quantile_adx_quantile_matchings"],
     )
 
@@ -403,13 +403,18 @@ def _main(main_schema: _MainSchema) -> None:  # noqa: WPS213
         return float(optuna_model.get_best_score()["validation"]["R2:use_weights=true"])
 
     study: Study = create_study(direction="maximize", sampler=CmaEsSampler(seed=settings.RANDOM_STATE))
-    study.optimize(func=objective, n_trials=10, gc_after_trial=True, show_progress_bar=True)
+    study.optimize(func=objective, n_trials=100, gc_after_trial=True, show_progress_bar=True)
 
     filepath: Path = Path(f"{uuid1()}.cbm")
     model: CatBoostRegressor = CatBoostRegressor(
         **study.best_params,
         loss_function="RMSE",
-        metadata={"columns": str(feature_columns)},
+        metadata={
+            "ma_prefixes": str(main_schema.ma_service.ma_prefixes),
+            "adx_columns": str(adx_columns),
+            "categorical_columns": str(categorical_columns),
+            "feature_columns": str(feature_columns)
+        },
         random_state=settings.RANDOM_STATE,
         verbose=False,
     )
