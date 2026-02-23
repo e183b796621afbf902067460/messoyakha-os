@@ -1,12 +1,13 @@
-from datetime import datetime, timedelta
+# pylint: disable=duplicate-code
+from datetime import datetime, timedelta, timezone
 
 from pydantic import BaseModel, Field, field_serializer
 
-from src.schemas.common.base import APIBaseInputSchema
+from src.schemas.common.base import APIBaseSchema
 from src.settings import settings
 
 
-class BinanceKlinesInputSchema(APIBaseInputSchema):
+class BinanceKlinesInputSchema(APIBaseSchema):
 
     ticker: str = Field(serialization_alias="symbol")
     section: str = Field(exclude=True)
@@ -58,6 +59,9 @@ class BinanceKlinesOutputSchema(BaseModel):
             high=kline[2],
             low=kline[3],
             close=kline[4],
-            open_time=datetime.fromtimestamp(kline[0] / settings.MILLISECONDS_IN_SECOND),
-            close_time=datetime.fromtimestamp(kline[6] / settings.MILLISECONDS_IN_SECOND),
+            open_time=datetime.fromtimestamp(kline[0] / settings.MILLISECONDS_IN_SECOND, tz=timezone.utc),
+            close_time=datetime.fromtimestamp(kline[6] / settings.MILLISECONDS_IN_SECOND, tz=timezone.utc),
         )
+
+
+# pylint: enable=duplicate-code

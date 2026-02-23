@@ -1,5 +1,5 @@
 from attr import attrs
-from polars import LazyFrame, scan_parquet
+from polars import DataFrame, LazyFrame, concat, scan_parquet
 
 
 @attrs(slots=True, auto_attribs=True, kw_only=True)
@@ -12,7 +12,10 @@ class PolarsBaseRepository:
     def _scan_parquets(self, paths: list[str]) -> list[LazyFrame]:
         return [self._scan_parquet(path=path) for path in paths]
 
-    def scan(self, paths: str | list[str]) -> LazyFrame | list[LazyFrame]:
+    def scan(self, paths: str | list[str]) -> LazyFrame:
         if isinstance(paths, str):
             return self._scan_parquet(path=paths)
-        return self._scan_parquets(paths=paths)
+        return concat(self._scan_parquets(paths=paths))
+
+    def insert_dataframe_as_parquet(self, dataframe: DataFrame, key: str) -> None:
+        dataframe.write_parquet(file=key, storage_options=self._storage_options)

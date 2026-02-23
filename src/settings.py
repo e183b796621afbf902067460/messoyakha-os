@@ -5,7 +5,6 @@ from pydantic_settings import BaseSettings
 
 
 class AppSettings(BaseSettings):
-
     APP_NAME: str = "candlesticks-pipelines"
     APP_VERSION: str = "v0.0.1-alpha"
 
@@ -17,13 +16,13 @@ class AppSettings(BaseSettings):
     S3_CONNECT_TIMEOUT: int = 2 * 60
     S3_BUCKET: str = "f8e90488-f511555d-274b-4258-bffc-572dd1900382"
 
+    HYPERLIQUID_L1_ADDRESS: str = "0x8BD4B2312f6C95B0D40E7407b26b124B25cbA375"
+    HYPERLIQUID_SECRET_KEY: str = "0x8f4d4485a80a5b2f13e6fc7480920c1f7ff4c753cf1c2b4fcf52eb2560b2d620"
+
     EXCHANGE: str = "Binance"
     SECTION: str = "SPOT"
     TICKER: str = "BTCUSDT"
-    INTERVAL: str = "4h"
-
-    TRAIN_SIZE: float = 0.8
-    RANDOM_STATE: int = 42
+    INTERVAL: str = "1w"
 
     TRIGGER_DATE: datetime = datetime.now()
 

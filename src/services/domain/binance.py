@@ -2,13 +2,14 @@ from datetime import datetime, timedelta
 from time import sleep
 
 from numpy import floor
-from pandas import DataFrame
+from polars import DataFrame
 
 from src.adapters.clients.binance import BinanceAPIClientBase
 from src.schemas.domain.binance import BinanceKlinesInputSchema, BinanceKlinesOutputSchema
 from src.services.common.api_base import APIBaseService
 
 
+# pylint: disable=too-many-return-statements
 def _convert_binance_interval_to_seconds(interval: str) -> float:
     if interval == "30m":
         return timedelta(minutes=30).total_seconds()  # noqa: WPS432
@@ -18,14 +19,20 @@ def _convert_binance_interval_to_seconds(interval: str) -> float:
         return timedelta(hours=2).total_seconds()
     if interval == "4h":
         return timedelta(hours=4).total_seconds()
+    if interval == "1d":
+        return timedelta(days=1).total_seconds()
+    if interval == "1w":
+        return timedelta(weeks=1).total_seconds()
     raise ValueError(f"Invalid interval `{interval}` were passed.")
 
 
-class BinanceService(APIBaseService):
+# pylint: enable=too-many-return-statements
 
+
+class BinanceService(APIBaseService):
     _client: BinanceAPIClientBase
 
-    async def _get_klines(self, input_schema: BinanceKlinesInputSchema) -> DataFrame:
+    async def get_ohlc(self, input_schema: BinanceKlinesInputSchema) -> DataFrame:
         klines: list[BinanceKlinesOutputSchema] = []
 
         number_of_batches: int = int(
@@ -51,6 +58,3 @@ class BinanceService(APIBaseService):
             klines.extend(batch)
             sleep(0.25)  # noqa: WPS432
         return DataFrame([kline.model_dump() for kline in klines])
-
-    async def get_ohlc(self, input_schema: BinanceKlinesInputSchema) -> DataFrame:
-        return await self._get_klines(input_schema=input_schema)

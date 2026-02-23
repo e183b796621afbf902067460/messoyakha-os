@@ -35,6 +35,7 @@ onnxruntime = "^1.23.2"
 cmaes = "^0.12.0"
 pyarrow = "^22.0.0"
 hyperliquid-python-sdk = "^0.21.0"
+eth-account = "^0.13.7"
 
 [tool.poetry.group.linters.dependencies]
 pre-commit = "3.6.0"
@@ -48,6 +49,13 @@ mypy = "~=1.0.1"
 
 [tool.poetry.group.test.dependencies]
 pytest-asyncio = ">=0.18.0"
+
+[tool.basedpyright]
+typeCheckingMode = "basic"
+reportCallIssue = "none"
+reportGeneralTypeIssues = "none"
+reportUnusedCallResult = "none"
+reportOptionalMemberAccess = "none"
 
 [tool.black]
 line-length = 120

@@ -40,4 +40,6 @@ RUN python3.10 -m venv --system-site-packages $VIRTUAL_ENV \
     && poetry install -vvv --no-interaction --no-root \
     && rm -rf /root/.cache/pypoetry
 
+RUN pip3 install -e "git+https://github.com/elliottech/lighter-python.git#egg=lighter-sdk"
+
 COPY ./src /code/src
