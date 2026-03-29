@@ -140,3 +140,7 @@ dmypy.json
 *.csv
 *.html
 draft.ipynb
+
+# Agent's context
+PLAN.md
+TASK.md

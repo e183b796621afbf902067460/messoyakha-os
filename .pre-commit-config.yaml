@@ -13,7 +13,7 @@ repos:
         name: isort
         entry: isort -q
         language: python
-        types: [ python ]
+        types: [python]
         require_serial: true
   - repo: local
     hooks:
@@ -22,16 +22,16 @@ repos:
         entry: black -q
         language: python
         require_serial: true
-        types: [ python ]
+        types: [python]
   - repo: local
     hooks:
       - id: flake8
         name: soft-flake8
         entry: pflake8
-        args: [ "--select=B,C,E,F,W,T4,B9" ]
-        additional_dependencies: [ pyproject-flake8 ]
+        args: ["--select=B,C,E,F,W,T4,B9"]
+        additional_dependencies: [pyproject-flake8]
         language: python
-        types: [ python ]
+        types: [python]
       - id: strict-flake8
         name: strict-flake8-src
         entry: pflake8
@@ -46,7 +46,7 @@ repos:
           ]
         exclude: ^(tests/)
         language: python
-        types: [ python ]
+        types: [python]
   - repo: local
     hooks:
       - id: mypy
@@ -54,7 +54,7 @@ repos:
         entry: mypy --pretty
         language: python
         require_serial: true
-        types: [ python ]
+        types: [python]
         files: ^src/
   - repo: local
     hooks:
@@ -63,5 +63,5 @@ repos:
         entry: pylint
         files: ^src/
         language: python
-        types: [ python ]
+        types: [python]
         require_serial: true

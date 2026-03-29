@@ -33,6 +33,9 @@ class _MainSchema(BaseModel):
     binance_service: BinanceService
     ohlc_service: OHLCService
 
+    class Config:
+        arbitrary_types_allowed: bool = True
+
 
 def _determine_latest_timestamp(latest_timestamp: datetime | None) -> datetime:
     if latest_timestamp is None:

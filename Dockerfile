@@ -20,7 +20,7 @@ RUN /usr/local/bin/.ta-lib.sh
 WORKDIR /code
 
 COPY ./pyproject.toml /code/pyproject.toml
-COPY ./poetry.lock /code/poetry.lock
+COPY ./uv.lock /code/uv.lock
 
 ENV VIRTUAL_ENV=/code/src/venv \
     PATH="/code/src/venv/bin:${PATH}" \
@@ -29,17 +29,16 @@ ENV VIRTUAL_ENV=/code/src/venv \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1
 
-ARG POETRY_VERSION=1.7.1
+ENV UV_VERSION=0.11.1
+ENV UV_VENV_CLEAR=1
 
 ENV TA_LIBRARY_PATH=$PREFIX/lib
 ENV TA_INCLUDE_PATH=$PREFIX/include
 
 RUN python3.10 -m venv --system-site-packages $VIRTUAL_ENV \
-    && pip3 install poetry~=$POETRY_VERSION \
+    && pip3 install uv~=$UV_VERSION \
     && pip3 install ta-lib==$TA_LIB_VERSION \
-    && poetry install -vvv --no-interaction --no-root \
-    && rm -rf /root/.cache/pypoetry
-
-RUN pip3 install -e "git+https://github.com/elliottech/lighter-python.git#egg=lighter-sdk"
+    && source $VIRTUAL_ENV/bin/activate \
+    && uv sync
 
 COPY ./src /code/src

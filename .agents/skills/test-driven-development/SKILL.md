@@ -1,0 +1,4 @@
+- Add tests for new behavior — cover success, failure, and edge cases;
+- https://pandas.pydata.org/docs/development/contributing_codebase.html#test-driven-development;
+- https://pandas.pydata.org/docs/development/contributing_codebase.html#preferred-pytest-idioms;
+- https://pandas.pydata.org/docs/development/contributing_codebase.html#using-hypothesis.
