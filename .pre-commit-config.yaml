@@ -1,67 +1,31 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
-        exclude: .yaml
       - id: check-added-large-files
         exclude: .lock
-  - repo: local
+
+  # https://github.com/astral-sh/ruff-pre-commit
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.8
     hooks:
-      - id: isort
-        name: isort
-        entry: isort -q
-        language: python
-        types: [python]
-        require_serial: true
-  - repo: local
+      - id: ruff-format
+        name: ruff-format
+        entry: uv run ruff format
+        args: [--config, python-core/pyproject.toml]
+      - id: ruff-check
+        name: ruff-lint
+        entry: uv run ruff check
+        args: [--config, python-core/pyproject.toml, --exit-non-zero-on-fix]
+
+  # https://github.com/facebook/pyrefly-pre-commit
+  - repo: https://github.com/facebook/pyrefly-pre-commit
+    rev: 0.52.0
     hooks:
-      - id: black
-        name: black
-        entry: black -q
-        language: python
-        require_serial: true
-        types: [python]
-  - repo: local
-    hooks:
-      - id: flake8
-        name: soft-flake8
-        entry: pflake8
-        args: ["--select=B,C,E,F,W,T4,B9"]
-        additional_dependencies: [pyproject-flake8]
-        language: python
-        types: [python]
-      - id: strict-flake8
-        name: strict-flake8-src
-        entry: pflake8
-        verbose: true
-        additional_dependencies:
-          [
-            pyproject-flake8,
-            flake8-eradicate,
-            flake8-boolean-trap,
-            flake8-print,
-            wemake-python-styleguide,
-          ]
-        exclude: ^(tests/)
-        language: python
-        types: [python]
-  - repo: local
-    hooks:
-      - id: mypy
-        name: mypy
-        entry: mypy --pretty
-        language: python
-        require_serial: true
-        types: [python]
-        files: ^src/
-  - repo: local
-    hooks:
-      - id: pylint
-        name: pylint
-        entry: pylint
-        files: ^src/
-        language: python
-        types: [python]
-        require_serial: true
+      - id: pyrefly-check
+        name: pyrefly-check
+        entry: uv run pyrefly check
+        args: [--config, python-core/pyproject.toml]
+        pass_filenames: false

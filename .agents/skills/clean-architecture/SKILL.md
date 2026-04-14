@@ -1,2 +1,0 @@
-- Define dedicated exception classes or use existing exceptions such as ValueError instead of raising the broad AirflowException directly. Each error case should have a specific exception type that conveys what went wrong;
-- https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html;
