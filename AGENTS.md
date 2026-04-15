@@ -1,6 +1,6 @@
 # Agent Standards
 
-A file for guiding agents to give persistent instructions with files.
+As an agent, always load the following skills while working on codebase in this project: `/md` skill must always be loaded into the agent context and conscientiously applied.
 
 ## Principles
 
