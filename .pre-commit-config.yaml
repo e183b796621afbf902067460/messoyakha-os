@@ -16,8 +16,12 @@ repos:
         entry: uv run ruff format
         args: [--config, python-core/pyproject.toml]
       - id: ruff-check
+        name: ruff-isort
+        entry: uv run ruff check --select I
+        args: [--config, python-core/pyproject.toml, --exit-non-zero-on-fix]
+      - id: ruff-check
         name: ruff-lint
-        entry: uv run ruff check
+        entry: uv run ruff check --ignore I
         args: [--config, python-core/pyproject.toml, --exit-non-zero-on-fix]
 
   # https://github.com/facebook/pyrefly-pre-commit

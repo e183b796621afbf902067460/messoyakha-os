@@ -1,10 +1,5 @@
 # ...
 
-- [stock duration](https://en.wikipedia.org/wiki/Stock_duration);
-- [10M SMA](...) and intrinsic value;
-
-Maybe enrich it with ADX and any other trend indicators.
-
 ## Repository Structure
 
 There are many ways to structure a project, but the best structure is one that is consistent, easy to maintain and scale! So repository has the following structure:
