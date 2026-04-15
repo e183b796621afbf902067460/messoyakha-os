@@ -1,5 +1,7 @@
 # PEP: Personal Endowment Program
 
+[Tactical asset allocation](https://en.wikipedia.org/wiki/Tactical_asset_allocation).
+
 ## ...
 
 ### What Is It?

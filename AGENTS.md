@@ -32,4 +32,4 @@ In essence, agent as the first line of defense against low-quality code plays a 
 | -------------- | ------------------------------------------------------- |
 | `python-core/` | Python shared core: this is where the most work happens |
 
-See the corresponding `AGENTS.md` files for details.
+See the corresponding `AGENTS.md` files in sub-cores for details.

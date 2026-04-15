@@ -67,7 +67,7 @@ ignore = [
     "COM812",
 
     # https://docs.astral.sh/ruff/rules/#pydocstyle-d
-    "D100", "D104", "D105", "D106", "D107", "D212", "D401", "D413",
+    "D100", "D104", "D105", "D106", "D107", "D206", "D212", "D401", "D413",
 
     # https://docs.astral.sh/ruff/rules/line-too-long/
     "E501",
@@ -134,8 +134,7 @@ convention = "google"
 [tool.ruff.format]
 indent-style = "tab"
 docstring-code-format = true
-skip-magic-trailing-comma = true
+skip-magic-trailing-comma = false
 
 [tool.pyrefly]
-baseline = ".baseline.json"
 python-platform = "linux"
