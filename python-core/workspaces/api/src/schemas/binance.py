@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_serializer
 from pep_api.settings.settings import settings
 
 
-class BinanceKlinesInputSchema(BaseModel):
+class BinanceKlinesParametersSchema(BaseModel):
 	ticker: str = Field(serialization_alias="symbol")
 	section: str = Field(exclude=True)
 	interval: str
