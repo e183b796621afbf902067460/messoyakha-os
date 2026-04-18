@@ -12,14 +12,14 @@ class BinanceAPIClientBase(APIClientBase):
 		await self._get(endpoint=self._ping_endpoint)
 
 	async def klines(self, input_schema: BinanceKlinesInputSchema) -> list[BinanceKlinesOutputSchema]:
-		klines: Response | None = await self._get(
+		klines: Response = await self._get(
 			endpoint=self._klines_endpoint, parameters=input_schema.model_dump(by_alias=True)
 		)
 		return [
 			BinanceKlinesOutputSchema.from_kline(
 				kline=kline, ticker=input_schema.ticker, section=input_schema.section, interval=input_schema.interval
 			)
-			for kline in klines.json()  # type: ignore[union-attr]
+			for kline in klines.json()
 		]
 
 

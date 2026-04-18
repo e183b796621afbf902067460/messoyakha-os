@@ -38,7 +38,7 @@ When `Any` is unavoidable due to external constraints, document expected structu
 For running tests, we use `pytest`. Tests always live in `tests/` directory and mirrors source code, so:
 
 <!-- py-rule:8 -->
-- every file that includes tests has a `test_*` prefix;
+- every file that includes tests has a `test__*` prefix;
 
 <!-- py-rule:10 -->
 - wrap tests in classes named with `Test*` prefix;
