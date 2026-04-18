@@ -3,9 +3,10 @@ from time import sleep
 
 from attr import attrs
 from numpy import floor
+from polars import DataFrame
+
 from pep_api.adapters.binance import BinanceAPIClientBase
 from pep_api.schemas.binance import BinanceKlinesInputSchema, BinanceKlinesOutputSchema
-from polars import DataFrame
 
 
 def _convert_binance_interval_to_seconds(interval: str) -> float:

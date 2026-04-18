@@ -77,3 +77,64 @@ We use docstrings to document the code! Update (or add) all relevant documentati
 
 <!-- py-rule:15 -->
 - only add docstrings in tests when they provide additional context.
+
+## Add New Strategy
+
+1. Create directory in `python-core/strategies`, for example `my-awesome-strategy`.
+
+2. Create `pyproject.toml` in `python-core/strategies/my-awesome-strategy` with following structure:
+
+    ```toml
+    [project]
+    name = "pep-my-awesome-strategy"
+    version = "0.0.1"
+    description = "My awesome description."
+    readme = "README.md"
+
+    [build-system]
+    requires = ["hatchling"]
+    build-backend = "hatchling.build"
+
+    [tool.hatch.build.targets.wheel]
+    packages = ["src"]
+
+    [tool.hatch.build.force-include]
+    "src" = "pep_my_awesome_strategy"
+    ```
+
+3. Update following sections in your `python-core/pyproject.toml`:
+
+    a. Update `[project]` dependencies:
+    ```toml
+    [project]
+    ...
+    dependencies = [
+        ...,
+        "pep-my-awesome-strategy"
+    ]
+    ```
+
+    b. Update `[tool.uv.sources]`:
+    ```toml
+    [tool.uv.sources]
+    pep-my-awesome-strategy = { path = "strategies/my-awesome-strategy", editable = true }
+    ```
+
+    c. Update `[tool.ruff.lint.isort]` known-first-party:
+    ```toml
+    [tool.ruff.lint.isort]
+    known-first-party = [..., "pep_my_awesome_strategy"]
+    ```
+
+    d. Update `[tool.pyrefly]` search-path:
+    ```toml
+    [tool.pyrefly]
+    search-path = [..., "strategies/my-awesome-strategy"]
+    ```
+
+4. Then run:
+    ```bash
+    make sync
+    ```
+
+After that you can do any imports from your strategy codebase by `pep_my_awesome_strategy` name.

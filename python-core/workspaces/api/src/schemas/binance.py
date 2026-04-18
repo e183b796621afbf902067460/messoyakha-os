@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
 
-from pep_api.settings.settings import settings
 from pydantic import BaseModel, Field, field_serializer
+
+from pep_api.settings.settings import settings
 
 
 class BinanceKlinesInputSchema(BaseModel):

@@ -114,7 +114,7 @@ force-wrap-aliases = true
 section-order = ["future", "standard-library", "third-party", "workspace", "first-party", "local-folder"]
 
 # https://docs.astral.sh/ruff/settings/#lint_isort_sections
-sections = { "workspace" = ["pep-api", "pep-lakehouse"] }
+sections = { "workspace" = ["pep_api", "pep_lakehouse"] }
 known-first-party = ["pep_pipelines", "pep_stock_duration"]
 
 [tool.ruff.lint.flake8-tidy-imports]

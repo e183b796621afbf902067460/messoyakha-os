@@ -1,4 +1,5 @@
 from httpx import Response
+
 from pep_api.adapters.common.abc import APIClientBase
 from pep_api.schemas.binance import BinanceKlinesInputSchema, BinanceKlinesOutputSchema
 

@@ -9,12 +9,6 @@ stock-duration-wiki = "https://en.wikipedia.org/wiki/Stock_duration"
 tactical-asset-allocation-wiki = "https://en.wikipedia.org/wiki/Tactical_asset_allocation"
 a-quantitative-approach-to-taa-mebane-faber = "https://mebfaber.com/wp-content/uploads/2016/05/SSRN-id962461.pdf"
 
-[tool.uv]
-package = false
-
-[tool.uv.sources]
-pep-lakehouse = { workspace = true }
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
