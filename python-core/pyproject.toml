@@ -58,7 +58,7 @@ fix = true
 select = ["ALL"]
 ignore = [
     # https://docs.astral.sh/ruff/rules/any-type/
-    "ANN401",
+    "ANN002", "ANN003", "ANN401",
 
     # https://docs.astral.sh/ruff/rules/missing-trailing-comma/
     "COM812",
@@ -68,6 +68,9 @@ ignore = [
 
     # https://docs.astral.sh/ruff/rules/line-too-long/
     "E501",
+
+    # https://docs.astral.sh/ruff/rules/commented-out-code/
+    "ERA001",
 
     # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
     "FA",

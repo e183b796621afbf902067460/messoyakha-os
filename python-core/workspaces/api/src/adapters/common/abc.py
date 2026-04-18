@@ -1,7 +1,22 @@
 from abc import ABC
+from collections.abc import Callable
+from functools import wraps
 
 from attr import attrs
 from httpx import URL, AsyncClient, Response
+
+
+def route(endpoint: str) -> Callable[[Callable], Callable]:
+	"""Decorator that injects endpoint into method kwargs."""
+
+	def decorator(func: Callable) -> Callable:
+		@wraps(func)
+		async def wrapper(self, *args, **kwargs):  # type: ignore[method-assign]  # noqa: ANN001, ANN202
+			return await func(self, *args, endpoint=endpoint, **kwargs)
+
+		return wrapper
+
+	return decorator
 
 
 @attrs(slots=True, auto_attribs=True, kw_only=True)
