@@ -1,12 +1,12 @@
 from typing import TypeAlias
 
-from httpx import Response
+from httpx import AsyncClient, Response
 
 from pep_api.adapters.common.abc import APIClientBase, route
 from pep_api.schemas.binance import BinanceKlinesOutputSchema, BinanceKlinesParametersSchema
 
 
-class BinanceAPIClientBase(APIClientBase):
+class _BinanceAPIClientBase(APIClientBase):
 	"""Binance API client base."""
 
 	async def _ping(self, *args, **kwargs) -> None:
@@ -22,15 +22,17 @@ class BinanceAPIClientBase(APIClientBase):
 			BinanceKlinesOutputSchema.from_kline(
 				kline=kline,
 				ticker=parameters_schema.ticker,
-				section=parameters_schema.section,
+				market=parameters_schema.market,
 				interval=parameters_schema.interval,
 			)
 			for kline in klines.json()
 		]
 
 
-class BinanceSpotAPIClient(BinanceAPIClientBase):
+class BinanceSpotAPIClient(_BinanceAPIClientBase):
 	"""Binance Spot API client."""
+
+	_session: AsyncClient = AsyncClient(base_url="https://api.binance.com", http2=True)
 
 	@route("/api/v3/ping")
 	async def ping(self, *args, **kwargs) -> None:
@@ -45,8 +47,10 @@ class BinanceSpotAPIClient(BinanceAPIClientBase):
 		return await super()._klines(parameters_schema=parameters_schema, **kwargs)
 
 
-class BinanceUSDTMAPIClient(BinanceAPIClientBase):
+class BinanceUSDTMAPIClient(_BinanceAPIClientBase):
 	"""Binance USDT-M Futures API client."""
+
+	_session: AsyncClient = AsyncClient(base_url="https://fapi.binance.com", http2=True)
 
 	@route("/fapi/v1/ping")
 	async def ping(self, *args, **kwargs) -> None:

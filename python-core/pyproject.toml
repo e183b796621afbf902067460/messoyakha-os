@@ -60,6 +60,9 @@ ignore = [
     # https://docs.astral.sh/ruff/rules/any-type/
     "ANN002", "ANN003", "ANN401",
 
+    # https://docs.astral.sh/ruff/rules/abstract-base-class-without-abstract-method/
+    "B024",
+
     # https://docs.astral.sh/ruff/rules/missing-trailing-comma/
     "COM812",
 
@@ -70,7 +73,7 @@ ignore = [
     "E501",
 
     # https://docs.astral.sh/ruff/rules/f-string-in-exception/
-    "EM102",
+    "EM101", "EM102",
 
     # https://docs.astral.sh/ruff/rules/commented-out-code/
     "ERA001",
@@ -130,7 +133,7 @@ ban-relative-imports = "all"
 ignorelist = ["id", "open"]
 
 [tool.ruff.lint.per-file-ignores]
-"**/tests/**" = ["ANN", "ARG", "D", "PT", "S101", "SLF"]
+"**/tests/**" = ["ANN", "ARG", "D", "PLR2004", "PT", "S101", "SLF"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 15

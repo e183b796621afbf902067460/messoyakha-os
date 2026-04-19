@@ -1,8 +1,9 @@
 from abc import ABC
 from collections.abc import Callable
 from functools import wraps
+from http import HTTPMethod
 
-from attr import attrs
+from attr import attr, attrs
 from httpx import URL, AsyncClient, Response
 
 
@@ -23,7 +24,7 @@ def route(endpoint: str) -> Callable[[Callable], Callable]:
 class APIClientBase(ABC):
 	"""Base class for API clients with shared HTTP request logic."""
 
-	_session: AsyncClient
+	_session: AsyncClient = attr(init=False)
 
 	async def __request(
 		self, method: str, endpoint: str, parameters: dict | None = None, headers: dict[str, str] | None = None
@@ -36,4 +37,4 @@ class APIClientBase(ABC):
 	async def _get(
 		self, endpoint: str, parameters: dict | None = None, headers: dict[str, str] | None = None
 	) -> Response:
-		return await self.__request(method="GET", endpoint=endpoint, parameters=parameters, headers=headers)
+		return await self.__request(method=HTTPMethod.GET, endpoint=endpoint, parameters=parameters, headers=headers)
