@@ -42,7 +42,7 @@ class BinanceService:
 			)
 		)
 		for _ in range(number_of_batches):
-			batch: list[BinanceKlinesOutputSchema] = await self._client.klines(input_schema=parameters_schema)
+			batch: list[BinanceKlinesOutputSchema] = await self._client.klines(parameters_schema=parameters_schema)
 			if not batch:
 				break
 
