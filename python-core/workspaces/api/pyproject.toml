@@ -1,14 +1,38 @@
 [project]
 name = "pep-api"
-version = "0.0.1c8"
+dynamic = ["version", "dependencies"]
+readme = "README.md"
 description = "..."
 
+requires-python = ">=3.10,<4.0"
+
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "pep440"
+bump = true
 
 [tool.hatch.metadata]
 allow-direct-references = true
 
+[tool.hatch.metadata.hooks.uv-dynamic-versioning]
+dependencies = [
+    "httpx[http2]>=0.28.1,<0.29",
+    "attrs>=25.1.0,<26",
+    "pydantic>=2.10.6,<3",
+    "polars==1.31.0",
+    "loguru>=0.7.3,<0.8",
+    "numpy>=2.2.6",
+]
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/pep_api"]
+packages = ["src"]
+
+[tool.hatch.build.force-include]
+"src" = "pep_api"

@@ -4,35 +4,13 @@ version = "0.0.1"
 description = "Personal financial environment for more effective risk management in order to make optimal decisions in the face of uncertainty."
 readme = "README.md"
 license = { file = "LICENSE" }
-dependencies = [
-    "pep-pipelines",
-    "pep-stock-duration",
-    "pep-api",
-    "pep-lakehouse",
-]
 requires-python = ">=3.10,<4.0"
 
 [project.urls]
 source = "https://github.com/e183b796621afbf902067460/pep"
 issues = "https://github.com/e183b796621afbf902067460/pep/issues"
 
-[dependency-groups]  # Sorted alphabetically
-api-developing = ["fastapi==0.111.0", "httpx[http2]>=0.28.1,<0.29", "uvicorn>=0.34.0,<0.35", "uvloop>=0.21.0,<0.22",]
-backtesting = ["backtesting>=0.6.5,<0.7", "ta-lib>=0.6.8",]
-data-handling = ["duckdb>=1.4.1,<2",]
-data-transformating = ["pandas>=2.2.3,<3", "polars==1.31.0", "pyarrow>=22.0.0,<23",]
-data-validating = ["attrs>=25.1.0,<26", "pydantic>=2.10.6,<3", "pydantic-settings>=2.7.1,<3",]
-data-plotting = ["matplotlib>=3.10.3,<4",]
-feature-engineering = ["collinearity>=0.6.1,<0.7",]
-hyperparameter-tuning = ["cmaes>=0.12.0,<0.13", "optuna>=4.4.0,<5",]
-logging = ["loguru>=0.7.3,<0.8",]
-machine-learning = ["catboost>=1.2.8,<2",]
-math = ["scipy>=1.15.3,<2",]
-testing = ["pytest-asyncio>=0.18.0",]
-sdk = ["boto3>=1.40.50,<2",]
-
 [tool.uv]
-default-groups = "all"
 package = false
 
 # https://docs.astral.sh/uv/concepts/projects/workspaces/#workspace-sources
