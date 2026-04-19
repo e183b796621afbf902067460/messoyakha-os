@@ -11,7 +11,4 @@ build-backend = "hatchling.build"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
-
-[tool.hatch.build.force-include]
-"src" = "pep_api"
+packages = ["src/pep_api"]
