@@ -1604,7 +1604,7 @@ testing = [{ name = "pytest-asyncio", specifier = ">=0.18.0" }]
 
 [[package]]
 name = "pep-api"
-version = "0.0.3"
+version = "0.0.1a0"
 source = { editable = "workspaces/api" }
 
 [[package]]

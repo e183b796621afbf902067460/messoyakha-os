@@ -1,12 +1,12 @@
+from asyncio import sleep
 from datetime import datetime, timedelta
-from time import sleep
 
 from attr import attrs
 from numpy import floor
 from polars import DataFrame
 
-from pep_api.adapters.binance import BinanceAPIClientBase
-from pep_api.schemas.binance import BinanceKlinesInputSchema, BinanceKlinesOutputSchema
+from pep_api.adapters.binance import BinanceAPIClient
+from pep_api.schemas.binance import BinanceKlinesOutputSchema, BinanceKlinesParametersSchema
 
 
 def _convert_binance_interval_to_seconds(interval: str) -> float:
@@ -27,31 +27,34 @@ def _convert_binance_interval_to_seconds(interval: str) -> float:
 
 @attrs(slots=True, auto_attribs=True, kw_only=True)
 class BinanceService:
-	_client: BinanceAPIClientBase
+	"""Service for fetching OHLCV data from Binance."""
 
-	async def get_ohlc(self, input_schema: BinanceKlinesInputSchema) -> DataFrame:
+	_client: BinanceAPIClient
+
+	async def get_ohlcv(self, parameters_schema: BinanceKlinesParametersSchema) -> DataFrame:
+		"""Fetch OHLCV data for given input schema."""
 		klines: list[BinanceKlinesOutputSchema] = []
 
 		number_of_batches: int = int(
 			floor(
-				input_schema.delta.total_seconds()
-				/ _convert_binance_interval_to_seconds(interval=input_schema.interval)
+				parameters_schema.delta.total_seconds()
+				/ _convert_binance_interval_to_seconds(interval=parameters_schema.interval)
 			)
 		)
 		for _ in range(number_of_batches):
-			batch: list[BinanceKlinesOutputSchema] = await self._client.klines(input_schema=input_schema)
+			batch: list[BinanceKlinesOutputSchema] = await self._client.klines(input_schema=parameters_schema)
 			if not batch:
 				break
 
 			next_start_time: datetime = batch[-1].close_time + timedelta(milliseconds=1)
-			input_schema = BinanceKlinesInputSchema(
-				ticker=input_schema.ticker,
-				section=input_schema.section,
-				interval=input_schema.interval,
+			parameters_schema = BinanceKlinesParametersSchema(
+				ticker=parameters_schema.ticker,
+				section=parameters_schema.section,
+				interval=parameters_schema.interval,
 				start_time=next_start_time,
-				end_time=input_schema.end_time,
+				end_time=parameters_schema.end_time,
 			)
 
 			klines.extend(batch)
-			sleep(0.25)
+			await sleep(0.25)
 		return DataFrame([kline.model_dump() for kline in klines])

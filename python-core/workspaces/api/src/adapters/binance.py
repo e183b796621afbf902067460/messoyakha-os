@@ -1,3 +1,5 @@
+from typing import TypeAlias
+
 from httpx import Response
 
 from pep_api.adapters.common.abc import APIClientBase, route
@@ -43,7 +45,7 @@ class BinanceSpotAPIClient(BinanceAPIClientBase):
 		return await super()._klines(parameters_schema=parameters_schema, **kwargs)
 
 
-class BinanceUsdtmAPIClient(BinanceAPIClientBase):
+class BinanceUSDTMAPIClient(BinanceAPIClientBase):
 	"""Binance USDT-M Futures API client."""
 
 	@route("/fapi/v1/ping")
@@ -57,3 +59,6 @@ class BinanceUsdtmAPIClient(BinanceAPIClientBase):
 	) -> list[BinanceKlinesOutputSchema]:
 		"""Get klines from Binance USDT-M Futures API."""
 		return await super()._klines(parameters_schema=parameters_schema, **kwargs)
+
+
+BinanceAPIClient: TypeAlias = BinanceSpotAPIClient | BinanceUSDTMAPIClient
