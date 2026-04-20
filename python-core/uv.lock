@@ -523,8 +523,13 @@ requires-dist = [
 
 [[package]]
 name = "pep-pipelines"
-version = "0.0.1"
-source = { editable = "pipelines" }
+source = { virtual = "pipelines" }
+dependencies = [
+    { name = "pep-api" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pep-api", editable = "workspaces/api" }]
 
 [[package]]
 name = "pep-stock-duration"

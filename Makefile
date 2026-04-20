@@ -22,5 +22,5 @@ sync: .uv
 	uv sync --project ./python-core/ --all-extras --all-packages --refresh
 
 .PHONY: pre-commit
-pre-commit: .pre-commit
+pre-commit: .pre-commit sync
 	@uv run --directory python-core/ pre-commit run --all-files

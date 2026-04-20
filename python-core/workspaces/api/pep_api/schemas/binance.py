@@ -22,14 +22,14 @@ class _BinanceKlinesParametersSchemaBase(BaseModel):
 	limit: int | None = Field(default=1_000)
 
 	@field_serializer("start_time")
-	def serialize_start_time_to_milliseconds(self, start_time: int | datetime) -> int | None:
+	def serialize_start_time_to_milliseconds(self, start_time: int | datetime) -> int:
 		"""Serialize start_time to milliseconds since epoch."""
 		if isinstance(start_time, datetime):
 			return int(start_time.timestamp() * _MILLISECONDS_IN_SECOND)
 		return start_time
 
 	@field_serializer("end_time")
-	def serialize_end_time_to_milliseconds(self, end_time: int | datetime) -> int | None:
+	def serialize_end_time_to_milliseconds(self, end_time: int | datetime) -> int:
 		"""Serialize end_time to milliseconds since epoch."""
 		if isinstance(end_time, datetime):
 			return int(end_time.timestamp() * _MILLISECONDS_IN_SECOND)
