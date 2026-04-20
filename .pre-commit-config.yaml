@@ -21,7 +21,7 @@ repos:
         args: [--config, python-core/pyproject.toml, --exit-non-zero-on-fix]
       - id: ruff-check
         name: ruff-lint
-        entry: uv run ruff check --ignore I
+        entry: uv run ruff check --ignore I --unsafe-fixes
         args: [--config, python-core/pyproject.toml, --exit-non-zero-on-fix]
 
   # https://github.com/facebook/pyrefly-pre-commit

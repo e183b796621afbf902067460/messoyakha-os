@@ -1,0 +1,27 @@
+from io import BytesIO
+
+from attrs import define, field
+from pandas import read_xml
+from polars import (
+	DataFrame as PlDataFrame,
+	col,
+	from_pandas,
+)
+
+from pep_api.adapters.cbr import CBRSOAPAPIClient
+from pep_api.schemas.cbr import CBRKeyRateParametersSchema
+
+
+@define(slots=True, auto_attribs=True, kw_only=True)
+class CBRService:
+	"""Service for fetching key rate data from CBR."""
+
+	_client: CBRSOAPAPIClient = field(init=False, factory=CBRSOAPAPIClient)
+
+	def get_key_rate(self, parameters_schema: CBRKeyRateParametersSchema) -> PlDataFrame:
+		"""Fetch key rate data for given input schema."""
+		key_rate: PlDataFrame = from_pandas(
+			read_xml(BytesIO(self._client.key_rate(parameters_schema=parameters_schema)), xpath=".//KR")
+		)
+		key_rate = key_rate.select([col("DT").alias("datetime"), col("Rate").alias("rate")])
+		return key_rate.with_columns(col("datetime").str.to_datetime().dt.replace_time_zone("UTC"), col("rate") / 100)

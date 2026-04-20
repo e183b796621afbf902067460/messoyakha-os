@@ -35,6 +35,7 @@ dependencies = [
     "numpy>=2.2.6",
     "httpx[http2]>=0.28.1,<0.29",
     "suds-py3>=1.4.5.0",
+    "lxml>=6.1.0",
     "loguru>=0.7.3,<0.8",
 ]
 
