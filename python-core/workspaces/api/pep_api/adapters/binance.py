@@ -4,12 +4,12 @@ from typing import TypeAlias
 from attrs import define, field
 from httpx import AsyncClient, Response
 
-from pep_api.adapters.common.abc import APIClientBase, route
+from pep_api.adapters.common.http import HTTPAPIClientBase, route
 from pep_api.schemas.binance import BinanceKlinesOutputSchema, BinanceKlinesParametersSchema
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
-class _BinanceAPIClientBase(APIClientBase):
+class _BinanceAPIClientBase(HTTPAPIClientBase):
 	"""Binance API client base."""
 
 	async def _ping(self, *args, **kwargs) -> None:

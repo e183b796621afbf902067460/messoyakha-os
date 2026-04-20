@@ -21,7 +21,7 @@ def route(endpoint: str) -> Callable[[Callable], Callable]:
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
-class APIClientBase(ABC):
+class HTTPAPIClientBase(ABC):
 	"""Base class for API clients with shared HTTP request logic."""
 
 	_session: AsyncClient = field(init=False)
