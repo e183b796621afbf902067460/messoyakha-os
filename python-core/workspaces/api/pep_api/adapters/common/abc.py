@@ -6,6 +6,7 @@ from http import HTTPMethod
 from attr import attr, attrs
 from httpx import URL, AsyncClient, Response
 
+my_s = ""
 
 def route(endpoint: str) -> Callable[[Callable], Callable]:
 	"""Decorator that injects endpoint into method kwargs."""

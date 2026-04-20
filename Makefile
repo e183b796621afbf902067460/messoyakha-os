@@ -19,7 +19,7 @@ export UV_PROJECT_ENVIRONMENT := .venv
 
 .PHONY: sync
 sync: .uv
-	uv sync --project ./python-core/ --all-extras --all-packages
+	uv sync --project ./python-core/ --all-extras --all-packages --refresh
 
 .PHONY: pre-commit
 pre-commit: .pre-commit

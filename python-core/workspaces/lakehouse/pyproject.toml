@@ -1,17 +1,40 @@
 [project]
 name = "pep-lakehouse"
-version = "0.0.1"
+dynamic = ["version", "dependencies"]
 description = "..."
+readme = "README.md"
+
+requires-python = ">=3.10,<4.0"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
 build-backend = "hatchling.build"
 
-[tool.hatch.metadata]
-allow-direct-references = true
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "pep440"
+bump = true
+
+[tool.uv]
+package = true
+
+[tool.hatch.metadata.hooks.uv-dynamic-versioning]
+dependencies = [
+    "attrs>=25.1.0,<26",
+    "boto3>=1.40.50,<2",
+    "duckdb>=1.4.1,<2",
+    "polars==1.31.0",
+    "pyarrow>=22.0.0,<23",
+    "pydantic>=2.10.6,<3",
+    "loguru>=0.7.3,<0.8",
+    "numpy>=2.2.6",
+]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["pep_lakehouse"]
 
-[tool.hatch.build.force-include]
-"src" = "pep_lakehouse"
+[tool.hatch.build.targets.sdist]
+exclude = ["tests"]

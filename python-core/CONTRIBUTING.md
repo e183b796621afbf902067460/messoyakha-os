@@ -22,7 +22,7 @@ There are some general rules to apply while writing code in `python-core/`:
 
 ### Annotating Python Code
 
-`pep` uses `pyrefly` to statically analyze the codebase nad type hints. After making any change you can ensure your type hints are consistent by running code formatting checks.
+`pep` uses `pyrefly` to statically analyze the codebase and type hints. After making any changes you can ensure your type hints are consistent by running code formatting checks.
 
 <!-- py-rule:5 -->
 Annotate code with type hints according to [PEP 484](https://peps.python.org/pep-0484/) (don't use unnecessary `Any` annotations, the use of `cast()` is strongly discouraged) — use built-in generic types (e.g. `list[str]` instead of `typing.List[str]`), use `Union`, `Protocol`, `TypeVar`, or schema-derived types for precision — precise types catch bugs at type-check.
@@ -104,29 +104,19 @@ We use docstrings to document the code! Update (or add) all relevant documentati
 
 3. Update following sections in your `python-core/pyproject.toml`:
 
-    a. Update `[project]` dependencies:
-    ```toml
-    [project]
-    ...
-    dependencies = [
-        ...,
-        "pep-my-awesome-strategy"
-    ]
-    ```
-
-    b. Update `[tool.uv.sources]`:
+    a. Update `[tool.uv.sources]`:
     ```toml
     [tool.uv.sources]
-    pep-my-awesome-strategy = { path = "strategies/my-awesome-strategy", editable = true }
+    pep-my-awesome-strategy = { workspace = true }
     ```
 
-    c. Update `[tool.ruff.lint.isort]` known-first-party:
+    b. Update `[tool.ruff.lint.isort]` known-first-party:
     ```toml
     [tool.ruff.lint.isort]
     known-first-party = [..., "pep_my_awesome_strategy"]
     ```
 
-    d. Update `[tool.pyrefly]` search-path:
+    c. Update `[tool.pyrefly]` search-path:
     ```toml
     [tool.pyrefly]
     search-path = [..., "strategies/my-awesome-strategy"]

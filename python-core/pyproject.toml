@@ -15,15 +15,22 @@ package = false
 
 # https://docs.astral.sh/uv/concepts/projects/workspaces/#workspace-sources
 [tool.uv.sources]
-pep-pipelines = { path = "pipelines", editable = true }
-pep-stock-duration = { path = "strategies/stock-duration", editable = true }
+
+# pipelines/
+pep-pipelines = { workspace = true }
+
+# strategies/*
+pep-stock-duration = { workspace = true }
+
+# workspaces/*
 pep-api = { workspace = true }
 pep-lakehouse = { workspace = true }
 
 [tool.uv.workspace]
 members = [
-    "workspaces/api",
-    "workspaces/lakehouse"
+    "pipelines",
+    "strategies/*",
+    "workspaces/*",
 ]
 
 [tool.ruff]

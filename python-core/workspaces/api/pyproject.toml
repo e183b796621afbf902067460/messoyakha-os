@@ -1,8 +1,8 @@
 [project]
 name = "pep-api"
 dynamic = ["version", "dependencies"]
-readme = "README.md"
 description = "..."
+readme = "README.md"
 
 requires-python = ">=3.10,<4.0"
 
@@ -18,8 +18,8 @@ vcs = "git"
 style = "pep440"
 bump = true
 
-[tool.hatch.metadata]
-allow-direct-references = true
+[tool.uv]
+package = true
 
 [tool.hatch.metadata.hooks.uv-dynamic-versioning]
 dependencies = [
@@ -32,7 +32,7 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["pep_api"]
 
-[tool.hatch.build.force-include]
-"src" = "pep_api"
+[tool.hatch.build.targets.sdist]
+exclude = ["tests"]

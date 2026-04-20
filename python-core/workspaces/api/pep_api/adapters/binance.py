@@ -4,6 +4,7 @@ from httpx import AsyncClient, Response
 
 from pep_api.adapters.common.abc import APIClientBase, route
 from pep_api.schemas.binance import BinanceKlinesOutputSchema, BinanceKlinesParametersSchema
+from pep_api.adapters.common.abc import my_s
 
 
 class _BinanceAPIClientBase(APIClientBase):
