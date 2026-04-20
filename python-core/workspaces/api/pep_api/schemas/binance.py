@@ -1,35 +1,19 @@
 from datetime import datetime, timedelta, timezone
-from enum import StrEnum
-from typing import Final
+from typing import Final, TypeAlias
 
 from pydantic import BaseModel, Field, field_serializer
+
+from pep_api.enums.binance import BinanceIntervalEnum, BinanceMarketEnum
 
 
 _MILLISECONDS_IN_SECOND: Final[int] = 10**3
 
 
-class BinanceIntervalEnum(StrEnum):
-	THIRTY_MINUTES = "30m"
-
-	ONE_HOUR = "1h"
-	TWO_HOURS = "2h"
-	FOUR_HOURS = "4h"
-
-	ONE_DAY = "1d"
-
-	ONE_WEEK = "1w"
-
-
-class BinanceMarketEnum(StrEnum):
-	SPOT = "Spot"
-	USDTM = "USDT-M"
-
-
-class BinanceKlinesParametersSchema(BaseModel):
+class _BinanceKlinesParametersSchemaBase(BaseModel):
 	"""Parameters schema for Binance klines endpoint."""
 
 	ticker: str = Field(serialization_alias="symbol")
-	market: BinanceMarketEnum = Field(default=BinanceMarketEnum.SPOT, init=False, exclude=True)  # TODO: separate default for each market
+	market: BinanceMarketEnum = Field(init=False, exclude=True)
 	interval: BinanceIntervalEnum
 
 	start_time: datetime = Field(serialization_alias="startTime")
@@ -73,6 +57,14 @@ class BinanceKlinesParametersSchema(BaseModel):
 		raise ValueError("Inappropriate interval set (pep-api).")
 
 
+class BinanceKlinesSpotParametersSchema(_BinanceKlinesParametersSchemaBase):
+	market: BinanceMarketEnum = Field(default=BinanceMarketEnum.SPOT, init=False, exclude=True)
+
+
+class BinanceKlinesUSDTMParametersSchema(_BinanceKlinesParametersSchemaBase):
+	market: BinanceMarketEnum = Field(default=BinanceMarketEnum.USDTM, init=False, exclude=True)
+
+
 class BinanceKlinesOutputSchema(BaseModel):
 	"""Output schema for Binance klines data."""
 
@@ -106,3 +98,6 @@ class BinanceKlinesOutputSchema(BaseModel):
 			open_time=datetime.fromtimestamp(kline[0] / _MILLISECONDS_IN_SECOND, tz=timezone.utc),
 			close_time=datetime.fromtimestamp(kline[6] / _MILLISECONDS_IN_SECOND, tz=timezone.utc),
 		)
+
+
+BinanceKlinesParametersSchema: TypeAlias = BinanceKlinesSpotParametersSchema | BinanceKlinesUSDTMParametersSchema

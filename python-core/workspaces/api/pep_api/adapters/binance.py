@@ -1,12 +1,14 @@
+from functools import partial
 from typing import TypeAlias
 
+from attrs import define, field
 from httpx import AsyncClient, Response
 
 from pep_api.adapters.common.abc import APIClientBase, route
 from pep_api.schemas.binance import BinanceKlinesOutputSchema, BinanceKlinesParametersSchema
-from pep_api.adapters.common.abc import my_s
 
 
+@define(slots=False, auto_attribs=True, kw_only=True)
 class _BinanceAPIClientBase(APIClientBase):
 	"""Binance API client base."""
 
@@ -30,10 +32,13 @@ class _BinanceAPIClientBase(APIClientBase):
 		]
 
 
+@define(slots=False, auto_attribs=True, kw_only=True)
 class BinanceSpotAPIClient(_BinanceAPIClientBase):
 	"""Binance Spot API client."""
 
-	_session: AsyncClient = AsyncClient(base_url="https://api.binance.com", http2=True)
+	_session: AsyncClient = field(
+		init=False, factory=partial(AsyncClient, base_url="https://api.binance.com", http2=True)
+	)
 
 	@route("/api/v3/ping")
 	async def ping(self, *args, **kwargs) -> None:
@@ -48,10 +53,13 @@ class BinanceSpotAPIClient(_BinanceAPIClientBase):
 		return await super()._klines(parameters_schema=parameters_schema, **kwargs)
 
 
+@define(slots=False, auto_attribs=True, kw_only=True)
 class BinanceUSDTMAPIClient(_BinanceAPIClientBase):
 	"""Binance USDT-M Futures API client."""
 
-	_session: AsyncClient = AsyncClient(base_url="https://fapi.binance.com", http2=True)
+	_session: AsyncClient = field(
+		init=False, factory=partial(AsyncClient, base_url="https://fapi.binance.com", http2=True)
+	)
 
 	@route("/fapi/v1/ping")
 	async def ping(self, *args, **kwargs) -> None:

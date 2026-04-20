@@ -3,10 +3,9 @@ from collections.abc import Callable
 from functools import wraps
 from http import HTTPMethod
 
-from attr import attr, attrs
+from attrs import define, field
 from httpx import URL, AsyncClient, Response
 
-my_s = ""
 
 def route(endpoint: str) -> Callable[[Callable], Callable]:
 	"""Decorator that injects endpoint into method kwargs."""
@@ -21,11 +20,11 @@ def route(endpoint: str) -> Callable[[Callable], Callable]:
 	return decorator
 
 
-@attrs(slots=True, auto_attribs=True, kw_only=True)
+@define(slots=False, auto_attribs=True, kw_only=True)
 class APIClientBase(ABC):
 	"""Base class for API clients with shared HTTP request logic."""
 
-	_session: AsyncClient = attr(init=False)
+	_session: AsyncClient = field(init=False)
 
 	async def __request(
 		self, method: str, endpoint: str, parameters: dict | None = None, headers: dict[str, str] | None = None
