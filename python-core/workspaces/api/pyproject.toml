@@ -6,6 +6,11 @@ readme = "README.md"
 
 requires-python = ">=3.10,<4.0"
 
+[project.urls]
+cbr = "https://www.cbr.ru/development/dws/"
+cbrapi = "https://github.com/mbk-dev/cbrapi/tree/master"
+okama = "https://habr.com/ru/companies/okama/profile/"
+
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
 build-backend = "hatchling.build"

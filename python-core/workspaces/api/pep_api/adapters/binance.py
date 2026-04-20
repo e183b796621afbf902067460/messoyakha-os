@@ -12,9 +12,9 @@ from pep_api.schemas.binance import BinanceKlinesOutputSchema, BinanceKlinesPara
 class _BinanceAPIClientBase(HTTPAPIClientBase):
 	"""Binance API client base."""
 
-	async def _ping(self, *args, **kwargs) -> None:
+	async def _ping(self, **kwargs) -> None:
 		"""Ping the API endpoint."""
-		await self._get(*args, **kwargs)
+		await self._get(**kwargs)
 
 	async def _klines(
 		self, parameters_schema: BinanceKlinesParametersSchema, **kwargs
@@ -41,9 +41,9 @@ class BinanceSpotAPIClient(_BinanceAPIClientBase):
 	)
 
 	@route("/api/v3/ping")
-	async def ping(self, *args, **kwargs) -> None:
+	async def ping(self, **kwargs) -> None:
 		"""Ping the Binance Spot API."""
-		await super()._ping(*args, **kwargs)
+		await super()._ping(**kwargs)
 
 	@route("/api/v3/klines")
 	async def klines(
@@ -62,9 +62,9 @@ class BinanceUSDTMAPIClient(_BinanceAPIClientBase):
 	)
 
 	@route("/fapi/v1/ping")
-	async def ping(self, *args, **kwargs) -> None:
+	async def ping(self, **kwargs) -> None:
 		"""Ping the Binance USDT-M Futures API."""
-		await super()._ping(*args, **kwargs)
+		await super()._ping(**kwargs)
 
 	@route("/fapi/v1/klines")
 	async def klines(

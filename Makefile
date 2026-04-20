@@ -23,4 +23,4 @@ sync: .uv
 
 .PHONY: pre-commit
 pre-commit: .pre-commit sync
-	@uv run --directory python-core/ pre-commit run --all-files
+	@uv run --project ./python-core/ pre-commit run --all-files
