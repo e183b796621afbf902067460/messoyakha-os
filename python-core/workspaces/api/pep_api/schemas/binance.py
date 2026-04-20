@@ -58,10 +58,14 @@ class _BinanceKlinesParametersSchemaBase(BaseModel):
 
 
 class BinanceKlinesSpotParametersSchema(_BinanceKlinesParametersSchemaBase):
+	"""Parameters schema for Binance spot market klines endpoint."""
+
 	market: BinanceMarketEnum = Field(default=BinanceMarketEnum.SPOT, init=False, exclude=True)
 
 
 class BinanceKlinesUSDTMParametersSchema(_BinanceKlinesParametersSchemaBase):
+	"""Parameters schema for Binance USDT-M futures market klines endpoint."""
+
 	market: BinanceMarketEnum = Field(default=BinanceMarketEnum.USDTM, init=False, exclude=True)
 
 

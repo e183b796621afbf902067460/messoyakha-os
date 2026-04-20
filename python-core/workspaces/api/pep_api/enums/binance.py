@@ -2,6 +2,8 @@ from enum import StrEnum
 
 
 class BinanceIntervalEnum(StrEnum):
+	"""Binance API interval values for klines endpoint."""
+
 	THIRTY_MINUTES = "30m"
 
 	ONE_HOUR = "1h"
@@ -14,5 +16,7 @@ class BinanceIntervalEnum(StrEnum):
 
 
 class BinanceMarketEnum(StrEnum):
+	"""Binance API market types."""
+
 	SPOT = "Spot"
 	USDTM = "USDT-M"
