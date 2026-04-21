@@ -70,7 +70,7 @@ uv run --directory python-core/ somewhere-in-python-core/script_dummy.py
 We use docstrings to document the code! Update (or add) all relevant documentation only after code change is final:
 
 <!-- py-rule:13 -->
-- follow «[Google Python Style Guide](https://google.github.io/styleguide/pyguide.html)» docstring conventions for all functions and classes ([PEP 257](https://peps.python.org/pep-0257/) is part of it);
+- follow «[Google Python Style Guide](https://google.github.io/styleguide/pyguide.html)» docstring conventions when documenting code ([PEP 257](https://peps.python.org/pep-0257/) is part of it);
 
 <!-- py-rule:14 -->
 - only add examples in docstrings for complex functionality;

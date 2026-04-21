@@ -10,16 +10,12 @@ from pep_api.schemas.binance import BinanceKlinesOutputSchema, BinanceKlinesPara
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class _BinanceAPIClientBase(HTTPAPIClientBase):
-	"""Binance API client base."""
-
 	async def _ping(self, **kwargs) -> None:
-		"""Ping the API endpoint."""
 		await self._get(**kwargs)
 
 	async def _klines(
 		self, parameters_schema: BinanceKlinesParametersSchema, **kwargs
 	) -> list[BinanceKlinesOutputSchema]:
-		"""Get klines data from the API."""
 		klines: Response = await self._get(parameters=parameters_schema.model_dump(by_alias=True), **kwargs)
 		return [
 			BinanceKlinesOutputSchema.from_kline(
@@ -34,43 +30,37 @@ class _BinanceAPIClientBase(HTTPAPIClientBase):
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class BinanceSpotAPIClient(_BinanceAPIClientBase):
-	"""Binance Spot API client."""
-
+	# TODO: __attrs_post_init__: DI (base_url, timeout, retries etc.)
 	_session: AsyncClient = field(
 		init=False, factory=partial(AsyncClient, base_url="https://api.binance.com", http2=True)
 	)
 
 	@route("/api/v3/ping")
 	async def ping(self, **kwargs) -> None:
-		"""Ping the Binance Spot API."""
 		await super()._ping(**kwargs)
 
 	@route("/api/v3/klines")
 	async def klines(
 		self, parameters_schema: BinanceKlinesParametersSchema, **kwargs
 	) -> list[BinanceKlinesOutputSchema]:
-		"""Get klines from Binance Spot API."""
 		return await super()._klines(parameters_schema=parameters_schema, **kwargs)
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class BinanceUSDTMAPIClient(_BinanceAPIClientBase):
-	"""Binance USDT-M Futures API client."""
-
+	# TODO: __attrs_post_init__: DI (base_url, timeout, retries etc.)
 	_session: AsyncClient = field(
 		init=False, factory=partial(AsyncClient, base_url="https://fapi.binance.com", http2=True)
 	)
 
 	@route("/fapi/v1/ping")
 	async def ping(self, **kwargs) -> None:
-		"""Ping the Binance USDT-M Futures API."""
 		await super()._ping(**kwargs)
 
 	@route("/fapi/v1/klines")
 	async def klines(
 		self, parameters_schema: BinanceKlinesParametersSchema, **kwargs
 	) -> list[BinanceKlinesOutputSchema]:
-		"""Get klines from Binance USDT-M Futures API."""
 		return await super()._klines(parameters_schema=parameters_schema, **kwargs)
 
 

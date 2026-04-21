@@ -8,8 +8,6 @@ from httpx import URL, AsyncClient, Response
 
 
 def route(endpoint: str) -> Callable[[Callable], Callable]:
-	"""Decorator that injects endpoint into method kwargs."""
-
 	def decorator(func: Callable) -> Callable:
 		@wraps(func)
 		async def wrapper(self, *args, **kwargs):  # type: ignore[method-assign]  # noqa: ANN001, ANN202
@@ -22,8 +20,6 @@ def route(endpoint: str) -> Callable[[Callable], Callable]:
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class HTTPAPIClientBase(ABC):
-	"""Base class for API clients with shared HTTP request logic."""
-
 	_session: AsyncClient = field(init=False)
 
 	async def __request(

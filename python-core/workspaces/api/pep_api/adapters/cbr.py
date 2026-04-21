@@ -8,8 +8,6 @@ from pep_api.schemas.cbr import CBRKeyRateParametersSchema
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class CBRSOAPAPIClient(SOAPAPIClientBase):
-	"""CBR SOAP API client."""
-
 	def __attrs_post_init__(self) -> None:
 		import_xml_schema: Import = Import("http://www.w3.org/2001/XMLSchema")
 		import_xml_schema.filter.add("http://web.cbr.ru/")
@@ -22,6 +20,6 @@ class CBRSOAPAPIClient(SOAPAPIClientBase):
 			headers={"User-Agent": "Mozilla"},
 		)
 
+	# TODO: CBRKeyRateOutputSchema (pydantic-xml)
 	def key_rate(self, parameters_schema: CBRKeyRateParametersSchema) -> bytes:
-		"""Get key rate from CBR SOAP API."""
 		return self._client.service.KeyRate(**parameters_schema.model_dump(by_alias=True))
