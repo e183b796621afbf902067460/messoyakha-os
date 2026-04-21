@@ -17,6 +17,5 @@ class CBRSOAPAPIClient(SOAPAPIClientBase):
 			headers={"User-Agent": "Mozilla"},
 		)
 
-	# TODO: CBRKeyRateOutputSchema (pydantic-xml)
 	def key_rate(self, parameters_schema: CBRKeyRateParametersSchema) -> bytes:
 		return self._client.service.KeyRate(**parameters_schema.model_dump(by_alias=True))

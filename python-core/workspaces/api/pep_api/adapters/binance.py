@@ -30,7 +30,6 @@ class _BinanceAPIClientBase(HTTPAPIClientBase):
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class BinanceSpotAPIClient(_BinanceAPIClientBase):
-	# TODO: __attrs_post_init__: DI (base_url, timeout, retries etc.)
 	_session: AsyncClient = field(
 		init=False, factory=partial(AsyncClient, base_url="https://api.binance.com", http2=True)
 	)
@@ -48,7 +47,6 @@ class BinanceSpotAPIClient(_BinanceAPIClientBase):
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class BinanceUSDTMAPIClient(_BinanceAPIClientBase):
-	# TODO: __attrs_post_init__: DI (base_url, timeout, retries etc.)
 	_session: AsyncClient = field(
 		init=False, factory=partial(AsyncClient, base_url="https://fapi.binance.com", http2=True)
 	)

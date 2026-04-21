@@ -18,3 +18,6 @@ class CBRKeyRateParametersSchema(BaseModel):
 		if isinstance(end_time, datetime):
 			return end_time.strftime("%Y-%m-%d")
 		return end_time
+
+
+class CBRKeyRateOutputSchema(...): ...
