@@ -5,12 +5,16 @@ from http import HTTPMethod
 
 from attrs import define, field
 from httpx import URL, AsyncClient, Response
+from pydantic import BaseModel
 
 
 def route(endpoint: str) -> Callable[[Callable], Callable]:
 	def decorator(func: Callable) -> Callable:
 		@wraps(func)
-		async def wrapper(self, *args, **kwargs):  # type: ignore[method-assign]  # noqa: ANN001, ANN202
+		async def wrapper(self, *args, endpoint=endpoint, **kwargs):  # type: ignore[method-assign]  # noqa: ANN001, ANN202
+			endpoint_schema: BaseModel | None = kwargs.get("endpoint_schema")
+			if endpoint_schema:
+				endpoint = endpoint.format(**endpoint_schema.model_dump(by_alias=True))
 			return await func(self, *args, endpoint=endpoint, **kwargs)
 
 		return wrapper
