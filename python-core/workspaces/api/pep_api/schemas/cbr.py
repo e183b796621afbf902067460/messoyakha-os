@@ -20,4 +20,4 @@ class CBRKeyRateParametersSchema(BaseModel):
         return end_time
 
 
-class CBRKeyRateOutputSchema(...): ...
+class CBRKeyRateOutputSchema(...): ...  # type: ignore[invalid-inheritance]

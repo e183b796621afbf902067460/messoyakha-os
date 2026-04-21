@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, Field, field_serializer, model_validator
+from pydantic import BaseModel, Field, ModelWrapValidatorHandler, ValidationInfo, field_serializer, model_validator
 
 from pep_api.enums.finam import FinamTimeframeEnum
 
@@ -38,7 +38,7 @@ class FinamBarsParametersSchema(BaseModel):
     end_time: datetime = Field(serialization_alias="interval.end_time")
 
 
-class _FinamBarsBarSchema(BaseModel):
+class FinamBarsOutputSchema(BaseModel):
     open: float
     high: float
     low: float
@@ -47,20 +47,15 @@ class _FinamBarsBarSchema(BaseModel):
 
     timestamp: datetime
 
-    @model_validator(mode="before")
-    def __unwrap(self, values: dict) -> dict:
-        if isinstance(values, dict):
-            return {
-                "timestamp": values.get("timestamp"),
-                "open": float(values["open"]["value"]),
-                "high": float(values["high"]["value"]),
-                "low": float(values["low"]["value"]),
-                "close": float(values["close"]["value"]),
-                "volume": float(values["volume"]["value"]),
-            }
-        return values
-
-
-class FinamBarsOutputSchema(BaseModel):
-    symbol: str
-    bars: list[_FinamBarsBarSchema]
+    @model_validator(mode="wrap")
+    @classmethod
+    def __wrap_bar(cls, bar: dict, handler: ModelWrapValidatorHandler[Self], info: ValidationInfo) -> Self:  # noqa: ARG003 unused arguement
+        data: dict = {
+            "timestamp": bar.get("timestamp"),
+            "open": bar["open"]["value"],
+            "high": bar["high"]["value"],
+            "low": bar["low"]["value"],
+            "close": bar["close"]["value"],
+            "volume": bar["volume"]["value"],
+        }
+        return handler(data)
