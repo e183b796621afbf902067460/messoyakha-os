@@ -117,9 +117,6 @@ ban-relative-imports = "all"
 [tool.ruff.lint.flake8-builtins]
 ignorelist = ["id", "open"]
 
-[tool.ruff.lint.per-file-ignores]
-"**/tests/**" = ["ANN", "ARG", "D", "PLR2004", "PT", "S101", "SLF"]
-
 [tool.ruff.lint.mccabe]
 max-complexity = 15
 
@@ -127,7 +124,7 @@ max-complexity = 15
 convention = "google"
 
 [tool.ruff.format]
-indent-style = "tab"
+indent-style = "space"
 docstring-code-format = true
 skip-magic-trailing-comma = false
 

@@ -10,56 +10,56 @@ from pep_api.schemas.binance import BinanceKlinesOutputSchema, BinanceKlinesPara
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class _BinanceAPIClientBase(HTTPAPIClientBase):
-	async def _ping(self, **kwargs) -> None:
-		await self._get(**kwargs)
+    async def _ping(self, **kwargs) -> None:
+        await self._get(**kwargs)
 
-	async def _klines(
-		self, parameters_schema: BinanceKlinesParametersSchema, **kwargs
-	) -> list[BinanceKlinesOutputSchema]:
-		klines: Response = await self._get(parameters=parameters_schema.model_dump(by_alias=True), **kwargs)
-		return [
-			BinanceKlinesOutputSchema.from_kline(
-				kline=kline,
-				ticker=parameters_schema.ticker,
-				market=parameters_schema.market,
-				interval=parameters_schema.interval,
-			)
-			for kline in klines.json()
-		]
+    async def _klines(
+        self, parameters_schema: BinanceKlinesParametersSchema, **kwargs
+    ) -> list[BinanceKlinesOutputSchema]:
+        klines: Response = await self._get(parameters=parameters_schema.model_dump(by_alias=True), **kwargs)
+        return [
+            BinanceKlinesOutputSchema.from_kline(
+                kline=kline,
+                ticker=parameters_schema.ticker,
+                market=parameters_schema.market,
+                interval=parameters_schema.interval,
+            )
+            for kline in klines.json()
+        ]
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class BinanceSpotAPIClient(_BinanceAPIClientBase):
-	_session: AsyncClient = field(
-		init=False, factory=partial(AsyncClient, base_url="https://api.binance.com", http2=True)
-	)
+    _session: AsyncClient = field(
+        init=False, factory=partial(AsyncClient, base_url="https://api.binance.com", http2=True)
+    )
 
-	@route("/api/v3/ping")
-	async def ping(self, **kwargs) -> None:
-		await super()._ping(**kwargs)
+    @route("/api/v3/ping")
+    async def ping(self, **kwargs) -> None:
+        await super()._ping(**kwargs)
 
-	@route("/api/v3/klines")
-	async def klines(
-		self, parameters_schema: BinanceKlinesParametersSchema, **kwargs
-	) -> list[BinanceKlinesOutputSchema]:
-		return await super()._klines(parameters_schema=parameters_schema, **kwargs)
+    @route("/api/v3/klines")
+    async def klines(
+        self, parameters_schema: BinanceKlinesParametersSchema, **kwargs
+    ) -> list[BinanceKlinesOutputSchema]:
+        return await super()._klines(parameters_schema=parameters_schema, **kwargs)
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class BinanceUSDTMAPIClient(_BinanceAPIClientBase):
-	_session: AsyncClient = field(
-		init=False, factory=partial(AsyncClient, base_url="https://fapi.binance.com", http2=True)
-	)
+    _session: AsyncClient = field(
+        init=False, factory=partial(AsyncClient, base_url="https://fapi.binance.com", http2=True)
+    )
 
-	@route("/fapi/v1/ping")
-	async def ping(self, **kwargs) -> None:
-		await super()._ping(**kwargs)
+    @route("/fapi/v1/ping")
+    async def ping(self, **kwargs) -> None:
+        await super()._ping(**kwargs)
 
-	@route("/fapi/v1/klines")
-	async def klines(
-		self, parameters_schema: BinanceKlinesParametersSchema, **kwargs
-	) -> list[BinanceKlinesOutputSchema]:
-		return await super()._klines(parameters_schema=parameters_schema, **kwargs)
+    @route("/fapi/v1/klines")
+    async def klines(
+        self, parameters_schema: BinanceKlinesParametersSchema, **kwargs
+    ) -> list[BinanceKlinesOutputSchema]:
+        return await super()._klines(parameters_schema=parameters_schema, **kwargs)
 
 
 BinanceAPIClient: TypeAlias = BinanceSpotAPIClient | BinanceUSDTMAPIClient

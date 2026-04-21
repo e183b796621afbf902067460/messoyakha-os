@@ -8,14 +8,14 @@ from pep_api.schemas.cbr import CBRKeyRateParametersSchema
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class CBRSOAPAPIClient(SOAPAPIClientBase):
-	def __attrs_post_init__(self) -> None:
-		self._schema.filter.add("http://web.cbr.ru/")
-		self._client: Client = Client(
-			url="http://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx?wsdl",
-			doctor=ImportDoctor(self._schema),
-			retxml=True,
-			headers={"User-Agent": "Mozilla"},
-		)
+    def __attrs_post_init__(self) -> None:
+        self._schema.filter.add("http://web.cbr.ru/")
+        self._client: Client = Client(
+            url="http://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx?wsdl",
+            doctor=ImportDoctor(self._schema),
+            retxml=True,
+            headers={"User-Agent": "Mozilla"},
+        )
 
-	def key_rate(self, parameters_schema: CBRKeyRateParametersSchema) -> bytes:
-		return self._client.service.KeyRate(**parameters_schema.model_dump(by_alias=True))
+    def key_rate(self, parameters_schema: CBRKeyRateParametersSchema) -> bytes:
+        return self._client.service.KeyRate(**parameters_schema.model_dump(by_alias=True))

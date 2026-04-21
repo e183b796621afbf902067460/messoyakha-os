@@ -11,34 +11,34 @@ from pep_api.schemas.binance import BinanceKlinesOutputSchema, BinanceKlinesPara
 
 @define(slots=True, auto_attribs=True, kw_only=True)
 class _BinanceServiceBase:
-	_client: BinanceAPIClient = field(init=False)
+    _client: BinanceAPIClient = field(init=False)
 
-	async def get_ohlcv(self, parameters_schema: BinanceKlinesParametersSchema) -> DataFrame:
-		number_of_batches: int = int(
-			floor(parameters_schema.delta.total_seconds() / parameters_schema.interval_seconds)
-		)
+    async def get_ohlcv(self, parameters_schema: BinanceKlinesParametersSchema) -> DataFrame:
+        number_of_batches: int = int(
+            floor(parameters_schema.delta.total_seconds() / parameters_schema.interval_seconds)
+        )
 
-		klines: list[BinanceKlinesOutputSchema] = []
-		for _ in range(number_of_batches):
-			batch: list[BinanceKlinesOutputSchema] = await self._client.klines(parameters_schema=parameters_schema)
-			if not batch:
-				break
-			klines.extend(batch)
+        klines: list[BinanceKlinesOutputSchema] = []
+        for _ in range(number_of_batches):
+            batch: list[BinanceKlinesOutputSchema] = await self._client.klines(parameters_schema=parameters_schema)
+            if not batch:
+                break
+            klines.extend(batch)
 
-			next_start_time: datetime = batch[-1].close_time + timedelta(milliseconds=1)
-			if next_start_time > parameters_schema.end_time:
-				break
-			parameters_schema.start_time = next_start_time
-			parameters_schema.end_time = parameters_schema.end_time
-			await sleep(0.25)
-		return DataFrame([kline.model_dump() for kline in klines])
+            next_start_time: datetime = batch[-1].close_time + timedelta(milliseconds=1)
+            if next_start_time > parameters_schema.end_time:
+                break
+            parameters_schema.start_time = next_start_time
+            parameters_schema.end_time = parameters_schema.end_time
+            await sleep(0.25)
+        return DataFrame([kline.model_dump() for kline in klines])
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
 class BinanceSpotService(_BinanceServiceBase):
-	_client: BinanceAPIClient = field(init=False, factory=BinanceSpotAPIClient)
+    _client: BinanceAPIClient = field(init=False, factory=BinanceSpotAPIClient)
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
 class BinanceUSDTMService(_BinanceServiceBase):
-	_client: BinanceAPIClient = field(init=False, factory=BinanceUSDTMAPIClient)
+    _client: BinanceAPIClient = field(init=False, factory=BinanceUSDTMAPIClient)
