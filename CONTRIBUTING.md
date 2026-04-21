@@ -34,13 +34,12 @@ This creates the directory `pep` and connect your local repository to the upstre
 
 ### Branching Rules
 
-<!-- general-rule:2 -->
 Your local `master` branch must always reflect the current state of `pep` repository: it's a defaul branch in this repository, ensure it's up-to-date with the main repository (assuming you're already in the `master` branch):
 ```bash
 git pull master --ff-only
 ```
 
-<!-- general-rule:3 -->
+<!-- general-rule:2 -->
 Then, create a branch for making your changes, for example for bugfix:
 ```bash
 git checkout -b bug/short-branch-name
@@ -111,7 +110,8 @@ Now all of the styling checks will be run each time you commit changes.
 
 #### Running `pre-commit` Hooks
 
-Run code formatting checks manually:
+<!-- general-rule:3 -->
+Always run all code formatting checks, not specific linter:
 ```bash
 make pre-commit
 ```
