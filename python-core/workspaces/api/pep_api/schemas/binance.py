@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
-from typing import Final, TypeAlias
+from typing import Final, Self, TypeAlias
 
-from pydantic import BaseModel, Field, field_serializer
+from pydantic import BaseModel, Field, ModelWrapValidatorHandler, ValidationInfo, field_serializer, model_validator
 
 from pep_api.enums.binance import BinanceIntervalEnum, BinanceMarketEnum
 
@@ -54,6 +54,12 @@ class BinanceKlinesUSDTMParametersSchema(_BinanceKlinesParametersSchemaBase):
     market: BinanceMarketEnum = Field(default=BinanceMarketEnum.USDTM, init=False, exclude=True)
 
 
+class BinanceKlinesContextSchema(BaseModel):
+    ticker: str
+    market: BinanceMarketEnum
+    interval: BinanceIntervalEnum
+
+
 class BinanceKlinesOutputSchema(BaseModel):
     ticker: str
     market: BinanceMarketEnum
@@ -68,22 +74,22 @@ class BinanceKlinesOutputSchema(BaseModel):
     open_time: datetime
     close_time: datetime
 
-    @staticmethod
-    def from_kline(
-        kline: list, ticker: str, market: BinanceMarketEnum, interval: BinanceIntervalEnum
-    ) -> "BinanceKlinesOutputSchema":
-        return BinanceKlinesOutputSchema(
-            ticker=ticker,
-            market=market,
-            interval=interval,
-            open=kline[1],
-            high=kline[2],
-            low=kline[3],
-            close=kline[4],
-            volume=kline[5],
-            open_time=datetime.fromtimestamp(kline[0] / _MILLISECONDS_IN_SECOND, tz=timezone.utc),
-            close_time=datetime.fromtimestamp(kline[6] / _MILLISECONDS_IN_SECOND, tz=timezone.utc),
-        )
+    @model_validator(mode="wrap")
+    @classmethod
+    def __wrap_kline(cls, kline: list, handler: ModelWrapValidatorHandler[Self], info: ValidationInfo) -> Self:
+        data: dict = {
+            "ticker": info.context["ticker"],  # type: ignore[unsupported-operation]
+            "market": info.context["market"],  # type: ignore[unsupported-operation]
+            "interval": info.context["interval"],  # type: ignore[unsupported-operation]
+            "open": kline[1],
+            "high": kline[2],
+            "low": kline[3],
+            "close": kline[4],
+            "volume": kline[5],
+            "open_time": datetime.fromtimestamp(kline[0] / _MILLISECONDS_IN_SECOND, tz=timezone.utc),
+            "close_time": datetime.fromtimestamp(kline[6] / _MILLISECONDS_IN_SECOND, tz=timezone.utc),
+        }
+        return handler(data)
 
 
 BinanceKlinesParametersSchema: TypeAlias = BinanceKlinesSpotParametersSchema | BinanceKlinesUSDTMParametersSchema
