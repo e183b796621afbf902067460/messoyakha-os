@@ -4,6 +4,10 @@ version = "0.0.1"
 description = "Personal financial environment for more effective risk management in order to make optimal decisions in the face of uncertainty."
 readme = "README.md"
 license = { file = "LICENSE" }
+dependencies = [
+    "ruff==0.14.8",
+    "pyrefly==0.52.0",
+]
 requires-python = ">=3.10,<4.0"
 
 [project.urls]
