@@ -9,15 +9,15 @@ from pep_api.enums.binance import BinanceIntervalEnum, BinanceMarketEnum
 _MILLISECONDS_IN_SECOND: Final[int] = 10**3
 
 
-class _BinanceKlinesParametersSchemaBase(BaseModel):
+class BinanceKlinesParametersSchema(BaseModel):
     ticker: str = Field(serialization_alias="symbol")
-    market: BinanceMarketEnum = Field(init=False, exclude=True)
+    market: BinanceMarketEnum = Field(exclude=True)
     interval: BinanceIntervalEnum
 
     start_time: datetime = Field(serialization_alias="startTime")
     end_time: datetime = Field(serialization_alias="endTime")
 
-    limit: int | None = Field(default=1_000)
+    limit: int | None = Field(init=False, default=1_000)
 
     @field_serializer("start_time")
     def serialize_start_time_to_milliseconds(self, start_time: int | datetime) -> int:
@@ -30,6 +30,15 @@ class _BinanceKlinesParametersSchemaBase(BaseModel):
         if isinstance(end_time, datetime):
             return int(end_time.timestamp() * _MILLISECONDS_IN_SECOND)
         return end_time
+
+
+class _BinanceKlinesInputSchemaBase(BaseModel):
+    ticker: str
+    market: BinanceMarketEnum = Field(init=False)
+    interval: BinanceIntervalEnum
+
+    start_time: datetime
+    end_time: datetime
 
     @property
     def delta(self) -> timedelta:
@@ -45,13 +54,16 @@ class _BinanceKlinesParametersSchemaBase(BaseModel):
             return timedelta(days=1).total_seconds()
         raise ValueError("Inappropriate interval set (pep-api).")
 
+    def to_parameters_schema(self) -> BinanceKlinesParametersSchema:
+        return BinanceKlinesParametersSchema(**self.model_dump())
 
-class BinanceKlinesSpotParametersSchema(_BinanceKlinesParametersSchemaBase):
-    market: BinanceMarketEnum = Field(default=BinanceMarketEnum.SPOT, init=False, exclude=True)
+
+class BinanceKlinesSpotInputSchema(_BinanceKlinesInputSchemaBase):
+    market: BinanceMarketEnum = Field(init=False, default=BinanceMarketEnum.SPOT)
 
 
-class BinanceKlinesUSDTMParametersSchema(_BinanceKlinesParametersSchemaBase):
-    market: BinanceMarketEnum = Field(default=BinanceMarketEnum.USDTM, init=False, exclude=True)
+class BinanceKlinesUSDTMInputSchema(_BinanceKlinesInputSchemaBase):
+    market: BinanceMarketEnum = Field(init=False, default=BinanceMarketEnum.USDTM)
 
 
 class BinanceKlinesContextSchema(BaseModel):
@@ -92,4 +104,4 @@ class BinanceKlinesOutputSchema(BaseModel):
         return handler(data)
 
 
-BinanceKlinesParametersSchema: TypeAlias = BinanceKlinesSpotParametersSchema | BinanceKlinesUSDTMParametersSchema
+BinanceKlinesInputSchema: TypeAlias = BinanceKlinesSpotInputSchema | BinanceKlinesUSDTMInputSchema
