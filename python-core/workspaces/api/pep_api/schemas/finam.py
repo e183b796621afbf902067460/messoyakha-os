@@ -37,6 +37,18 @@ class FinamBarsParametersSchema(BaseModel):
     start_time: datetime = Field(serialization_alias="interval.start_time")
     end_time: datetime = Field(serialization_alias="interval.end_time")
 
+    @field_serializer("start_time")
+    def add_utc_timezone_to_start_time(self, start_time: datetime) -> str:
+        if isinstance(start_time, datetime):
+            return start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        return start_time
+
+    @field_serializer("end_time")
+    def add_utc_timezone_to_end_time(self, end_time: datetime) -> str:
+        if isinstance(end_time, datetime):
+            return end_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        return end_time
+
 
 class FinamBarsOutputSchema(BaseModel):
     open: float
@@ -59,3 +71,13 @@ class FinamBarsOutputSchema(BaseModel):
             "volume": bar["volume"]["value"],
         }
         return handler(data)
+
+
+class FinamBarsInputSchema(BaseModel):
+    secret: str
+
+    ticker: str
+    timeframe: FinamTimeframeEnum
+
+    start_time: datetime
+    end_time: datetime

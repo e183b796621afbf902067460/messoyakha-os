@@ -30,10 +30,10 @@ class FinamAPIClient(HTTPAPIClientBase):
         parameters_schema: FinamBarsParametersSchema,
         headers_schema: FinamBarsHeadersSchema,
         **kwargs,
-    ) -> FinamBarsOutputSchema:
+    ) -> list[FinamBarsOutputSchema]:
         response: Response = await self._get(
             parameters=parameters_schema.model_dump(by_alias=True),
             headers=headers_schema.model_dump(by_alias=True),
             **kwargs,
         )
-        return FinamBarsOutputSchema.model_validate(response.json())
+        return [FinamBarsOutputSchema.model_validate(bar) for bar in response.json()["bars"]]
