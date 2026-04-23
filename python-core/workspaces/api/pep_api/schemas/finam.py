@@ -1,7 +1,15 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Literal, Self
 
-from pydantic import BaseModel, Field, ModelWrapValidatorHandler, ValidationInfo, field_serializer, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    ModelWrapValidatorHandler,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from pep_api.enums.finam import FinamTimeframeEnum
 
@@ -63,7 +71,7 @@ class FinamBarsOutputSchema(BaseModel):
     @classmethod
     def __wrap_bar(cls, bar: dict, handler: ModelWrapValidatorHandler[Self], info: ValidationInfo) -> Self:  # noqa: ARG003 unused arguement
         data: dict = {
-            "timestamp": bar.get("timestamp"),
+            "timestamp": bar["timestamp"],
             "open": bar["open"]["value"],
             "high": bar["high"]["value"],
             "low": bar["low"]["value"],
@@ -71,6 +79,11 @@ class FinamBarsOutputSchema(BaseModel):
             "volume": bar["volume"]["value"],
         }
         return handler(data)
+
+    @field_validator("timestamp", mode="after")
+    @classmethod
+    def update_timestamp_timezone(cls, timestamp: datetime) -> datetime:
+        return timestamp.replace(tzinfo=timezone.utc)
 
 
 class FinamBarsInputSchema(BaseModel):
@@ -81,3 +94,29 @@ class FinamBarsInputSchema(BaseModel):
 
     start_time: datetime
     end_time: datetime
+
+    limit: timedelta = Field(init=False, default=timedelta(days=30))
+
+    @property
+    def delta(self) -> timedelta:
+        return self.end_time - self.start_time
+
+    @property
+    def interval_seconds(self) -> float:
+        if self.timeframe == FinamTimeframeEnum.ONE_HOUR:
+            return timedelta(hours=1).total_seconds()
+        if self.timeframe == FinamTimeframeEnum.FOUR_HOURS:
+            return timedelta(hours=4).total_seconds()
+        if self.timeframe == FinamTimeframeEnum.ONE_DAY:
+            return timedelta(days=1).total_seconds()
+        raise ValueError("Inappropriate interval set (pep-api).")
+
+    @field_validator("start_time", mode="after")
+    @classmethod
+    def update_start_time_timezone(cls, start_time: datetime) -> datetime:
+        return start_time.replace(tzinfo=timezone.utc)
+
+    @field_validator("end_time", mode="after")
+    @classmethod
+    def update_end_time_timezone(cls, end_time: datetime) -> datetime:
+        return end_time.replace(tzinfo=timezone.utc)

@@ -1,7 +1,15 @@
 from datetime import datetime, timedelta, timezone
 from typing import Final, Self, TypeAlias
 
-from pydantic import BaseModel, Field, ModelWrapValidatorHandler, ValidationInfo, field_serializer, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    ModelWrapValidatorHandler,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from pep_api.enums.binance import BinanceIntervalEnum, BinanceMarketEnum
 
@@ -54,6 +62,16 @@ class _BinanceKlinesInputSchemaBase(BaseModel):
             return timedelta(days=1).total_seconds()
         raise ValueError("Inappropriate interval set (pep-api).")
 
+    @field_validator("start_time", mode="after")
+    @classmethod
+    def update_start_time_timezone(cls, start_time: datetime) -> datetime:
+        return start_time.replace(tzinfo=timezone.utc)
+
+    @field_validator("end_time", mode="after")
+    @classmethod
+    def update_end_time_timezone(cls, end_time: datetime) -> datetime:
+        return end_time.replace(tzinfo=timezone.utc)
+
     def to_parameters_schema(self) -> BinanceKlinesParametersSchema:
         return BinanceKlinesParametersSchema(**self.model_dump())
 
@@ -102,6 +120,16 @@ class BinanceKlinesOutputSchema(BaseModel):
             "close_time": datetime.fromtimestamp(kline[6] / _MILLISECONDS_IN_SECOND, tz=timezone.utc),
         }
         return handler(data)
+
+    @field_validator("open_time", mode="after")
+    @classmethod
+    def update_open_time_timezone(cls, open_time: datetime) -> datetime:
+        return open_time.replace(tzinfo=timezone.utc)
+
+    @field_validator("close_time", mode="after")
+    @classmethod
+    def update_close_time_timezone(cls, close_time: datetime) -> datetime:
+        return close_time.replace(tzinfo=timezone.utc)
 
 
 BinanceKlinesInputSchema: TypeAlias = BinanceKlinesSpotInputSchema | BinanceKlinesUSDTMInputSchema
