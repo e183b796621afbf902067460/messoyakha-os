@@ -2,11 +2,17 @@ from asyncio import sleep
 from datetime import datetime, timedelta
 
 from attrs import define, field
+from loguru import logger
 from numpy import floor
 from polars import DataFrame
+from tqdm import tqdm
 
 from pep_api.adapters.binance import BinanceAPIClient, BinanceSpotAPIClient, BinanceUSDTMAPIClient
 from pep_api.schemas.binance import BinanceKlinesInputSchema, BinanceKlinesOutputSchema
+
+
+logger.remove()
+logger.add(lambda message: tqdm.write(message, end=""), colorize=True)
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
@@ -17,7 +23,7 @@ class _BinanceServiceBase:
         number_of_batches: int = int(floor(input_schema.delta.total_seconds() / input_schema.interval_seconds))
 
         klines: list[BinanceKlinesOutputSchema] = []
-        for _ in range(number_of_batches):
+        for _ in tqdm(range(number_of_batches)):
             batch: list[BinanceKlinesOutputSchema] = await self._client.klines(
                 parameters_schema=input_schema.to_parameters_schema()
             )

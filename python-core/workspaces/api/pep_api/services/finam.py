@@ -2,7 +2,9 @@ from asyncio import sleep
 from datetime import datetime, timedelta
 
 from attrs import define, field
+from loguru import logger
 from polars import DataFrame
+from tqdm import tqdm
 
 from pep_api.adapters.finam import FinamAPIClient
 from pep_api.schemas.finam import (
@@ -14,6 +16,10 @@ from pep_api.schemas.finam import (
     FinamSessionsJsonSchema,
     FinamSessionsOutputSchema,
 )
+
+
+logger.remove()
+logger.add(lambda message: tqdm.write(message, end=""), colorize=True)
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
@@ -28,7 +34,7 @@ class FinamService:
         number_of_batches: int = max(1, int(input_schema.delta.total_seconds() / input_schema.limit.total_seconds()))
 
         bars: list[FinamBarsOutputSchema] = []
-        for _ in range(number_of_batches):
+        for _ in tqdm(range(number_of_batches)):
             end_time: datetime = min(input_schema.start_time + input_schema.limit, input_schema.end_time)
             batch: list[FinamBarsOutputSchema] = await self._client.bars(
                 endpoint_schema=FinamBarsEndpointSchema(ticker=input_schema.ticker),
