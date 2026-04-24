@@ -12,4 +12,4 @@ The `python-core/` contains a `uv` [workspaces](https://docs.astral.sh/uv/concep
 And the core apps:
 
 - in `python-core/pipelines` we store all general data pipelines: we use `dagster` framework as a data pipeline orchestrator;
-- In `python-core/strategies` we store our core strategies and backtests pipelines: we use `backtesting` and `bt` libraries for backtests.
+- In `python-core/strategies` we store our core strategies and backtests pipelines.

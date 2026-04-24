@@ -1,6 +1,6 @@
 # Agent Standards
 
-As an agent, always load the following skills while working on codebase in this project: `/md` skill must always be loaded into the agent context and conscientiously applied, you can find it in `.kilo/skills`.
+A file for guiding coding agents.
 
 ## Principles
 

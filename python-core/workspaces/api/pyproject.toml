@@ -3,7 +3,6 @@ name = "pep-api"
 dynamic = ["version", "dependencies"]
 description = "..."
 readme = "README.md"
-
 requires-python = ">=3.10,<4.0"
 
 [project.urls]
