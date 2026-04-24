@@ -25,7 +25,7 @@ class FinamAPIClient(HTTPAPIClientBase):
         response: Response = await self._post(json=json_schema.model_dump(), **kwargs)
         return FinamSessionsOutputSchema(**response.json())
 
-    @route("/v1/instruments/{ticker}/bars")
+    @route("/v1/instruments/{symbol}/bars")
     async def bars(
         self,
         endpoint_schema: FinamBarsEndpointSchema,  # noqa: ARG002

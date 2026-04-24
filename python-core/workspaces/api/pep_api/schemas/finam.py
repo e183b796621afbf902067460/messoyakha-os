@@ -25,7 +25,7 @@ class FinamSessionsOutputSchema(BaseModel):
 
 
 class FinamBarsEndpointSchema(EndpointSchemaBase):
-    ticker: str
+    ticker: str = Field(serialization_alias="symbol")
 
 
 class FinamBarsHeadersSchema(HeadersSchemaBase): ...
