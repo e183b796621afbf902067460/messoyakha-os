@@ -19,7 +19,7 @@ from pep_api.schemas.finam import (
 
 
 logger.remove()
-logger.add(lambda message: tqdm.write(message, end=""), colorize=True)
+logger.add(lambda message: tqdm.write(message), colorize=True)
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
