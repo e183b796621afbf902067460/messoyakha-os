@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Literal, Self
+from typing import Self
 
 from pydantic import (
     BaseModel,
@@ -12,9 +12,8 @@ from pydantic import (
 )
 
 from pep_api.enums.finam import FinamTimeframeEnum
-
-
-_BEARER: Literal["Bearer"] = "Bearer"
+from pep_api.schemas.common.endpoints import EndpointSchemaBase
+from pep_api.schemas.common.headers import HeadersSchemaBase
 
 
 class FinamSessionsJsonSchema(BaseModel):
@@ -25,18 +24,11 @@ class FinamSessionsOutputSchema(BaseModel):
     token: str
 
 
-class FinamBarsEndpointSchema(BaseModel):
+class FinamBarsEndpointSchema(EndpointSchemaBase):
     ticker: str
 
 
-class FinamBarsHeadersSchema(BaseModel):
-    authorization: str = Field(serialization_alias="Authorization")
-
-    @field_serializer("authorization")
-    def add_bearer_to_authorization_at_serialization(self, authorization: str) -> str:
-        if _BEARER not in authorization:
-            return f"{_BEARER} {authorization}"
-        return authorization
+class FinamBarsHeadersSchema(HeadersSchemaBase): ...
 
 
 class FinamBarsParametersSchema(BaseModel):
