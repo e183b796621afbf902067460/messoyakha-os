@@ -5,6 +5,16 @@ description = "Personal financial environment for more effective risk management
 readme = "README.md"
 license = { file = "LICENSE" }
 dependencies = [
+    "attrs>=25.1.0,<26",
+    "pydantic>=2.10.6,<3",
+
+    "polars==1.31.0",
+    "pandas>=2.2.3,<3",
+    "numpy>=2.2.6",
+
+    "loguru>=0.7.3,<0.8",
+    "tqdm>=4.67.3",
+
     "ruff==0.14.8",
     "pyrefly==0.52.0",
 ]
