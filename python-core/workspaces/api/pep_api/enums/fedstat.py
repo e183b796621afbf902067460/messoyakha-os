@@ -20,7 +20,7 @@ class FedstatMonthEnum(StrEnum):
     def from_month(cls, month: int) -> Self:
         if month == 1:
             return cls(cls.JANUARY.value)
-        if month == cls.FEBRUARY.value:
+        if month == 2:  # noqa: PLR2004
             return cls(cls.FEBRUARY.value)
         if month == 3:  # noqa: PLR2004
             return cls(cls.MARCH.value)
