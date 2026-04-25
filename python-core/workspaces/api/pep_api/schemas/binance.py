@@ -72,9 +72,6 @@ class _BinanceKlinesInputSchemaBase(BaseModel):
     def update_end_time_timezone(cls, end_time: datetime) -> datetime:
         return end_time.replace(tzinfo=timezone.utc)
 
-    def to_parameters_schema(self) -> BinanceKlinesParametersSchema:
-        return BinanceKlinesParametersSchema(**self.model_dump())
-
 
 class BinanceKlinesSpotInputSchema(_BinanceKlinesInputSchemaBase):
     market: BinanceMarketEnum = Field(init=False, default=BinanceMarketEnum.SPOT)

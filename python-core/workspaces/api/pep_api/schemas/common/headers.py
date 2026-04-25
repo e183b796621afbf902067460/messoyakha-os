@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, field_serializer
 _BEARER: Literal["Bearer"] = "Bearer"
 
 
-class HeadersSchemaBase(BaseModel):
+class AuthorizationHeaderSchemaBase(BaseModel):
     authorization: str = Field(serialization_alias="Authorization")
 
     @field_serializer("authorization")

@@ -13,7 +13,7 @@ from pydantic import (
 
 from pep_api.enums.finam import FinamTimeframeEnum
 from pep_api.schemas.common.endpoints import EndpointSchemaBase
-from pep_api.schemas.common.headers import HeadersSchemaBase
+from pep_api.schemas.common.headers import AuthorizationHeaderSchemaBase
 
 
 class FinamSessionsJsonSchema(BaseModel):
@@ -28,7 +28,7 @@ class FinamBarsEndpointSchema(EndpointSchemaBase):
     ticker: str = Field(serialization_alias="symbol")
 
 
-class FinamBarsHeadersSchema(HeadersSchemaBase): ...
+class FinamBarsHeadersSchema(AuthorizationHeaderSchemaBase): ...
 
 
 class FinamBarsParametersSchema(BaseModel):

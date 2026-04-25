@@ -8,7 +8,7 @@ from polars import DataFrame
 from tqdm import tqdm
 
 from pep_api.adapters.binance import BinanceAPIClient, BinanceSpotAPIClient, BinanceUSDTMAPIClient
-from pep_api.schemas.binance import BinanceKlinesInputSchema, BinanceKlinesOutputSchema
+from pep_api.schemas.binance import BinanceKlinesInputSchema, BinanceKlinesOutputSchema, BinanceKlinesParametersSchema
 
 
 logger.remove()
@@ -25,7 +25,7 @@ class _BinanceServiceBase:
         klines: list[BinanceKlinesOutputSchema] = []
         for _ in tqdm(range(number_of_batches)):
             batch: list[BinanceKlinesOutputSchema] = await self._client.klines(
-                parameters_schema=input_schema.to_parameters_schema()
+                parameters_schema=BinanceKlinesParametersSchema(**input_schema.model_dump())
             )
             if not batch:
                 break

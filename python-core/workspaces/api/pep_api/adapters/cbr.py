@@ -14,7 +14,6 @@ class CBRSOAPAPIClient(SOAPAPIClientBase):
             url="http://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx?wsdl",
             doctor=ImportDoctor(self._schema),
             retxml=True,
-            headers={"User-Agent": "Mozilla"},
         )
 
     def key_rate(self, parameters_schema: CBRKeyRateParametersSchema) -> bytes:
