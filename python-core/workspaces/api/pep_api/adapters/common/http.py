@@ -33,12 +33,13 @@ class HTTPAPIClientBase(ABC):
         method: str,
         endpoint: str,
         parameters: dict | None = None,
+        data: dict[str, str] | None = None,
         json: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
     ) -> Response:
         url: URL = self._session.base_url.join(url=endpoint)
         response: Response = await self._session.request(
-            method=method, url=url, params=parameters, json=json, headers=headers
+            method=method, url=url, params=parameters, data=data, json=json, headers=headers
         )
         response.raise_for_status()
         return response
@@ -52,9 +53,10 @@ class HTTPAPIClientBase(ABC):
         self,
         endpoint: str,
         parameters: dict | None = None,
+        data: dict[str, str] | None = None,
         json: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
     ) -> Response:
         return await self.__request(
-            method=HTTPMethod.POST, endpoint=endpoint, parameters=parameters, json=json, headers=headers
+            method=HTTPMethod.POST, endpoint=endpoint, parameters=parameters, data=data, json=json, headers=headers
         )

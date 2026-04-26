@@ -143,6 +143,8 @@ dmypy.json
 *.csv
 *.html
 draft.ipynb
+*.txt
+*.xls
 
 # Agent's context
 .kilo/

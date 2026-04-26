@@ -5,15 +5,15 @@ from pydantic import BaseModel, Field, computed_field
 from pep_api.enums.fedstat import FedstatMonthEnum
 
 
+class FedstatInflationRateParametersSchema(BaseModel):
+    id: str = Field(init=False, default="33568")
+
+
 class _FedstatJsonSchemaBase(BaseModel):
     format: str = Field(init=False, default="excel")
 
 
-class FedstatInflationRateParametersSchema(BaseModel):
-    id: str
-
-
-class FedstatInflationRateJsonSchema(_FedstatJsonSchemaBase):
+class FedstatInflationRateDataSchema(_FedstatJsonSchemaBase):
     start_date: datetime = Field(exclude=True)
     end_date: datetime = Field(exclude=True)
 
@@ -73,7 +73,5 @@ class FedstatInflationRateJsonSchema(_FedstatJsonSchemaBase):
 
 
 class FedstatInflationRateInputSchema(BaseModel):
-    id: str = Field(init=False, default="33568")
-
     start_date: datetime
     end_date: datetime
