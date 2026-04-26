@@ -16,5 +16,7 @@ class CBRService:
         key_rate: DataFrame = from_pandas(
             read_xml(BytesIO(self._client.key_rate(parameters_schema=parameters_schema)), xpath=".//KR")
         )
-        key_rate = key_rate.select([col("DT").alias("datetime"), col("Rate").alias("rate")])
-        return key_rate.with_columns(col("datetime").str.to_datetime().dt.replace_time_zone("UTC"), col("rate") / 100)
+        key_rate = key_rate.select([col("DT").alias("datetime"), col("Rate").alias("key_rate")])
+        return key_rate.with_columns(
+            col("datetime").str.to_datetime().dt.replace_time_zone("UTC"), col("key_rate") / 100
+        )
