@@ -19,6 +19,9 @@ logger.add(lambda message: tqdm.write(message), colorize=True)
 class _BinanceServiceBase:
     _client: BinanceAPIClient = field(init=False)
 
+    async def ping(self) -> None:
+        await self._client.ping()
+
     async def get_ohlcv(self, input_schema: BinanceKlinesInputSchema) -> DataFrame:
         number_of_batches: int = int(floor(input_schema.delta.total_seconds() / input_schema.interval_seconds))
 

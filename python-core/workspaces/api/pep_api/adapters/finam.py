@@ -9,6 +9,7 @@ from pep_api.schemas.finam import (
     FinamBarsHeadersSchema,
     FinamBarsOutputSchema,
     FinamBarsParametersSchema,
+    FinamClockHeadersSchema,
     FinamSessionsJsonSchema,
     FinamSessionsOutputSchema,
 )
@@ -19,6 +20,10 @@ class FinamAPIClient(HTTPAPIClientBase):
     _session: AsyncClient = field(
         init=False, factory=partial(AsyncClient, base_url="https://api.finam.ru", timeout=10, http2=True)
     )
+
+    @route("/v1/assets/clock")
+    async def clock(self, headers_schema: FinamClockHeadersSchema, **kwargs) -> None:
+        await self._get(headers=headers_schema.model_dump(by_alias=True), **kwargs)
 
     @route("/v1/sessions")
     async def sessions(self, json_schema: FinamSessionsJsonSchema, **kwargs) -> FinamSessionsOutputSchema:

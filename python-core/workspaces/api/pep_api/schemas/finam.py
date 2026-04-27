@@ -28,6 +28,9 @@ class FinamBarsEndpointSchema(EndpointSchemaBase):
     ticker: str = Field(serialization_alias="symbol")
 
 
+class FinamClockHeadersSchema(AuthorizationHeaderSchemaBase): ...
+
+
 class FinamBarsHeadersSchema(AuthorizationHeaderSchemaBase): ...
 
 
@@ -78,9 +81,14 @@ class FinamBarsOutputSchema(BaseModel):
         return timestamp.replace(tzinfo=timezone.utc)
 
 
-class FinamBarsInputSchema(BaseModel):
+class _FinamSecretInputSchemaBase(BaseModel):
     secret: str
 
+
+class FinamPingInputSchema(_FinamSecretInputSchemaBase): ...
+
+
+class FinamBarsInputSchema(_FinamSecretInputSchemaBase):
     ticker: str
     timeframe: FinamTimeframeEnum
 

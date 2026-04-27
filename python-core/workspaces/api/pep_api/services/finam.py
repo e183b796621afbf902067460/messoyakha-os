@@ -13,6 +13,8 @@ from pep_api.schemas.finam import (
     FinamBarsInputSchema,
     FinamBarsOutputSchema,
     FinamBarsParametersSchema,
+    FinamClockHeadersSchema,
+    FinamPingInputSchema,
     FinamSessionsJsonSchema,
     FinamSessionsOutputSchema,
 )
@@ -25,6 +27,12 @@ logger.add(lambda message: tqdm.write(message), colorize=True)
 @define(slots=True, auto_attribs=True, kw_only=True)
 class FinamService:
     _client: FinamAPIClient = field(init=False, factory=FinamAPIClient)
+
+    async def ping(self, input_schema: FinamPingInputSchema) -> None:
+        session: FinamSessionsOutputSchema = await self._client.sessions(
+            json_schema=FinamSessionsJsonSchema(secret=input_schema.secret)
+        )
+        await self._client.clock(headers_schema=FinamClockHeadersSchema(authorization=session.token))
 
     async def get_ohlcv(self, input_schema: FinamBarsInputSchema) -> DataFrame:
         session: FinamSessionsOutputSchema = await self._client.sessions(

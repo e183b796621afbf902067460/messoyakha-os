@@ -10,6 +10,7 @@ cbr = "https://www.cbr.ru/development/dws/"
 cbrapi = "https://github.com/mbk-dev/cbrapi/tree/master"
 okama = "https://habr.com/ru/companies/okama/profile/"
 finam = "https://tradeapi.finam.ru/getting-started/"
+fedstat-inflation-rate = "https://www.fedstat.ru/indicator/33568.do#"
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
