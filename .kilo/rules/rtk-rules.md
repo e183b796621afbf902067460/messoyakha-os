@@ -1,6 +1,6 @@
 # RTK - Rust Token Killer (Kilo Code)
 
-**Usage**: Token-optimized CLI proxy for shell commands.
+**Usage**: Token-optimized [CLI](https://github.com/rtk-ai/rtk) proxy for shell commands.
 
 ## Rule
 

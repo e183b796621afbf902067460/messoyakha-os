@@ -6,8 +6,7 @@ from loguru import logger
 from polars import DataFrame, col
 from tqdm import tqdm
 
-from pep_api.adapters.finam import _FinamAPIClientBase
-from pep_api.enums.finam import FinamMarketEnum
+from pep_api.adapters.finam import FinamAPIClient, FinamMISXAPIClient
 from pep_api.schemas.finam import (
     FinamBarsEndpointSchema,
     FinamBarsHeadersSchema,
@@ -26,17 +25,17 @@ logger.add(lambda message: tqdm.write(message), colorize=True)
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
-class FinamService:
-    _client: _FinamAPIClientBase = field(init=False, factory=_FinamAPIClientBase)
+class _FinamService:
+    _client: FinamAPIClient = field(init=False)
 
     async def ping(self, input_schema: FinamPingInputSchema) -> None:
-        session: FinamSessionsOutputSchema = await self._client._sessions(  # noqa: SLF001
+        session: FinamSessionsOutputSchema = await self._client.sessions(
             json_schema=FinamSessionsJsonSchema(secret=input_schema.secret)
         )
-        await self._client._clock(headers_schema=FinamClockHeadersSchema(authorization=session.token))  # noqa: SLF001
+        await self._client.clock(headers_schema=FinamClockHeadersSchema(authorization=session.token))
 
     async def get_ohlcv(self, input_schema: FinamBarsInputSchema) -> DataFrame:
-        session: FinamSessionsOutputSchema = await self._client._sessions(  # noqa: SLF001
+        session: FinamSessionsOutputSchema = await self._client.sessions(
             json_schema=FinamSessionsJsonSchema(secret=input_schema.secret)
         )
 
@@ -45,8 +44,8 @@ class FinamService:
         bars: list[FinamBarsOutputSchema] = []
         for _ in tqdm(range(number_of_batches)):
             end_time: datetime = min(input_schema.start_time + input_schema.limit, input_schema.end_time)
-            batch: list[FinamBarsOutputSchema] = await self._client._bars(  # noqa: SLF001
-                endpoint_schema=FinamBarsEndpointSchema(ticker=input_schema.ticker, market=FinamMarketEnum.MISX),
+            batch: list[FinamBarsOutputSchema] = await self._client.bars(
+                endpoint_schema=FinamBarsEndpointSchema(ticker=input_schema.ticker, market=input_schema.market),
                 parameters_schema=FinamBarsParametersSchema(
                     interval=input_schema.interval, start_time=input_schema.start_time, end_time=end_time
                 ),
@@ -62,3 +61,8 @@ class FinamService:
             input_schema.start_time = next_start_time
             await sleep(0.5)
         return DataFrame([bar.model_dump() for bar in bars]).sort(by=col("timestamp")).unique()
+
+
+@define(slots=True, auto_attribs=True, kw_only=True)
+class FinamMISXService(_FinamService):
+    _client: FinamAPIClient = field(init=False, factory=FinamMISXAPIClient)

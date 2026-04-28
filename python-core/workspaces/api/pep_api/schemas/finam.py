@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Self
+from typing import Self, TypeAlias
 
 from pydantic import (
     BaseModel,
@@ -108,9 +108,9 @@ class _FinamSecretInputSchemaBase(BaseModel):
 class FinamPingInputSchema(_FinamSecretInputSchemaBase): ...
 
 
-class FinamBarsInputSchema(_FinamSecretInputSchemaBase):
+class _FinamBarsInputSchema(_FinamSecretInputSchemaBase):
     ticker: str
-    market: FinamMarketEnum
+    market: FinamMarketEnum = Field(init=False)
     interval: FinamIntervalEnum
 
     start_time: datetime
@@ -141,3 +141,10 @@ class FinamBarsInputSchema(_FinamSecretInputSchemaBase):
     @classmethod
     def update_end_time_timezone(cls, end_time: datetime) -> datetime:
         return end_time.replace(tzinfo=timezone.utc)
+
+
+class FinamBarsMISXInputSchema(_FinamBarsInputSchema):
+    market: FinamMarketEnum = Field(init=False, default=FinamMarketEnum.MISX)
+
+
+FinamBarsInputSchema: TypeAlias = FinamBarsMISXInputSchema
