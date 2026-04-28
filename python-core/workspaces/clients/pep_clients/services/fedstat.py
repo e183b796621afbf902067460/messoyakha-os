@@ -47,7 +47,7 @@ def _parse_fedstat_excel_to_dataframe(fedstat_excel: PdDf) -> PdDf:  # noqa: C90
             if value_as_string in russian_months:
                 month_column_id = row.Index  # pyrefly: ignore[bad-assignment]
     if not year_column_id or not month_column_id:
-        return PdDf()
+        return PdDf(columns=["year", "month", "inflation_rate"])
     year_row: Series = fedstat_excel.iloc[year_column_id]
     month_row: Series = fedstat_excel.iloc[month_column_id]
 
