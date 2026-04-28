@@ -6,12 +6,13 @@ from pydantic import (
     Field,
     ModelWrapValidatorHandler,
     ValidationInfo,
+    computed_field,
     field_serializer,
     field_validator,
     model_validator,
 )
 
-from pep_api.enums.finam import FinamTimeframeEnum
+from pep_api.enums.finam import FinamIntervalEnum, FinamMarketEnum
 from pep_api.schemas.common.endpoints import EndpointSchemaBase
 from pep_api.schemas.common.headers import AuthorizationHeaderSchemaBase
 
@@ -25,7 +26,13 @@ class FinamSessionsOutputSchema(BaseModel):
 
 
 class FinamBarsEndpointSchema(EndpointSchemaBase):
-    ticker: str = Field(serialization_alias="symbol")
+    ticker: str = Field(exclude=True)
+    market: FinamMarketEnum = Field(exclude=True)
+
+    @computed_field(alias="symbol", repr=False)
+    @property
+    def symbol(self) -> str:
+        return f"{self.ticker}@{self.market}"
 
 
 class FinamClockHeadersSchema(AuthorizationHeaderSchemaBase): ...
@@ -35,7 +42,7 @@ class FinamBarsHeadersSchema(AuthorizationHeaderSchemaBase): ...
 
 
 class FinamBarsParametersSchema(BaseModel):
-    timeframe: FinamTimeframeEnum
+    interval: FinamIntervalEnum = Field(serialization_alias="timeframe")
 
     start_time: datetime = Field(serialization_alias="interval.start_time")
     end_time: datetime = Field(serialization_alias="interval.end_time")
@@ -53,7 +60,17 @@ class FinamBarsParametersSchema(BaseModel):
         return end_time
 
 
+class FinamBarsContextSchema(BaseModel):
+    ticker: str
+    market: FinamMarketEnum
+    interval: FinamIntervalEnum
+
+
 class FinamBarsOutputSchema(BaseModel):
+    ticker: str
+    market: FinamMarketEnum
+    interval: FinamIntervalEnum
+
     open: float
     high: float
     low: float
@@ -64,14 +81,17 @@ class FinamBarsOutputSchema(BaseModel):
 
     @model_validator(mode="wrap")
     @classmethod
-    def __wrap_bar(cls, bar: dict, handler: ModelWrapValidatorHandler[Self], info: ValidationInfo) -> Self:  # noqa: ARG003 unused arguement
+    def __wrap_bar(cls, bar: dict, handler: ModelWrapValidatorHandler[Self], info: ValidationInfo) -> Self:
         data: dict = {
-            "timestamp": bar["timestamp"],
+            "ticker": info.context["ticker"],  # type: ignore[unsupported-operation]
+            "market": info.context["market"],  # type: ignore[unsupported-operation]
+            "interval": info.context["interval"],  # type: ignore[unsupported-operation]
             "open": bar["open"]["value"],
             "high": bar["high"]["value"],
             "low": bar["low"]["value"],
             "close": bar["close"]["value"],
             "volume": bar["volume"]["value"],
+            "timestamp": bar["timestamp"],
         }
         return handler(data)
 
@@ -90,7 +110,8 @@ class FinamPingInputSchema(_FinamSecretInputSchemaBase): ...
 
 class FinamBarsInputSchema(_FinamSecretInputSchemaBase):
     ticker: str
-    timeframe: FinamTimeframeEnum
+    market: FinamMarketEnum
+    interval: FinamIntervalEnum
 
     start_time: datetime
     end_time: datetime
@@ -103,11 +124,11 @@ class FinamBarsInputSchema(_FinamSecretInputSchemaBase):
 
     @property
     def interval_seconds(self) -> float:
-        if self.timeframe == FinamTimeframeEnum.ONE_HOUR:
+        if self.interval == FinamIntervalEnum.ONE_HOUR:
             return timedelta(hours=1).total_seconds()
-        if self.timeframe == FinamTimeframeEnum.FOUR_HOURS:
+        if self.interval == FinamIntervalEnum.FOUR_HOURS:
             return timedelta(hours=4).total_seconds()
-        if self.timeframe == FinamTimeframeEnum.ONE_DAY:
+        if self.interval == FinamIntervalEnum.ONE_DAY:
             return timedelta(days=1).total_seconds()
         raise ValueError("Inappropriate interval set (pep-api).")
 

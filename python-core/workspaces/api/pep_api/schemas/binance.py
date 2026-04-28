@@ -98,8 +98,7 @@ class BinanceKlinesOutputSchema(BaseModel):
     close: float
     volume: float
 
-    open_time: datetime
-    close_time: datetime
+    timestamp: datetime
 
     @model_validator(mode="wrap")
     @classmethod
@@ -113,20 +112,14 @@ class BinanceKlinesOutputSchema(BaseModel):
             "low": kline[3],
             "close": kline[4],
             "volume": kline[5],
-            "open_time": datetime.fromtimestamp(kline[0] / _MILLISECONDS_IN_SECOND, tz=timezone.utc),
-            "close_time": datetime.fromtimestamp(kline[6] / _MILLISECONDS_IN_SECOND, tz=timezone.utc),
+            "timestamp": datetime.fromtimestamp(kline[0] / _MILLISECONDS_IN_SECOND, tz=timezone.utc),
         }
         return handler(data)
 
-    @field_validator("open_time", mode="after")
+    @field_validator("timestamp", mode="after")
     @classmethod
-    def update_open_time_timezone(cls, open_time: datetime) -> datetime:
-        return open_time.replace(tzinfo=timezone.utc)
-
-    @field_validator("close_time", mode="after")
-    @classmethod
-    def update_close_time_timezone(cls, close_time: datetime) -> datetime:
-        return close_time.replace(tzinfo=timezone.utc)
+    def update_timestamp_timezone(cls, timestamp: datetime) -> datetime:
+        return timestamp.replace(tzinfo=timezone.utc)
 
 
 BinanceKlinesInputSchema: TypeAlias = BinanceKlinesSpotInputSchema | BinanceKlinesUSDTMInputSchema

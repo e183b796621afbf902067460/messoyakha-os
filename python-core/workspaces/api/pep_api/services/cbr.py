@@ -19,4 +19,4 @@ class CBRService:
         key_rate = key_rate.select([col("DT").alias("datetime"), col("Rate").alias("key_rate")])
         return key_rate.with_columns(
             col("datetime").str.to_datetime().dt.replace_time_zone("UTC"), col("key_rate") / 100
-        )
+        ).unique()

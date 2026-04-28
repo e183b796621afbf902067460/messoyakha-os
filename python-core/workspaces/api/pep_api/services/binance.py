@@ -34,12 +34,12 @@ class _BinanceServiceBase:
                 break
             klines.extend(batch)
 
-            next_start_time: datetime = batch[-1].close_time + timedelta(milliseconds=1)
+            next_start_time: datetime = batch[-1].timestamp + timedelta(milliseconds=1)
             if next_start_time > input_schema.end_time:
                 break
             input_schema.start_time = next_start_time
             await sleep(0.25)
-        return DataFrame([kline.model_dump() for kline in klines])
+        return DataFrame([kline.model_dump() for kline in klines]).unique()
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)

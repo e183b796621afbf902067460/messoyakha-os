@@ -104,4 +104,4 @@ class FedstatService:
             )
             .with_columns((col("inflation_rate") - 100) / 100)
             .sort(by=[col("year"), col("month")])
-        )
+        ).unique()
