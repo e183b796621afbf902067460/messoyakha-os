@@ -4,8 +4,8 @@ from typing import TypeAlias
 from attrs import define, field
 from httpx import AsyncClient, Response
 
-from pep_api.adapters.common.http import HTTPAPIClientBase, route
-from pep_api.schemas.finam import (
+from pep_clients.adapters.common.http import HTTPAPIClientBase, route
+from pep_clients.schemas.finam import (
     FinamBarsContextSchema,
     FinamBarsEndpointSchema,
     FinamBarsHeadersSchema,

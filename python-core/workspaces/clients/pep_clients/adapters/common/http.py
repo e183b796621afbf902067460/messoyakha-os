@@ -6,7 +6,7 @@ from http import HTTPMethod
 from attrs import define, field
 from httpx import URL, AsyncClient, Response
 
-from pep_api.schemas.common.endpoints import EndpointSchemaBase
+from pep_clients.schemas.common.endpoints import EndpointSchemaBase
 
 
 def route(endpoint: str) -> Callable[[Callable], Callable]:

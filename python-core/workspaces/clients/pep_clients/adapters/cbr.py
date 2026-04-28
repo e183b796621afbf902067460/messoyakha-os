@@ -2,8 +2,8 @@ from attrs import define
 from suds.client import Client
 from suds.xsd.doctor import ImportDoctor
 
-from pep_api.adapters.common.soap import SOAPAPIClientBase
-from pep_api.schemas.cbr import CBRKeyRateParametersSchema
+from pep_clients.adapters.common.soap import SOAPAPIClientBase
+from pep_clients.schemas.cbr import CBRKeyRateParametersSchema
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)

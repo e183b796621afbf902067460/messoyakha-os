@@ -4,8 +4,8 @@ from attrs import define, field
 from pandas import read_xml
 from polars import DataFrame, col, from_pandas
 
-from pep_api.adapters.cbr import CBRSOAPAPIClient
-from pep_api.schemas.cbr import CBRKeyRateParametersSchema
+from pep_clients.adapters.cbr import CBRSOAPAPIClient
+from pep_clients.schemas.cbr import CBRKeyRateParametersSchema
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)

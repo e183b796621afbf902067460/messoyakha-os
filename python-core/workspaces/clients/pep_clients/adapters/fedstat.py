@@ -3,8 +3,8 @@ from functools import partial
 from attrs import define, field
 from httpx import AsyncClient, Response
 
-from pep_api.adapters.common.http import HTTPAPIClientBase, route
-from pep_api.schemas.fedstat import FedstatInflationRateDataSchema, FedstatInflationRateParametersSchema
+from pep_clients.adapters.common.http import HTTPAPIClientBase, route
+from pep_clients.schemas.fedstat import FedstatInflationRateDataSchema, FedstatInflationRateParametersSchema
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
