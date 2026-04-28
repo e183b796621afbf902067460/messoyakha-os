@@ -3,7 +3,7 @@ from functools import partial
 from attrs import define, field
 from httpx import AsyncClient, Response
 
-from pep_clients.adapters.common.http import HTTPAPIClientBase, route
+from pep_clients.adapters.common.http import HTTPAPIClientBase
 from pep_clients.schemas.fedstat import FedstatInflationRateDataSchema, FedstatInflationRateParametersSchema
 
 
@@ -14,7 +14,6 @@ class FedstatAPIClient(HTTPAPIClientBase):
         factory=partial(AsyncClient, base_url="https://www.fedstat.ru/indicator/data.do", timeout=10, http2=True),
     )
 
-    @route("")
     async def inflation_rate(
         self,
         data_schema: FedstatInflationRateDataSchema,

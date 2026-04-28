@@ -31,13 +31,13 @@ class HTTPAPIClientBase(ABC):
     async def __request(
         self,
         method: str,
-        endpoint: str,
+        endpoint: str | None = None,
         parameters: dict | None = None,
         data: dict[str, str] | None = None,
         json: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
     ) -> Response:
-        url: URL = self._session.base_url.join(url=endpoint)
+        url: URL = self._session.base_url.join(url=endpoint) if endpoint else self._session.base_url
         response: Response = await self._session.request(
             method=method, url=url, params=parameters, data=data, json=json, headers=headers
         )
@@ -45,13 +45,13 @@ class HTTPAPIClientBase(ABC):
         return response
 
     async def _get(
-        self, endpoint: str, parameters: dict | None = None, headers: dict[str, str] | None = None
+        self, endpoint: str | None = None, parameters: dict | None = None, headers: dict[str, str] | None = None
     ) -> Response:
         return await self.__request(method=HTTPMethod.GET, endpoint=endpoint, parameters=parameters, headers=headers)
 
     async def _post(
         self,
-        endpoint: str,
+        endpoint: str | None = None,
         parameters: dict | None = None,
         data: dict[str, str] | None = None,
         json: dict[str, str] | None = None,
