@@ -13,8 +13,6 @@
         "./CONTRIBUTING.md",
         "./AGENTS.md",
         "./python-core/CONTRIBUTING.md",
-        "./python-core/AGENTS.md",
-
-        "./.kilo/rules/rtk-rules.md"
+        "./python-core/AGENTS.md"
     ]
 }
