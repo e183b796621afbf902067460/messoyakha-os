@@ -1,6 +1,6 @@
 # Python Agent Standards
 
-As an agent, always load the following skills while working on codebase in `python-core/`: `/dignified-python` and `/python-tests` skills must always be loaded into the agent context and conscientiously applied, you can find them in provided URLs in `.kilo/kilo.json`.
+A file for guiding coding agents at `/python-core`.
 
 ## Python Monorepo Structure
 
