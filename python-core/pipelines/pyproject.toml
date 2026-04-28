@@ -30,6 +30,7 @@ pep-clients = { workspace = true }
 [tool.hatch.metadata.hooks.uv-dynamic-versioning]
 dependencies = [
     "pep-sdk=={{ version }}",
+    "pep-dlh=={{ version }}",
 ]
 
 [tool.hatch.build.targets.wheel]

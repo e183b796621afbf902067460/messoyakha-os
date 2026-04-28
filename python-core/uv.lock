@@ -10,7 +10,7 @@ resolution-markers = [
 [manifest]
 members = [
     "pep",
-    "pep-lakehouse",
+    "pep-dlh",
     "pep-pipelines",
     "pep-sdk",
     "pep-stock-duration",
@@ -978,8 +978,8 @@ requires-dist = [
 ]
 
 [[package]]
-name = "pep-lakehouse"
-source = { editable = "workspaces/lakehouse" }
+name = "pep-dlh"
+source = { editable = "workspaces/dlh" }
 dependencies = [
     { name = "boto3" },
     { name = "duckdb" },
@@ -995,11 +995,15 @@ requires-dist = [
 name = "pep-pipelines"
 source = { virtual = "pipelines" }
 dependencies = [
+    { name = "pep-dlh" },
     { name = "pep-sdk" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pep-sdk", editable = "workspaces/sdk" }]
+requires-dist = [
+    { name = "pep-dlh", editable = "workspaces/dlh" },
+    { name = "pep-sdk", editable = "workspaces/sdk" },
+]
 
 [[package]]
 name = "pep-sdk"

@@ -51,18 +51,18 @@ For running tests, we use `pytest`. Tests always live in `tests/` directory and 
 
 To run a specific test, for example in `python-core/somewhere-in-python-core/tests/unit/test_dummy.py`:
 ```bash
-uv run --directory python-core/ pytest somewhere-in-python-core/tests/unit/test_dummy.py
+uv run --project python-core/ pytest python-core/somewhere-in-python-core/tests/unit/test_dummy.py
 ```
 
 <!-- py-rule:12 -->
 > [!IMPORTANT]
-> Always run scripts (or commands) from root of the repository, not specific core.
+> Always run scripts (or commands) from root of the repository, not specific core (e.g. `make pre-commit` must always run from root).
 
 ### Running Python Code
 
 To run a specific script, for example located in `python-core/somewhere-in-python-core/script_dummy.py`:
 ```bash
-uv run --directory python-core/ somewhere-in-python-core/script_dummy.py
+uv run --project python-core/ python-core/somewhere-in-python-core/script_dummy.py
 ```
 
 ### Documenting Python Code
@@ -77,54 +77,3 @@ We use docstrings to document the code! Update (or add) all relevant documentati
 
 <!-- py-rule:15 -->
 - only add docstrings in tests when they provide additional context.
-
-## Add New Strategy
-
-1. Create directory in `python-core/strategies`, for example `my-awesome-strategy`.
-
-2. Create `pyproject.toml` in `python-core/strategies/my-awesome-strategy` with following structure:
-
-    ```toml
-    [project]
-    name = "pep-my-awesome-strategy"
-    version = "0.0.1"
-    description = "My awesome description."
-    readme = "README.md"
-
-    [build-system]
-    requires = ["hatchling"]
-    build-backend = "hatchling.build"
-
-    [tool.hatch.build.targets.wheel]
-    packages = ["src"]
-
-    [tool.hatch.build.force-include]
-    "src" = "pep_my_awesome_strategy"
-    ```
-
-3. Update following sections in your `python-core/pyproject.toml`:
-
-    a. Update `[tool.uv.sources]`:
-    ```toml
-    [tool.uv.sources]
-    pep-my-awesome-strategy = { workspace = true }
-    ```
-
-    b. Update `[tool.ruff.lint.isort]` known-first-party:
-    ```toml
-    [tool.ruff.lint.isort]
-    known-first-party = [..., "pep_my_awesome_strategy"]
-    ```
-
-    c. Update `[tool.pyrefly]` search-path:
-    ```toml
-    [tool.pyrefly]
-    search-path = [..., "strategies/my-awesome-strategy"]
-    ```
-
-4. Then run:
-    ```bash
-    make sync
-    ```
-
-After that you can do any imports from your strategy codebase by `pep_my_awesome_strategy` name.

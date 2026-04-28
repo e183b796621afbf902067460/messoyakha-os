@@ -35,7 +35,7 @@ pep-stock-duration = { workspace = true }
 
 # workspaces/*
 pep-sdk = { workspace = true }
-pep-lakehouse = { workspace = true }
+pep-dlh = { workspace = true }
 
 [tool.uv.workspace]
 members = [
@@ -119,7 +119,7 @@ force-wrap-aliases = true
 section-order = ["future", "standard-library", "third-party", "workspace", "first-party", "local-folder"]
 
 # https://docs.astral.sh/ruff/settings/#lint_isort_sections
-sections = { "workspace" = ["pep_sdk", "pep_lakehouse"] }
+sections = { "workspace" = ["pep_sdk", "pep_dlh"] }
 known-first-party = ["pep_pipelines", "pep_stock_duration"]
 
 [tool.ruff.lint.flake8-tidy-imports]
@@ -142,4 +142,4 @@ skip-magic-trailing-comma = false
 [tool.pyrefly]
 python-interpreter-path = ".venv/bin/python3.13"
 python-platform = "linux"
-search-path = ["pipelines", "strategies/stock-duration", "workspaces/sdk", "workspaces/lakehouse"]
+search-path = ["pipelines", "strategies/stock-duration", "workspaces/sdk", "workspaces/dlh"]

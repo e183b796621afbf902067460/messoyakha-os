@@ -12,7 +12,6 @@
         "./README.md",
         "./CONTRIBUTING.md",
         "./AGENTS.md",
-        "./python-core/CONTRIBUTING.md",
-        "./python-core/AGENTS.md"
+        "./python-core/CONTRIBUTING.md"
     ]
 }
