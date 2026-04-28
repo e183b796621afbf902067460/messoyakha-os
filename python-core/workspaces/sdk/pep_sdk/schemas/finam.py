@@ -12,9 +12,9 @@ from pydantic import (
     model_validator,
 )
 
-from pep_clients.enums.finam import FinamIntervalEnum, FinamMarketEnum
-from pep_clients.schemas.common.endpoints import EndpointSchemaBase
-from pep_clients.schemas.common.headers import AuthorizationHeaderSchemaBase
+from pep_sdk.enums.finam import FinamIntervalEnum, FinamMarketEnum
+from pep_sdk.schemas.common.endpoints import EndpointSchemaBase
+from pep_sdk.schemas.common.headers import AuthorizationHeaderSchemaBase
 
 
 class FinamSessionsJsonSchema(BaseModel):

@@ -7,12 +7,8 @@ from numpy import floor
 from polars import DataFrame, col
 from tqdm import tqdm
 
-from pep_clients.adapters.binance import BinanceAPIClient, BinanceSpotAPIClient, BinanceUSDTMAPIClient
-from pep_clients.schemas.binance import (
-    BinanceKlinesInputSchema,
-    BinanceKlinesOutputSchema,
-    BinanceKlinesParametersSchema,
-)
+from pep_sdk.adapters.binance import BinanceAPIClient, BinanceSpotAPIClient, BinanceUSDTMAPIClient
+from pep_sdk.schemas.binance import BinanceKlinesInputSchema, BinanceKlinesOutputSchema, BinanceKlinesParametersSchema
 
 
 logger.remove()
