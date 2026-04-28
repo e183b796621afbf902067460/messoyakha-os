@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from attrs import define, field
 from loguru import logger
-from polars import DataFrame
+from polars import DataFrame, col
 from tqdm import tqdm
 
 from pep_api.adapters.finam import _FinamAPIClientBase
@@ -61,4 +61,4 @@ class FinamService:
                 break
             input_schema.start_time = next_start_time
             await sleep(0.5)
-        return DataFrame([bar.model_dump() for bar in bars]).unique()
+        return DataFrame([bar.model_dump() for bar in bars]).sort(by=col("timestamp")).unique()

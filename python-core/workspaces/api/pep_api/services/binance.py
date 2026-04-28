@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from attrs import define, field
 from loguru import logger
 from numpy import floor
-from polars import DataFrame
+from polars import DataFrame, col
 from tqdm import tqdm
 
 from pep_api.adapters.binance import BinanceAPIClient, BinanceSpotAPIClient, BinanceUSDTMAPIClient
@@ -39,7 +39,7 @@ class _BinanceServiceBase:
                 break
             input_schema.start_time = next_start_time
             await sleep(0.25)
-        return DataFrame([kline.model_dump() for kline in klines]).unique()
+        return DataFrame([kline.model_dump() for kline in klines]).sort(by=col("timestamp")).unique()
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
