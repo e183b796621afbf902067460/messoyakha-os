@@ -19,7 +19,7 @@ class FedstatInflationRateDataSchema(_FedstatJsonSchemaBase):
 
     @computed_field(alias="lineObjectIds", repr=False)
     @property
-    def line_object_ids(self) -> list[str]:
+    def _line_object_ids(self) -> list[str]:
         return [
             "0",  # IndicatorLineId
             "30611",  # ?
@@ -28,7 +28,7 @@ class FedstatInflationRateDataSchema(_FedstatJsonSchemaBase):
 
     @computed_field(alias="columnObjectIds", repr=False)
     @property
-    def column_object_ids(self) -> list[str]:
+    def _column_object_ids(self) -> list[str]:
         return [
             "3",  # YearColumnId
             "33560",  # MonthColumnId
@@ -37,7 +37,7 @@ class FedstatInflationRateDataSchema(_FedstatJsonSchemaBase):
 
     @computed_field(alias="selectedFilterIds", repr=False)
     @property
-    def selected_filter_ids(self) -> list[str]:
+    def _selected_filter_ids(self) -> list[str]:
         selected_filter_ids: list[str] = [
             "0_33568",  # IndicatorFilter
             "30611_950473",  # ?

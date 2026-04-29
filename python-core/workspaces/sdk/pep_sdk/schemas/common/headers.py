@@ -10,7 +10,7 @@ class AuthorizationHeaderSchemaBase(BaseModel):
     authorization: str = Field(serialization_alias="Authorization")
 
     @field_serializer("authorization")
-    def add_bearer_to_authorization_at_serialization(self, authorization: str) -> str:
+    def _add_bearer_to_authorization(self, authorization: str) -> str:
         if _BEARER not in authorization:
             return f"{_BEARER} {authorization}"
         return authorization

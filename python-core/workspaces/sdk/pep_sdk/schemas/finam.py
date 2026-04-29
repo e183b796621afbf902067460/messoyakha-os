@@ -31,7 +31,7 @@ class FinamBarsEndpointSchema(EndpointSchemaBase):
 
     @computed_field(alias="symbol", repr=False)
     @property
-    def symbol(self) -> str:
+    def _symbol(self) -> str:
         return f"{self.ticker}@{self.market}"
 
 
@@ -48,13 +48,13 @@ class FinamBarsParametersSchema(BaseModel):
     end_time: datetime = Field(serialization_alias="interval.end_time")
 
     @field_serializer("start_time")
-    def add_utc_timezone_to_start_time(self, start_time: datetime) -> str:
+    def _add_utc_timezone_to_start_time(self, start_time: datetime) -> str:
         if isinstance(start_time, datetime):
             return start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
         return start_time
 
     @field_serializer("end_time")
-    def add_utc_timezone_to_end_time(self, end_time: datetime) -> str:
+    def _add_utc_timezone_to_end_time(self, end_time: datetime) -> str:
         if isinstance(end_time, datetime):
             return end_time.strftime("%Y-%m-%dT%H:%M:%SZ")
         return end_time
@@ -81,7 +81,7 @@ class FinamBarsOutputSchema(BaseModel):
 
     @model_validator(mode="wrap")
     @classmethod
-    def __wrap_bar(cls, bar: dict, handler: ModelWrapValidatorHandler[Self], info: ValidationInfo) -> Self:
+    def _wrap(cls, bar: dict, handler: ModelWrapValidatorHandler[Self], info: ValidationInfo) -> Self:
         data: dict = {
             "ticker": info.context["ticker"],  # type: ignore[unsupported-operation]
             "market": info.context["market"],  # type: ignore[unsupported-operation]
@@ -97,7 +97,7 @@ class FinamBarsOutputSchema(BaseModel):
 
     @field_validator("timestamp", mode="after")
     @classmethod
-    def update_timestamp_timezone(cls, timestamp: datetime) -> datetime:
+    def _update_timestamp_timezone(cls, timestamp: datetime) -> datetime:
         return timestamp.replace(tzinfo=timezone.utc)
 
 
@@ -134,12 +134,12 @@ class _FinamBarsInputSchema(_FinamSecretInputSchemaBase):
 
     @field_validator("start_time", mode="after")
     @classmethod
-    def update_start_time_timezone(cls, start_time: datetime) -> datetime:
+    def _update_start_time_timezone(cls, start_time: datetime) -> datetime:
         return start_time.replace(tzinfo=timezone.utc)
 
     @field_validator("end_time", mode="after")
     @classmethod
-    def update_end_time_timezone(cls, end_time: datetime) -> datetime:
+    def _update_end_time_timezone(cls, end_time: datetime) -> datetime:
         return end_time.replace(tzinfo=timezone.utc)
 
 

@@ -28,13 +28,13 @@ class BinanceKlinesParametersSchema(BaseModel):
     limit: int | None = Field(init=False, default=1_000)
 
     @field_serializer("start_time")
-    def serialize_start_time_to_milliseconds(self, start_time: int | datetime) -> int:
+    def _serialize_start_time_to_milliseconds(self, start_time: int | datetime) -> int:
         if isinstance(start_time, datetime):
             return int(start_time.timestamp() * _MILLISECONDS_IN_SECOND)
         return start_time
 
     @field_serializer("end_time")
-    def serialize_end_time_to_milliseconds(self, end_time: int | datetime) -> int:
+    def _serialize_end_time_to_milliseconds(self, end_time: int | datetime) -> int:
         if isinstance(end_time, datetime):
             return int(end_time.timestamp() * _MILLISECONDS_IN_SECOND)
         return end_time
@@ -64,12 +64,12 @@ class _BinanceKlinesInputSchemaBase(BaseModel):
 
     @field_validator("start_time", mode="after")
     @classmethod
-    def update_start_time_timezone(cls, start_time: datetime) -> datetime:
+    def _update_start_time_timezone(cls, start_time: datetime) -> datetime:
         return start_time.replace(tzinfo=timezone.utc)
 
     @field_validator("end_time", mode="after")
     @classmethod
-    def update_end_time_timezone(cls, end_time: datetime) -> datetime:
+    def _update_end_time_timezone(cls, end_time: datetime) -> datetime:
         return end_time.replace(tzinfo=timezone.utc)
 
 
@@ -102,7 +102,7 @@ class BinanceKlinesOutputSchema(BaseModel):
 
     @model_validator(mode="wrap")
     @classmethod
-    def __wrap_kline(cls, kline: list, handler: ModelWrapValidatorHandler[Self], info: ValidationInfo) -> Self:
+    def _wrap(cls, kline: list, handler: ModelWrapValidatorHandler[Self], info: ValidationInfo) -> Self:
         data: dict = {
             "ticker": info.context["ticker"],  # type: ignore[unsupported-operation]
             "market": info.context["market"],  # type: ignore[unsupported-operation]
@@ -118,7 +118,7 @@ class BinanceKlinesOutputSchema(BaseModel):
 
     @field_validator("timestamp", mode="after")
     @classmethod
-    def update_timestamp_timezone(cls, timestamp: datetime) -> datetime:
+    def _update_timestamp_timezone(cls, timestamp: datetime) -> datetime:
         return timestamp.replace(tzinfo=timezone.utc)
 
 

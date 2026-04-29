@@ -9,7 +9,7 @@ from httpx import URL, AsyncClient, Response
 class HTTPAPIClientBase(ABC):
     _session: AsyncClient = field(init=False)
 
-    async def __request(
+    async def _request(
         self,
         method: str,
         endpoint: str | None = None,
@@ -28,7 +28,7 @@ class HTTPAPIClientBase(ABC):
     async def _get(
         self, endpoint: str | None = None, parameters: dict | None = None, headers: dict[str, str] | None = None
     ) -> Response:
-        return await self.__request(method=HTTPMethod.GET, endpoint=endpoint, parameters=parameters, headers=headers)
+        return await self._request(method=HTTPMethod.GET, endpoint=endpoint, parameters=parameters, headers=headers)
 
     async def _post(
         self,
@@ -38,6 +38,6 @@ class HTTPAPIClientBase(ABC):
         json: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
     ) -> Response:
-        return await self.__request(
+        return await self._request(
             method=HTTPMethod.POST, endpoint=endpoint, parameters=parameters, data=data, json=json, headers=headers
         )
