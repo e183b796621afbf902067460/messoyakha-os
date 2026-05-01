@@ -9,11 +9,11 @@ class FedstatInflationRateParametersSchema(BaseModel):
     id: str = Field(init=False, default="33568")
 
 
-class _FedstatJsonSchemaBase(BaseModel):
+class _FedstatDataSchemaBase(BaseModel):
     format: str = Field(init=False, default="excel")
 
 
-class FedstatInflationRateDataSchema(_FedstatJsonSchemaBase):
+class FedstatInflationRateDataSchema(_FedstatDataSchemaBase):
     start_date: datetime = Field(exclude=True)
     end_date: datetime = Field(exclude=True)
 

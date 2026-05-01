@@ -40,6 +40,12 @@ class BinanceKlinesParametersSchema(BaseModel):
         return end_time
 
 
+class BinanceKlinesContextSchema(BaseModel):
+    ticker: str
+    market: BinanceMarketEnum
+    interval: BinanceIntervalEnum
+
+
 class _BinanceKlinesInputSchemaBase(BaseModel):
     ticker: str
     market: BinanceMarketEnum = Field(init=False)
@@ -79,12 +85,6 @@ class BinanceKlinesSpotInputSchema(_BinanceKlinesInputSchemaBase):
 
 class BinanceKlinesUSDTMInputSchema(_BinanceKlinesInputSchemaBase):
     market: BinanceMarketEnum = Field(init=False, default=BinanceMarketEnum.USDTM)
-
-
-class BinanceKlinesContextSchema(BaseModel):
-    ticker: str
-    market: BinanceMarketEnum
-    interval: BinanceIntervalEnum
 
 
 class BinanceKlinesOutputSchema(BaseModel):
