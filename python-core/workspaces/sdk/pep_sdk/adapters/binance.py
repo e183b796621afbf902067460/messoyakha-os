@@ -18,14 +18,13 @@ class _BinanceAPIClientBase(HTTPAPIClientBase):
         self, parameters_schema: BinanceKlinesParametersSchema, **kwargs
     ) -> list[BinanceKlinesOutputSchema]:
         response: Response = await self._get(parameters=parameters_schema.model_dump(by_alias=True), **kwargs)
-        context_schema: BinanceKlinesContextSchema = BinanceKlinesContextSchema(
+        context: BinanceKlinesContextSchema = BinanceKlinesContextSchema(
             ticker=parameters_schema.ticker,
             market=parameters_schema.market,
             interval=parameters_schema.interval,
         )
         return [
-            BinanceKlinesOutputSchema.model_validate(value, context=context_schema.model_dump())
-            for value in response.json()
+            BinanceKlinesOutputSchema.model_validate(kline, context=context.model_dump()) for kline in response.json()
         ]
 
 

@@ -18,24 +18,30 @@ class BSCrawlerBase(ABC):
         endpoint: str | None = None,
         payload: str | None = None,
         headers: dict[str, str] | None = None,
+        user_data: dict | None = None,
         label: str | None = None,
-    ) -> None:
+    ) -> RequestQueue:
         url: URL = self._session.base_url.join(url=endpoint) if endpoint else self._session.base_url
-        request: Request = Request.from_url(url=str(url), method=method, payload=payload, headers=headers, label=label)
+        request: Request = Request.from_url(
+            url=str(url), method=method, payload=payload, headers=headers, user_data=user_data, label=label
+        )
         queue: RequestQueue = await RequestQueue.open()
         await queue.add_request(request=request)
+        return queue
 
     async def _get(
         self,
         endpoint: str | None = None,
         payload: str | None = None,
         headers: dict[str, str] | None = None,
+        user_data: dict | None = None,
         label: str | None = None,
-    ) -> None:
-        await self._request(
+    ) -> RequestQueue:
+        return await self._request(
             method=HTTPMethod.GET.value,  # type: ignore[bad-argument-type]
             endpoint=endpoint,
             payload=payload,
             headers=headers,
+            user_data=user_data,
             label=label,
         )

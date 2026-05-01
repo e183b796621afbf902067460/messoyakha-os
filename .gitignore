@@ -145,6 +145,7 @@ dmypy.json
 draft.ipynb
 *.txt
 *.xls
+storage/
 
 # Agent's context
 .kilo/

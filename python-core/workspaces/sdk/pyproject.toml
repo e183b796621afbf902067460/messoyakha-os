@@ -30,6 +30,7 @@ package = true
 [tool.hatch.metadata.hooks.uv-dynamic-versioning]
 dependencies = [
     "babel>=2.18.0",
+    "bs4>=0.0.2",
     "crawlee>=1.6.0",
     "httpx[http2]>=0.28.1,<0.29",
     "suds-py3>=1.4.5.0",

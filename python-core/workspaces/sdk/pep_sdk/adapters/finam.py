@@ -39,14 +39,13 @@ class _FinamAPIClientBase(HTTPAPIClientBase):
             headers=headers_schema.model_dump(by_alias=True),
             **kwargs,
         )
-        context_schema: FinamBarsContextSchema = FinamBarsContextSchema(
+        context: FinamBarsContextSchema = FinamBarsContextSchema(
             ticker=endpoint_schema.ticker,
             market=endpoint_schema.market,
             interval=parameters_schema.interval,
         )
         return [
-            FinamBarsOutputSchema.model_validate(bar, context=context_schema.model_dump())
-            for bar in response.json()["bars"]
+            FinamBarsOutputSchema.model_validate(bar, context=context.model_dump()) for bar in response.json()["bars"]
         ]
 
 
