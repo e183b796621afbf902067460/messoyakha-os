@@ -25,6 +25,10 @@ class DohodDividendContextSchema(BaseModel):
     ticker: str
 
 
+class DohodDividendInputSchema(BaseModel):
+    ticker: str
+
+
 class DohodDividendOutputSchema(BaseModel):
     ticker: str
     dividend: float
