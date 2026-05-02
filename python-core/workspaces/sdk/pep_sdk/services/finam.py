@@ -60,7 +60,7 @@ class _FinamService:
                 break
             input_schema.start_time = next_start_time
             await sleep(0.5)
-        return DataFrame([bar.model_dump() for bar in bars]).sort(by=col("timestamp")).unique()
+        return DataFrame([bar.model_dump() for bar in bars]).unique().sort(by=col("timestamp"))
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)

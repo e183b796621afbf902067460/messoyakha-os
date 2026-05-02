@@ -13,4 +13,4 @@ class DohodService:
         dividends: list[DohodDividendOutputSchema] = await self._crawler.dividend(
             endpoint_schema=DohodDividendEndpointSchema(ticker=input_schema.ticker)
         )
-        return DataFrame([dividend.model_dump() for dividend in dividends]).sort(by=col("timestamp")).unique()
+        return DataFrame([dividend.model_dump() for dividend in dividends]).unique().sort(by=col("timestamp"))

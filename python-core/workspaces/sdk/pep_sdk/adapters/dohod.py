@@ -14,9 +14,7 @@ from pep_sdk.schemas.dohod import DohodDividendContextSchema, DohodDividendEndpo
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class DohodBSCrawler(BSCrawlerBase):
-    _session: AsyncClient = field(
-        init=False, factory=partial(AsyncClient, base_url="https://www.dohod.ru", timeout=10, http2=True)
-    )
+    _session: AsyncClient = field(init=False, factory=partial(AsyncClient, base_url="https://www.dohod.ru"))
 
     @route("/ik/analytics/dividend/{ticker}")
     async def dividend(self, endpoint_schema: DohodDividendEndpointSchema, **kwargs) -> list[DohodDividendOutputSchema]:

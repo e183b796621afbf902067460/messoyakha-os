@@ -103,5 +103,6 @@ class FedstatService:
                 pl_date(col("year"), col("month"), 1).is_between(input_schema.start_date, input_schema.end_date)
             )
             .with_columns((col("inflation_rate") - 100) / 100)
+            .unique()
             .sort(by=[col("year"), col("month")])
-        ).unique()
+        )
