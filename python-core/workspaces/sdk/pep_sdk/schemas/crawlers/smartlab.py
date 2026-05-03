@@ -3,7 +3,7 @@ from typing import Self
 
 from pydantic import BaseModel, ModelWrapValidatorHandler, ValidationInfo, field_validator, model_validator
 
-from pep_sdk.schemas.common.endpoints import EndpointSchemaBase
+from pep_sdk.schemas._common.endpoints import EndpointSchemaBase
 
 
 class SmartLabNetIncomeEndpointSchema(EndpointSchemaBase):

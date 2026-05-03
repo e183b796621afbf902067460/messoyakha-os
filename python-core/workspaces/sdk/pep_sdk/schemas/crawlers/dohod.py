@@ -10,7 +10,7 @@ from pydantic import (
     model_validator,
 )
 
-from pep_sdk.schemas.common.endpoints import EndpointSchemaBase
+from pep_sdk.schemas._common.endpoints import EndpointSchemaBase
 
 
 class DohodDividendEndpointSchema(EndpointSchemaBase):

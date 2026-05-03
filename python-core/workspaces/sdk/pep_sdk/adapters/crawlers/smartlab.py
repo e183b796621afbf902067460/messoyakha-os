@@ -7,9 +7,9 @@ from crawlee.storages import Dataset, RequestQueue
 from httpx import AsyncClient
 from pandas import to_datetime
 
-from pep_sdk.adapters.common.bs import BSCrawlerBase
+from pep_sdk.adapters.crawlers._common.bs import BSCrawlerBase
 from pep_sdk.route import route
-from pep_sdk.schemas.smartlab import (
+from pep_sdk.schemas.crawlers.smartlab import (
     SmartLabNetIncomeContextSchema,
     SmartLabNetIncomeEndpointSchema,
     SmartLabNetIncomeOutputSchema,

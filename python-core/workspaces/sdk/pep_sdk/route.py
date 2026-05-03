@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from functools import wraps
 
-from pep_sdk.schemas.common.endpoints import EndpointSchemaBase
+from pep_sdk.schemas._common.endpoints import EndpointSchemaBase
 
 
 def route(endpoint: str) -> Callable[[Callable], Callable]:

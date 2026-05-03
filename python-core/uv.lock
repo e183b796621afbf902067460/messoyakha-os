@@ -264,20 +264,6 @@ lxml = [
 ]
 
 [[package]]
-name = "boto3"
-version = "1.42.91"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "botocore" },
-    { name = "jmespath" },
-    { name = "s3transfer" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a7/c0/98b8cec7ca22dde776df48c58940ae1abc425593959b7226e270760d726f/boto3-1.42.91.tar.gz", hash = "sha256:03d70532b17f7f84df37ca7e8c21553280454dea53ae12b15d1cfef9b16fcb8a", size = 113181, upload-time = "2026-04-17T19:31:06.251Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/02/29/faba6521257c34085cc9b439ef98235b581772580f417fa3629728007270/boto3-1.42.91-py3-none-any.whl", hash = "sha256:04e72071cde022951ce7f81bd9933c90095ab8923e8ced61c8dacfe9edac0f5c", size = 140553, upload-time = "2026-04-17T19:31:02.57Z" },
-]
-
-[[package]]
 name = "botocore"
 version = "1.42.91"
 source = { registry = "https://pypi.org/simple" }
@@ -1692,14 +1678,12 @@ version = "0.0.1"
 source = { virtual = "." }
 dependencies = [
     { name = "attrs" },
-    { name = "duckdb" },
     { name = "loguru" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pandas" },
     { name = "polars" },
     { name = "pydantic" },
-    { name = "pyiceberg", extra = ["polars", "s3fs"] },
     { name = "pyrefly" },
     { name = "ruff" },
     { name = "tqdm" },
@@ -1708,13 +1692,11 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "attrs", specifier = ">=25.1.0,<26" },
-    { name = "duckdb", specifier = ">=1.5.2" },
     { name = "loguru", specifier = ">=0.7.3,<0.8" },
     { name = "numpy", specifier = ">=2.2.6" },
     { name = "pandas", specifier = ">=2.2.3,<3" },
     { name = "polars", specifier = "==1.31.0" },
     { name = "pydantic", specifier = ">=2.10.6,<3" },
-    { name = "pyiceberg", extras = ["polars", "s3fs"], specifier = ">=0.11.1" },
     { name = "pyrefly", specifier = "==0.52.0" },
     { name = "ruff", specifier = "==0.14.8" },
     { name = "tqdm", specifier = ">=4.67.3" },
@@ -1724,14 +1706,14 @@ requires-dist = [
 name = "pep-dlh"
 source = { editable = "workspaces/dlh" }
 dependencies = [
-    { name = "boto3" },
     { name = "duckdb" },
+    { name = "pyiceberg", extra = ["polars", "s3fs"] },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "boto3", specifier = ">=1.40.50,<2" },
-    { name = "duckdb", specifier = ">=1.4.1,<2" },
+    { name = "duckdb", specifier = ">=1.5.2" },
+    { name = "pyiceberg", extras = ["polars", "s3fs"], specifier = ">=0.11.1" },
 ]
 
 [[package]]
@@ -2431,18 +2413,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/cb/d8/76f3dc1558bdf4494b117a9f7a9cc0a5d9d34edadc9e5d7ceabc5a6a7c37/s3fs-2026.4.0.tar.gz", hash = "sha256:5bdce0abb00b0435ee150807a45fea727451dbc22de4cbc116464f8504ab9d37", size = 85986, upload-time = "2026-04-29T20:52:51.748Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5d/a4/9d1ea10ebc9e028a289a72fec84da170689549a8102c8aacfcad26bc5035/s3fs-2026.4.0-py3-none-any.whl", hash = "sha256:de0d2a1f33cdf03831fd2382d278c6e4e31fe57c3bf2f703c61f8aec6b703e2a", size = 32392, upload-time = "2026-04-29T20:52:50.295Z" },
-]
-
-[[package]]
-name = "s3transfer"
-version = "0.16.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "botocore" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/05/04/74127fc843314818edfa81b5540e26dd537353b123a4edc563109d8f17dd/s3transfer-0.16.0.tar.gz", hash = "sha256:8e990f13268025792229cd52fa10cb7163744bf56e719e0b9cb925ab79abf920", size = 153827, upload-time = "2025-12-01T02:30:59.114Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fc/51/727abb13f44c1fcf6d145979e1535a35794db0f6e450a0cb46aa24732fe2/s3transfer-0.16.0-py3-none-any.whl", hash = "sha256:18e25d66fed509e3868dc1572b3f427ff947dd2c56f844a5bf09481ad3f3b2fe", size = 86830, upload-time = "2025-12-01T02:30:57.729Z" },
 ]
 
 [[package]]

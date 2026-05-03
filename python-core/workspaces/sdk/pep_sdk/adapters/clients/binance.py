@@ -4,9 +4,13 @@ from typing import TypeAlias
 from attrs import define, field
 from httpx import AsyncClient, Response
 
-from pep_sdk.adapters.common.http import HTTPAPIClientBase
+from pep_sdk.adapters.clients._common.http import HTTPAPIClientBase
 from pep_sdk.route import route
-from pep_sdk.schemas.binance import BinanceKlinesContextSchema, BinanceKlinesOutputSchema, BinanceKlinesParametersSchema
+from pep_sdk.schemas.clients.binance import (
+    BinanceKlinesContextSchema,
+    BinanceKlinesOutputSchema,
+    BinanceKlinesParametersSchema,
+)
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)

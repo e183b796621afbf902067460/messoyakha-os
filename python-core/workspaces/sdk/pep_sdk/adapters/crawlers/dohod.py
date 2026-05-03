@@ -7,9 +7,13 @@ from crawlee.storage_clients.models import DatasetItemsListPage
 from crawlee.storages import Dataset, RequestQueue
 from httpx import AsyncClient
 
-from pep_sdk.adapters.common.bs import BSCrawlerBase
+from pep_sdk.adapters.crawlers._common.bs import BSCrawlerBase
 from pep_sdk.route import route
-from pep_sdk.schemas.dohod import DohodDividendContextSchema, DohodDividendEndpointSchema, DohodDividendOutputSchema
+from pep_sdk.schemas.crawlers.dohod import (
+    DohodDividendContextSchema,
+    DohodDividendEndpointSchema,
+    DohodDividendOutputSchema,
+)
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)

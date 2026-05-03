@@ -6,8 +6,8 @@ from loguru import logger
 from polars import DataFrame, col
 from tqdm import tqdm
 
-from pep_sdk.adapters.finam import FinamAPIClient, FinamMISXAPIClient
-from pep_sdk.schemas.finam import (
+from pep_sdk.adapters.clients.finam import FinamAPIClient, FinamMISXAPIClient
+from pep_sdk.schemas.clients.finam import (
     FinamBarsEndpointSchema,
     FinamBarsHeadersSchema,
     FinamBarsInputSchema,

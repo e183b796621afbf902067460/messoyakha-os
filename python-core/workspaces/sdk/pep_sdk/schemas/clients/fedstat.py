@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, computed_field
 
-from pep_sdk.enums.fedstat import FedstatMonthEnum
+from pep_sdk.enums.clients.fedstat import FedstatMonthEnum
 
 
 class FedstatInflationRateParametersSchema(BaseModel):

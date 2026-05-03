@@ -1,8 +1,12 @@
 from attrs import define, field
 from polars import DataFrame, col
 
-from pep_sdk.adapters.dohod import DohodBSCrawler
-from pep_sdk.schemas.dohod import DohodDividendEndpointSchema, DohodDividendInputSchema, DohodDividendOutputSchema
+from pep_sdk.adapters.crawlers.dohod import DohodBSCrawler
+from pep_sdk.schemas.crawlers.dohod import (
+    DohodDividendEndpointSchema,
+    DohodDividendInputSchema,
+    DohodDividendOutputSchema,
+)
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
