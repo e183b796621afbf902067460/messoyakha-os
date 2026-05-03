@@ -7,10 +7,10 @@ requires-python = ">=3.10,<4.0"
 
 [project.urls]
 cbr = "https://www.cbr.ru/development/dws/"
-cbrapi = "https://github.com/mbk-dev/cbrapi/tree/master"
-okama = "https://habr.com/ru/companies/okama/profile/"
 finam = "https://tradeapi.finam.ru/getting-started/"
 fedstat-inflation-rate = "https://www.fedstat.ru/indicator/33568.do#"
+fedstat-m2x = "https://fedstat.ru/indicator/59853"
+smart-lab-sectors = "https://smart-lab.ru/forum/sectors/"
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
