@@ -146,6 +146,7 @@ draft.ipynb
 *.txt
 *.xls
 storage/
+*.parquet
 
 # Agent's context
 .kilo/

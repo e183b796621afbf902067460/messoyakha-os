@@ -10,9 +10,9 @@ from httpx import AsyncClient
 from pep_sdk.adapters.crawlers._common.bs import BSCrawlerBase
 from pep_sdk.route import route
 from pep_sdk.schemas.crawlers.dohod import (
-    DohodDividendContextSchema,
-    DohodDividendEndpointSchema,
-    DohodDividendOutputSchema,
+    DohodDividendsContextSchema,
+    DohodDividendsEndpointSchema,
+    DohodDividendsOutputSchema,
 )
 
 
@@ -21,7 +21,9 @@ class DohodBSCrawler(BSCrawlerBase):
     _session: AsyncClient = field(init=False, factory=partial(AsyncClient, base_url="https://www.dohod.ru"))
 
     @route("/ik/analytics/dividend/{ticker}")
-    async def dividend(self, endpoint_schema: DohodDividendEndpointSchema, **kwargs) -> list[DohodDividendOutputSchema]:
+    async def dividend(
+        self, endpoint_schema: DohodDividendsEndpointSchema, **kwargs
+    ) -> list[DohodDividendsOutputSchema]:
         queue: RequestQueue = await self._get(**kwargs)
         crawler: BeautifulSoupCrawler = BeautifulSoupCrawler(request_manager=queue, configure_logging=False)
 
@@ -41,5 +43,7 @@ class DohodBSCrawler(BSCrawlerBase):
         await crawler.run()
         dataset: Dataset = await Dataset.open()
         response: DatasetItemsListPage = await dataset.get_data()
-        context: DohodDividendContextSchema = DohodDividendContextSchema(ticker=endpoint_schema.ticker)
-        return [DohodDividendOutputSchema.model_validate(item, context=context.model_dump()) for item in response.items]
+        context: DohodDividendsContextSchema = DohodDividendsContextSchema(ticker=endpoint_schema.ticker)
+        return [
+            DohodDividendsOutputSchema.model_validate(item, context=context.model_dump()) for item in response.items
+        ]

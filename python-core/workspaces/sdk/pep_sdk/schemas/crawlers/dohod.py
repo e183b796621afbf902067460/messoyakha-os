@@ -13,7 +13,7 @@ from pydantic import (
 from pep_sdk.schemas._common.endpoints import EndpointSchemaBase
 
 
-class DohodDividendEndpointSchema(EndpointSchemaBase):
+class DohodDividendsEndpointSchema(EndpointSchemaBase):
     ticker: str
 
     @field_serializer("ticker")
@@ -21,15 +21,15 @@ class DohodDividendEndpointSchema(EndpointSchemaBase):
         return ticker.lower()
 
 
-class DohodDividendContextSchema(BaseModel):
+class DohodDividendsContextSchema(BaseModel):
     ticker: str
 
 
-class DohodDividendInputSchema(BaseModel):
+class DohodDividendsInputSchema(BaseModel):
     ticker: str
 
 
-class DohodDividendOutputSchema(BaseModel):
+class DohodDividendsOutputSchema(BaseModel):
     ticker: str
     dividend: float
     timestamp: datetime

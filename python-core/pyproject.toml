@@ -10,6 +10,10 @@ dependencies = [
     "polars==1.31.0",
     "pandas>=2.2.3,<3",
     "numpy>=2.2.6",
+    "fastparquet>=2026.3.0",
+    "dagster>=1.13.3",
+    "dagster-pandera>=0.29.3",
+    "that-depends>=3.9.2",
     "loguru>=0.7.3,<0.8",
     "tqdm>=4.67.3",
     "ruff==0.14.8",
@@ -119,7 +123,7 @@ force-wrap-aliases = true
 section-order = ["future", "standard-library", "third-party", "workspace", "first-party", "local-folder"]
 
 # https://docs.astral.sh/ruff/settings/#lint_isort_sections
-sections = { "workspace" = ["pep_sdk", "pep_dlh"] }
+sections = { "workspace" = ["pep_dlh", "pep_sdk"] }
 known-first-party = ["pep_pipelines", "pep_stock_duration"]
 
 [tool.ruff.lint.flake8-tidy-imports]
@@ -142,4 +146,4 @@ skip-magic-trailing-comma = false
 [tool.pyrefly]
 python-interpreter-path = ".venv/bin/python3.13"
 python-platform = "linux"
-search-path = ["pipelines", "strategies/stock-duration", "workspaces/sdk", "workspaces/dlh"]
+search-path = ["pipelines", "strategies/stock-duration", "workspaces/dlh", "workspaces/sdk"]
