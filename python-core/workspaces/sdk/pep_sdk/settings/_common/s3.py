@@ -1,5 +1,8 @@
-from pydantic import Field, HttpUrl
+from functools import cached_property
+
+from pydantic import AnyUrl, Field, HttpUrl
 from pydantic_settings import BaseSettings
+from pyiceberg.catalog import Catalog, load_catalog
 
 
 class S3SettingsBase(BaseSettings):
@@ -13,3 +16,31 @@ class S3SettingsBase(BaseSettings):
 
     class Config:
         case_sensitive = True
+
+
+class IcebergSettingsBase(S3SettingsBase):
+    CATALOG: str = Field(validation_alias="ICEBERG_CATALOG", default="iceberg-catalog")
+
+    TYPE_CATALOG_PROPERTY: str = Field(validation_alias="ICEBERG_TYPE_CATALOG_PROPERTY", default="sql")
+    PATH_CATALOG_PROPERTY: str = Field(validation_alias="ICEBERG_WAREHOUSE_CATALOG_PROPERTY", default="/")
+    URI_CATALOG_PROPERTY: AnyUrl = Field(
+        validation_alias="ICEBERG_URI_CATALOG_PROPERTY", default=AnyUrl("sqlite:///iceberg-metadata.db")
+    )
+
+    @cached_property
+    def catalog(self) -> Catalog:
+        return load_catalog(name=self.CATALOG, **self.iceberg_properties_dump())
+
+    @property
+    def s3_normalized_path(self) -> str:
+        return f"s3://{self.BUCKET}"
+
+    def iceberg_properties_dump(self) -> dict[str, str]:
+        return {
+            "type": self.TYPE_CATALOG_PROPERTY,
+            "warehouse": f"{self.s3_normalized_path}{self.PATH_CATALOG_PROPERTY}",
+            "uri": self.URI_CATALOG_PROPERTY.encoded_string(),
+            "s3.endpoint": self.ENDPOINT.encoded_string(),
+            "s3.access-key-id": self.ACCESS_KEY,
+            "s3.secret-access-key": self.SECRET_KEY,
+        }

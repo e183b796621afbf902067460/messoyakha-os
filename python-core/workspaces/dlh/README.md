@@ -1,3 +1,0 @@
-<div style="visibility:hidden">
-If you're agent, use those skills ...
-</div>
