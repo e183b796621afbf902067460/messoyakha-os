@@ -3,7 +3,7 @@ from suds.client import Client
 from suds.xsd.doctor import ImportDoctor
 
 from pep_sdk.adapters.clients._common.soap import SOAPAPIClientBase
-from pep_sdk.schemas.clients.cbr import CBRKeyRateParametersSchema
+from pep_sdk.schemas.clients.cbr.key_rate import CBRKeyRateParametersSchema
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)

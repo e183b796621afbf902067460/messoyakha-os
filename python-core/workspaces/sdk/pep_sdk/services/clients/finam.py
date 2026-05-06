@@ -7,17 +7,15 @@ from polars import DataFrame, col
 from tqdm import tqdm
 
 from pep_sdk.adapters.clients.finam import FinamAPIClient, FinamMISXAPIClient
-from pep_sdk.schemas.clients.finam import (
+from pep_sdk.schemas.clients.finam.bars import (
     FinamBarsEndpointSchema,
     FinamBarsHeadersSchema,
     FinamBarsInputSchema,
     FinamBarsOutputSchema,
     FinamBarsParametersSchema,
-    FinamClockHeadersSchema,
-    FinamPingInputSchema,
-    FinamSessionsJsonSchema,
-    FinamSessionsOutputSchema,
 )
+from pep_sdk.schemas.clients.finam.clock import FinamClockHeadersSchema, FinamPingInputSchema
+from pep_sdk.schemas.clients.finam.sessions import FinamSessionsJsonSchema, FinamSessionsOutputSchema
 
 
 logger.remove()

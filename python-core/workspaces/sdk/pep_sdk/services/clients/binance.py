@@ -8,7 +8,7 @@ from polars import DataFrame, col
 from tqdm import tqdm
 
 from pep_sdk.adapters.clients.binance import BinanceAPIClient, BinanceSpotAPIClient, BinanceUSDTMAPIClient
-from pep_sdk.schemas.clients.binance import (
+from pep_sdk.schemas.clients.binance.klines import (
     BinanceKlinesInputSchema,
     BinanceKlinesOutputSchema,
     BinanceKlinesParametersSchema,

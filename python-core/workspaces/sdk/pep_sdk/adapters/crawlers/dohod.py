@@ -9,7 +9,7 @@ from httpx import AsyncClient
 
 from pep_sdk.adapters.crawlers._common.bs import BSCrawlerBase
 from pep_sdk.route import route
-from pep_sdk.schemas.crawlers.dohod import (
+from pep_sdk.schemas.crawlers.dohod.dividends import (
     DohodDividendsContextSchema,
     DohodDividendsEndpointSchema,
     DohodDividendsOutputSchema,

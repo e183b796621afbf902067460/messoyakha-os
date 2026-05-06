@@ -6,7 +6,7 @@ from httpx import AsyncClient, Response
 
 from pep_sdk.adapters.clients._common.http import HTTPAPIClientBase
 from pep_sdk.route import route
-from pep_sdk.schemas.clients.binance import (
+from pep_sdk.schemas.clients.binance.klines import (
     BinanceKlinesContextSchema,
     BinanceKlinesOutputSchema,
     BinanceKlinesParametersSchema,

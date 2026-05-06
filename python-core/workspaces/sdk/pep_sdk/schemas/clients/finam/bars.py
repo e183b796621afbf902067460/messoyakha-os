@@ -12,17 +12,10 @@ from pydantic import (
     model_validator,
 )
 
-from pep_sdk.enums.clients.finam import FinamIntervalEnum, FinamMarketEnum
 from pep_sdk.schemas._common.endpoints import EndpointSchemaBase
 from pep_sdk.schemas._common.headers import AuthorizationHeaderSchemaBase
-
-
-class FinamSessionsJsonSchema(BaseModel):
-    secret: str
-
-
-class FinamSessionsOutputSchema(BaseModel):
-    token: str
+from pep_sdk.schemas.clients.finam._common.enums import FinamIntervalEnum, FinamMarketEnum
+from pep_sdk.schemas.clients.finam._common.secrets import FinamSecretsInputSchemaBase
 
 
 class FinamBarsEndpointSchema(EndpointSchemaBase):
@@ -33,9 +26,6 @@ class FinamBarsEndpointSchema(EndpointSchemaBase):
     @property
     def _symbol(self) -> str:
         return f"{self.ticker}@{self.market}"
-
-
-class FinamClockHeadersSchema(AuthorizationHeaderSchemaBase): ...
 
 
 class FinamBarsHeadersSchema(AuthorizationHeaderSchemaBase): ...
@@ -101,14 +91,7 @@ class FinamBarsOutputSchema(BaseModel):
         return timestamp.replace(tzinfo=timezone.utc)
 
 
-class _FinamSecretInputSchemaBase(BaseModel):
-    secret: str
-
-
-class FinamPingInputSchema(_FinamSecretInputSchemaBase): ...
-
-
-class _FinamBarsInputSchema(_FinamSecretInputSchemaBase):
+class _FinamBarsInputSchema(FinamSecretsInputSchemaBase):
     ticker: str
     market: FinamMarketEnum = Field(init=False)
     interval: FinamIntervalEnum

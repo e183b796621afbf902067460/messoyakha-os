@@ -9,7 +9,7 @@ from pandas import to_datetime
 
 from pep_sdk.adapters.crawlers._common.bs import BSCrawlerBase
 from pep_sdk.route import route
-from pep_sdk.schemas.crawlers.smartlab import (
+from pep_sdk.schemas.crawlers.smartlab.net_income import (
     SmartLabNetIncomeContextSchema,
     SmartLabNetIncomeEndpointSchema,
     SmartLabNetIncomeOutputSchema,

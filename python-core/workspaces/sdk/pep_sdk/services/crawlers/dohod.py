@@ -2,7 +2,7 @@ from attrs import define, field
 from polars import DataFrame, col
 
 from pep_sdk.adapters.crawlers.dohod import DohodBSCrawler
-from pep_sdk.schemas.crawlers.dohod import (
+from pep_sdk.schemas.crawlers.dohod.dividends import (
     DohodDividendsEndpointSchema,
     DohodDividendsInputSchema,
     DohodDividendsOutputSchema,

@@ -1,3 +1,4 @@
+from calendar import Month
 from enum import StrEnum
 from typing import Self
 
@@ -18,28 +19,28 @@ class FedstatMonthEnum(StrEnum):
 
     @classmethod
     def from_month(cls, month: int) -> Self:
-        if month == 1:
+        if month == Month.JANUARY.value:
             return cls(cls.JANUARY.value)
-        if month == 2:  # noqa: PLR2004
+        if month == Month.FEBRUARY.value:
             return cls(cls.FEBRUARY.value)
-        if month == 3:  # noqa: PLR2004
+        if month == Month.MARCH.value:
             return cls(cls.MARCH.value)
-        if month == 4:  # noqa: PLR2004
+        if month == Month.APRIL.value:
             return cls(cls.APRIL.value)
-        if month == 5:  # noqa: PLR2004
+        if month == Month.MAY.value:
             return cls(cls.MAY.value)
-        if month == 6:  # noqa: PLR2004
+        if month == Month.JUNE.value:
             return cls(cls.JUNE.value)
-        if month == 7:  # noqa: PLR2004
+        if month == Month.JULY.value:
             return cls(cls.JULY.value)
-        if month == 8:  # noqa: PLR2004
+        if month == Month.AUGUST.value:
             return cls(cls.AUGUST.value)
-        if month == 9:  # noqa: PLR2004
+        if month == Month.SEPTEMBER.value:
             return cls(cls.SEPTEMBER.value)
-        if month == 10:  # noqa: PLR2004
+        if month == Month.OCTOBER.value:
             return cls(cls.OCTOBER.value)
-        if month == 11:  # noqa: PLR2004
+        if month == Month.NOVEMBER.value:
             return cls(cls.NOVEMBER.value)
-        if month == 12:  # noqa: PLR2004
+        if month == Month.DECEMBER.value:
             return cls(cls.DECEMBER.value)
         raise ValueError("Inappropriate month passed (pep-api).")

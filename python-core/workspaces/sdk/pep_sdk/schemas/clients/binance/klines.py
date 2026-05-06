@@ -11,7 +11,7 @@ from pydantic import (
     model_validator,
 )
 
-from pep_sdk.enums.clients.binance import BinanceIntervalEnum, BinanceMarketEnum
+from pep_sdk.schemas.clients.binance._common.enums import BinanceIntervalEnum, BinanceMarketEnum
 
 
 _MILLISECONDS_IN_SECOND: Final[int] = 10**3

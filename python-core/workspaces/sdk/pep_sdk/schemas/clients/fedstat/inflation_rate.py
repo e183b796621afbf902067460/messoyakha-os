@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, computed_field
 
-from pep_sdk.enums.clients.fedstat import FedstatMonthEnum
+from pep_sdk.schemas.clients.fedstat._common.enums import FedstatMonthEnum
 
 
 class FedstatInflationRateParametersSchema(BaseModel):
@@ -21,28 +21,28 @@ class FedstatInflationRateDataSchema(_FedstatDataSchemaBase):
     @property
     def _line_object_ids(self) -> list[str]:
         return [
-            "0",  # IndicatorLineId
-            "30611",  # ?
-            "57831",  # RegionLineId
+            "0",
+            "30611",
+            "57831",
         ]
 
     @computed_field(alias="columnObjectIds", repr=False)
     @property
     def _column_object_ids(self) -> list[str]:
         return [
-            "3",  # YearColumnId
-            "33560",  # MonthColumnId
-            "57937",  # PeriodicityColumnId
+            "3",
+            "33560",
+            "57937",
         ]
 
     @computed_field(alias="selectedFilterIds", repr=False)
     @property
     def _selected_filter_ids(self) -> list[str]:
         selected_filter_ids: list[str] = [
-            "0_33568",  # IndicatorFilter
-            "30611_950473",  # ?
-            "57831_1688487",  # RegionFilter
-            "57937_1704140",  # PeriodicityFilter
+            "0_33568",
+            "30611_950473",
+            "57831_1688487",
+            "57937_1704140",
         ]
 
         selected_year_filter_ids: list[str] = [f"3_{year}" for year in self._date_range_to_list_of_years()]

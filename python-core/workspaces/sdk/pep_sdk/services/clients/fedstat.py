@@ -18,7 +18,7 @@ from polars import (
 from pydantic import BaseModel
 
 from pep_sdk.adapters.clients.fedstat import FedstatAPIClient
-from pep_sdk.schemas.clients.fedstat import (
+from pep_sdk.schemas.clients.fedstat.inflation_rate import (
     FedstatInflationRateDataSchema,
     FedstatInflationRateInputSchema,
     FedstatInflationRateParametersSchema,

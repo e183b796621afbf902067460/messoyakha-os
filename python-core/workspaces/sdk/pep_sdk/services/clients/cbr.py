@@ -5,7 +5,7 @@ from pandas import read_xml
 from polars import DataFrame, col, from_pandas
 
 from pep_sdk.adapters.clients.cbr import CBRSOAPAPIClient
-from pep_sdk.schemas.clients.cbr import CBRKeyRateParametersSchema
+from pep_sdk.schemas.clients.cbr.key_rate import CBRKeyRateParametersSchema
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)

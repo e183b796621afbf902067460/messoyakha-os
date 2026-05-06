@@ -2,7 +2,7 @@ from attrs import define, field
 from polars import DataFrame, col
 
 from pep_sdk.adapters.crawlers.smartlab import SmartLabBSCrawler
-from pep_sdk.schemas.crawlers.smartlab import (
+from pep_sdk.schemas.crawlers.smartlab.net_income import (
     SmartLabNetIncomeEndpointSchema,
     SmartLabNetIncomeInputSchema,
     SmartLabNetIncomeOutputSchema,

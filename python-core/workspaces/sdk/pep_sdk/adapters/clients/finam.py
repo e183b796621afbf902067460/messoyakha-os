@@ -6,16 +6,15 @@ from httpx import AsyncClient, Response
 
 from pep_sdk.adapters.clients._common.http import HTTPAPIClientBase
 from pep_sdk.route import route
-from pep_sdk.schemas.clients.finam import (
+from pep_sdk.schemas.clients.finam.bars import (
     FinamBarsContextSchema,
     FinamBarsEndpointSchema,
     FinamBarsHeadersSchema,
     FinamBarsOutputSchema,
     FinamBarsParametersSchema,
-    FinamClockHeadersSchema,
-    FinamSessionsJsonSchema,
-    FinamSessionsOutputSchema,
 )
+from pep_sdk.schemas.clients.finam.clock import FinamClockHeadersSchema
+from pep_sdk.schemas.clients.finam.sessions import FinamSessionsJsonSchema, FinamSessionsOutputSchema
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
