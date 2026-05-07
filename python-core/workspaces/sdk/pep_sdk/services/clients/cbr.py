@@ -12,13 +12,15 @@ from pep_sdk.schemas.clients.cbr.key_rate import CBRKeyRateParametersSchema
 class CBRService:
     _client: CBRSOAPAPIClient = field(init=False, factory=CBRSOAPAPIClient)
 
-    def get_key_rate(self, parameters_schema: CBRKeyRateParametersSchema) -> DataFrame:
-        key_rate: DataFrame = from_pandas(
+    def get_key_rates(self, parameters_schema: CBRKeyRateParametersSchema) -> DataFrame:
+        key_rates: DataFrame = from_pandas(
             read_xml(BytesIO(self._client.key_rate(parameters_schema=parameters_schema)), xpath=".//KR")
         )
-        key_rate = key_rate.select([col("DT").alias("datetime"), col("Rate").alias("key_rate")])
+        key_rates = key_rates.select([col("DT").alias("timestamp"), col("Rate").alias("key_rate")])
         return (
-            key_rate.with_columns(col("datetime").str.to_datetime().dt.replace_time_zone("UTC"), col("key_rate") / 100)
+            key_rates.with_columns(
+                col("timestamp").str.to_datetime().dt.replace_time_zone("UTC"), col("key_rate") / 100
+            )
             .unique()
-            .sort(by=col("datetime"))
+            .sort(by=col("timestamp"))
         )

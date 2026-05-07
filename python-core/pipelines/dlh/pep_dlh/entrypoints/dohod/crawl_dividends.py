@@ -82,12 +82,12 @@ def load_to_s3_iceberg(context: OpExecutionContext, data: list[DataFrame]) -> No
     dividends: DataFrame = concat(data)
     logger.info(f"Got all the dividends, shape is {dividends.shape}.")
 
-    dlh_dohod_dividends_s3_uceberg_table: str = _S3_ICEBERG_DLH_DOHOD_DIVIDENDS_TABLE.format(
+    dlh_dohod_dividends_s3_iceberg_table: str = _S3_ICEBERG_DLH_DOHOD_DIVIDENDS_TABLE.format(
         namespace=context.resources.settings.NAMESPACE
     )
-    if context.resources.settings.catalog.table_exists(identifier=dlh_dohod_dividends_s3_uceberg_table):
+    if context.resources.settings.catalog.table_exists(identifier=dlh_dohod_dividends_s3_iceberg_table):
         dividends.write_iceberg(
-            target=context.resources.settings.catalog.load_table(dlh_dohod_dividends_s3_uceberg_table),
+            target=context.resources.settings.catalog.load_table(dlh_dohod_dividends_s3_iceberg_table),
             mode="overwrite",
         )
 

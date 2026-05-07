@@ -5,7 +5,9 @@
             "https://github.com/dagster-io/skills/tree/master/skills/dignified-python/skills/dignified-python",
             "https://dagster.io/blog/dignified-python-10-rules-to-improve-your-llm-agents",
             "https://github.com/dagster-io/skills/tree/master/skills/dagster-expert/skills/dagster-expert",
-            "https://github.com/PrefectHQ/fastmcp/tree/main/.claude/skills/python-tests",
+
+            "https://github.com/mgechev/skills-best-practices",
+            "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices",
         ]
     },
     "instructions": [
