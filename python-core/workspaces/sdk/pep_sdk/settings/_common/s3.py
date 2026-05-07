@@ -19,7 +19,7 @@ class S3SettingsBase(BaseSettings):
 
 
 class IcebergSettingsBase(S3SettingsBase):
-    CATALOG: str = Field(validation_alias="ICEBERG_CATALOG", default="iceberg-catalog")
+    NAMESPACE: str = Field(validation_alias="ICEBERG_CATALOG", default="default")
 
     TYPE_CATALOG_PROPERTY: str = Field(validation_alias="ICEBERG_TYPE_CATALOG_PROPERTY", default="sql")
     PATH_CATALOG_PROPERTY: str = Field(validation_alias="ICEBERG_WAREHOUSE_CATALOG_PROPERTY", default="/")
@@ -29,7 +29,7 @@ class IcebergSettingsBase(S3SettingsBase):
 
     @cached_property
     def catalog(self) -> Catalog:
-        return load_catalog(name=self.CATALOG, **self.iceberg_properties_dump())
+        return load_catalog(name=self.NAMESPACE, **self.iceberg_properties_dump())
 
     @property
     def s3_normalized_path(self) -> str:

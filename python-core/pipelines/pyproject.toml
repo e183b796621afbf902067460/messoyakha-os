@@ -6,6 +6,9 @@ readme = "README.md"
 
 requires-python = ">=3.10,<4.0"
 
+[project.urls]
+that-depends-quick-start = "https://that-depends.readthedocs.io/"
+
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
 build-backend = "hatchling.build"
