@@ -12,8 +12,9 @@ from dagster import (
     multiprocess_executor,
     op,
 )
+from duckdb import register, sql
 from loguru import logger
-from polars import DataFrame, concat
+from polars import DataFrame, Series, concat
 from pyiceberg.partitioning import DayTransform, IdentityTransform, PartitionField, PartitionSpec
 from pyiceberg.schema import Schema
 from pyiceberg.types import DoubleType, NestedField, StringType, TimestamptzType
@@ -26,7 +27,18 @@ from pep_sdk.services.crawlers.dohod import DohodService as DohodSDKService
 from pep_dlh.settings import Settings
 
 
-_DLH_DOHOD_DIVIDENDS_S3_ICEBERG_TABLE: Final[str] = "{namespace}.dohod-dividends"
+_S3_ICEBERG_DLH_DOHOD_DIVIDENDS_TABLE: Final[str] = "{namespace}.dohod-dividends"
+_IN_MEMORY_CONFIG_TICKERS_VIEW: Final[Series] = Series(
+    name="tickers",
+    values=[
+        "SIBN",
+        "ROSN",
+        "TRNFP",
+        "PHOR",
+        "PLZL",
+        "SBER",
+    ],
+)
 
 
 @op(required_resource_keys={"settings"})
@@ -34,7 +46,7 @@ def setup_s3_iceberg(context: OpExecutionContext) -> None:
     context.resources.settings.catalog.create_namespace_if_not_exists(namespace=context.resources.settings.NAMESPACE)
     if context.resources.settings.catalog.namespace_exists(identifier=context.resources.settings.NAMESPACE):
         context.resources.settings.catalog.create_table_if_not_exists(
-            identifier=_DLH_DOHOD_DIVIDENDS_S3_ICEBERG_TABLE.format(namespace=context.resources.settings.NAMESPACE),
+            identifier=_S3_ICEBERG_DLH_DOHOD_DIVIDENDS_TABLE.format(namespace=context.resources.settings.NAMESPACE),
             schema=Schema(
                 NestedField(field_id=1, name="ticker", field_type=StringType()),  # type: ignore[missing-argument]
                 NestedField(field_id=2, name="dividend", field_type=DoubleType()),  # type: ignore[missing-argument]
@@ -48,15 +60,9 @@ def setup_s3_iceberg(context: OpExecutionContext) -> None:
 
 
 @op(ins={"depends_on_s3_iceberg_setup": In(Nothing)}, out=DynamicOut())
-def retrieve_mocked_tickers() -> Generator[DynamicOutput[str], None, None]:
-    tickers: list[str] = [
-        "SIBN",
-        "ROSN",
-        "TRNFP",
-        "PHOR",
-        "PLZL",
-        "SBER",
-    ]  # HOLD: RTKM (!), CHMF (!), GMKN (!), MDMG (?)
+def query_mocked_in_memory_tickers() -> Generator[DynamicOutput[str], None, None]:
+    register("in_memory_config_tickers_view", _IN_MEMORY_CONFIG_TICKERS_VIEW.to_frame())
+    tickers: list[str] = list(sql("SELECT tickers FROM in_memory_config_tickers_view").fetchnumpy()["tickers"])
     for ticker in tickers:
         yield DynamicOutput(value=ticker, mapping_key=ticker)
 
@@ -74,8 +80,9 @@ async def crawl_dividends(context: OpExecutionContext, ticker: str) -> DataFrame
 @op(required_resource_keys={"settings"})
 def load_to_s3_iceberg(context: OpExecutionContext, data: list[DataFrame]) -> None:
     dividends: DataFrame = concat(data)
+    logger.info(f"Got all the dividends, shape is {dividends.shape}.")
 
-    dlh_dohod_dividends_s3_uceberg_table: str = _DLH_DOHOD_DIVIDENDS_S3_ICEBERG_TABLE.format(
+    dlh_dohod_dividends_s3_uceberg_table: str = _S3_ICEBERG_DLH_DOHOD_DIVIDENDS_TABLE.format(
         namespace=context.resources.settings.NAMESPACE
     )
     if context.resources.settings.catalog.table_exists(identifier=dlh_dohod_dividends_s3_uceberg_table):
@@ -88,7 +95,9 @@ def load_to_s3_iceberg(context: OpExecutionContext, data: list[DataFrame]) -> No
 @graph
 def dohod_dividends_crawling_pipeline() -> None:
     load_to_s3_iceberg(
-        data=(retrieve_mocked_tickers(depends_on_s3_iceberg_setup=setup_s3_iceberg()).map(crawl_dividends)).collect()
+        data=(
+            query_mocked_in_memory_tickers(depends_on_s3_iceberg_setup=setup_s3_iceberg()).map(crawl_dividends)
+        ).collect()
     )
 
 

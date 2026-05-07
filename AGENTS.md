@@ -48,8 +48,14 @@ In essence, agent as the first line of defense against low-quality code plays a 
 
 ## Monorepo Structure
 
-| Core           | Purpose                                                 |
-| -------------- | ------------------------------------------------------- |
-| `python-core/` | Python shared core: this is where the most work happens |
+| Core                                     | Purpose                                                                                  |
+| ---------------------------------------  | -----------------------------------------------------------------------------------------|
+| `python-core/*`                          | Python shared core: this is where the most work happens                                  |
+| `python-core/pipelines/*`                | Data pipelines orchestrated with Dagster and schema validation written on Pandera models |
+| `python-core/workspaces/sdk/`            | Shared SDK, clean architecture: adapters, services, schemas for all modules              |
 
 See the corresponding `AGENTS.md` files in sub-cores for details.
+
+<!-- agent-general-rule:11 -->
+> [!IMPORTANT]
+> There is no need to explore other modules when working with specific ones, unless explicitly asked to do so.
