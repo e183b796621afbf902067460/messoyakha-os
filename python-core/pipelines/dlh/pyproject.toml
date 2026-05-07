@@ -1,5 +1,5 @@
 [project]
-name = "pep-pipelines"
+name = "pep-dlh"
 dynamic = ["version", "dependencies"]
 description = "..."
 readme = "README.md"
@@ -39,7 +39,7 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["pep_pipelines"]
+packages = ["pep_dlh"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["tests"]

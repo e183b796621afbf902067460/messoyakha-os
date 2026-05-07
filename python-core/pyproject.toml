@@ -25,8 +25,8 @@ package = false
 # https://docs.astral.sh/uv/concepts/projects/workspaces/#workspace-sources
 [tool.uv.sources]
 
-# pipelines/
-pep-pipelines = { workspace = true }
+# pipelines/*
+pep-dlh = { workspace = true }
 
 # strategies/*
 pep-stock-duration = { workspace = true }
@@ -36,7 +36,7 @@ pep-sdk = { workspace = true }
 
 [tool.uv.workspace]
 members = [
-    "pipelines",
+    "pipelines/*",
     "strategies/*",
     "workspaces/*",
 ]
@@ -117,7 +117,7 @@ section-order = ["future", "standard-library", "third-party", "workspace", "firs
 
 # https://docs.astral.sh/ruff/settings/#lint_isort_sections
 sections = { "workspace" = ["pep_sdk"] }
-known-first-party = ["pep_pipelines", "pep_stock_duration"]
+known-first-party = ["pep_dlh", "pep_stock_duration"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
@@ -139,4 +139,4 @@ skip-magic-trailing-comma = false
 [tool.pyrefly]
 python-interpreter-path = ".venv/bin/python3.13"
 python-platform = "linux"
-search-path = ["pipelines", "strategies/stock-duration", "workspaces/sdk"]
+search-path = ["pipelines/dlh", "strategies/stock-duration", "workspaces/sdk"]

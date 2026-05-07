@@ -11,7 +11,7 @@ resolution-markers = [
 [manifest]
 members = [
     "pep",
-    "pep-pipelines",
+    "pep-dlh",
     "pep-sdk",
     "pep-stock-duration",
 ]
@@ -2240,8 +2240,8 @@ requires-dist = [
 ]
 
 [[package]]
-name = "pep-pipelines"
-source = { editable = "pipelines" }
+name = "pep-dlh"
+source = { editable = "pipelines/dlh" }
 dependencies = [
     { name = "dagster" },
     { name = "dagster-pandera" },
