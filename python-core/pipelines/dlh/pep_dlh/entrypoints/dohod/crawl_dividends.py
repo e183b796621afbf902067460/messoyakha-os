@@ -33,11 +33,8 @@ _DLH_DOHOD_DIVIDENDS_S3_ICEBERG_TABLE: Final[str] = "{namespace}.dohod-dividends
 def setup_s3_iceberg(context: OpExecutionContext) -> None:
     context.resources.settings.catalog.create_namespace_if_not_exists(namespace=context.resources.settings.NAMESPACE)
     if context.resources.settings.catalog.namespace_exists(identifier=context.resources.settings.NAMESPACE):
-        dlh_dohod_dividends_s3_uceberg_table: str = _DLH_DOHOD_DIVIDENDS_S3_ICEBERG_TABLE.format(
-            namespace=context.resources.settings.NAMESPACE
-        )
         context.resources.settings.catalog.create_table_if_not_exists(
-            identifier=dlh_dohod_dividends_s3_uceberg_table,
+            identifier=_DLH_DOHOD_DIVIDENDS_S3_ICEBERG_TABLE.format(namespace=context.resources.settings.NAMESPACE),
             schema=Schema(
                 NestedField(field_id=1, name="ticker", field_type=StringType()),  # type: ignore[missing-argument]
                 NestedField(field_id=2, name="dividend", field_type=DoubleType()),  # type: ignore[missing-argument]
