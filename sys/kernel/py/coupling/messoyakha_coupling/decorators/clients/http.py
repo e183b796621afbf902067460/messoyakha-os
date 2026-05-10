@@ -1,6 +1,6 @@
 from collections.abc import Callable
-from typing import Protocol, runtime_checkable
 from functools import wraps
+from typing import Protocol, runtime_checkable
 
 from pydantic import BaseModel
 
@@ -15,7 +15,7 @@ def route(endpoint: str) -> Callable[[Callable], Callable]:
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def wrapper(self, *args, endpoint=endpoint, **kwargs):  # type: ignore[method-assign]  # noqa: ANN001, ANN202
-            for key, value in kwargs.items():
+            for value in kwargs.values():
                 if isinstance(value, _HTTPEndpointProtocol) and issubclass(value, BaseModel):
                     endpoint: str = endpoint.format(**value.model_dump(by_alias=True))
                     break

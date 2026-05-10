@@ -1,4 +1,7 @@
-from duckdb import DuckDBPyConnection, connect as duckdb_connect
+from duckdb import (
+    DuckDBPyConnection,
+    connect as duckdb_connect,
+)
 
 
 def connect(access_key: str, secret_key: str, endpoint: str, region: str) -> DuckDBPyConnection:
