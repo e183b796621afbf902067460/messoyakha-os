@@ -33,10 +33,24 @@ messoyakha-binance-sdk-py = { workspace = true }
 messoyakha-finam-sdk-py = { workspace = true }
 messoyakha-s3-sdk-py = { workspace = true }
 
+# home/idata/lib/*
+messoyakha-cbr-sdk-py = { workspace = true }
+messoyakha-dohod-sdk-py = { workspace = true }
+messoyakha-fedstat-sdk-py = { workspace = true }
+messoyakha-smart-lab-sdk-py = { workspace = true }
+
+# home/idata/dags/*
+messoyakha-dlh-py = { workspace = true }
+messoyakha-dwh-py = { workspace = true }
+
 [tool.uv.workspace]
 members = [
-    "sys/kernel/py/*",
+    "home/idata/dags/*",
+    "home/idata/lib/*",
+
     "lib/py/*",
+
+    "sys/kernel/py/*",
 ]
 
 [tool.ruff]
@@ -114,15 +128,21 @@ force-wrap-aliases = true
 section-order = ["future", "standard-library", "third-party", "workspace", "first-party", "local-folder"]
 
 # https://docs.astral.sh/ruff/settings/#lint_isort_sections
-sections = { 
+sections = {
     "workspace" = [
-        "messoyakha_coupling", 
-        "messoyakha_binance_sdk", 
-        "messoyakha_finam_sdk", 
-        "messoyakha_s3_sdk"
-    ] 
+        "messoyakha_coupling",
+
+        "messoyakha_binance_sdk",
+        "messoyakha_finam_sdk",
+        "messoyakha_s3_sdk",
+
+        "messoyakha_cbr_sdk",
+        "messoyakha_dohod_sdk",
+        "messoyakha_fedstat_sdk",
+        "messoyakha_smart_lab_sdk"
+    ]
 }
-known-first-party = ["pep_dlh", "pep_stock_duration"]
+known-first-party = ["messoyakha_dlh", "messoyakha_dwh"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
@@ -145,9 +165,17 @@ skip-magic-trailing-comma = false
 python-interpreter-path = ".venv/bin/python3.13"
 python-platform = "linux"
 search-path = [
-    "sys/kernel/py/coupling", 
+    "sys/kernel/py/coupling",
 
-    "lib/py/binance-sdk", 
-    "lib/py/finam-sdk", 
-    "lib/py/s3-sdk", 
+    "lib/py/binance-sdk",
+    "lib/py/finam-sdk",
+    "lib/py/s3-sdk",
+
+    "home/idata/lib/cbr-sdk",
+    "home/idata/lib/dohod-sdk",
+    "home/idata/lib/fedstat-sdk",
+    "home/idata/lib/smart-lab-sdk",
+
+    "home/idata/dags/dlh",
+    "home/idata/dags/dwh"
 ]

@@ -1,11 +1,11 @@
 [project]
-name = "messoyakha-finam-sdk-py"
+name = "messoyakha-smart-lab-sdk-py"
 dynamic = ["version", "dependencies"]
 description = "..."
 requires-python = ">=3.10,<4.0"
 
 [project.urls]
-finam-getting-started = "https://tradeapi.finam.ru/getting-started/"
+smart-lab-sectors = "https://smart-lab.ru/forum/sectors/"
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
@@ -22,17 +22,15 @@ bump = true
 [tool.uv]
 package = true
 
-[tool.uv.sources]
-messoyakha-coupling-py = { workspace = true }
-
 [tool.hatch.metadata.hooks.uv-dynamic-versioning]
 dependencies = [
+    "crawlee[beautifulsoup,playwright]>=1.6.3",
     "httpx[http2]>=0.28.1,<0.29",
     "messoyakha-coupling-py=={{ version }}",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["messoyakha_finam_sdk"]
+packages = ["messoyakha_smart_lab_sdk"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["tests"]

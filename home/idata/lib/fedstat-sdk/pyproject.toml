@@ -1,11 +1,12 @@
 [project]
-name = "messoyakha-finam-sdk-py"
+name = "messoyakha-fedstat-sdk-py"
 dynamic = ["version", "dependencies"]
 description = "..."
 requires-python = ">=3.10,<4.0"
 
 [project.urls]
-finam-getting-started = "https://tradeapi.finam.ru/getting-started/"
+fedstat-cpi = "https://fedstat.ru/indicator/33568"
+fedstat-m2x = "https://fedstat.ru/indicator/59853"
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
@@ -22,17 +23,15 @@ bump = true
 [tool.uv]
 package = true
 
-[tool.uv.sources]
-messoyakha-coupling-py = { workspace = true }
-
 [tool.hatch.metadata.hooks.uv-dynamic-versioning]
 dependencies = [
     "httpx[http2]>=0.28.1,<0.29",
+    "xlrd>=2.0.2",
     "messoyakha-coupling-py=={{ version }}",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["messoyakha_finam_sdk"]
+packages = ["messoyakha_fedstat_sdk"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["tests"]
