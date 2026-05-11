@@ -11,7 +11,8 @@ from pydantic import (
     model_validator,
 )
 
-from messoyakha_binance_sdk.schemas._common.enums import BinanceIntervalEnum, BinanceMarketEnum
+from messoyakha_binance_sdk.enums.intervals import BinanceIntervalEnum
+from messoyakha_binance_sdk.enums.markets import BinanceMarketEnum
 
 
 _MILLISECONDS_IN_SECOND: Final[int] = 10**3

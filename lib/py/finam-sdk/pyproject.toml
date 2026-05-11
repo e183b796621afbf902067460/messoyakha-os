@@ -6,6 +6,7 @@ requires-python = ">=3.10,<4.0"
 
 [project.urls]
 finam-getting-started = "https://tradeapi.finam.ru/getting-started/"
+github-finam-trade-api = "https://github.com/DBoyara/FinamTradeApiPy"
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]

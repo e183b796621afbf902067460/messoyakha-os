@@ -15,19 +15,18 @@ repos:
         language: python
         types: [ python ]
         entry: uv run ruff format
-        args: [--config, python-core/pyproject.toml]
       - id: ruff-check
         name: ruff-isort
         language: python
         types: [ python ]
         entry: uv run ruff check --select I
-        args: [--config, python-core/pyproject.toml, --exit-non-zero-on-fix]
+        args: [--exit-non-zero-on-fix]
       - id: ruff-check
         name: ruff-lint
         language: python
         types: [ python ]
         entry: uv run ruff check --ignore I --unsafe-fixes
-        args: [--config, python-core/pyproject.toml, --exit-non-zero-on-fix]
+        args: [--exit-non-zero-on-fix]
 
   # https://github.com/facebook/pyrefly-pre-commit
   - repo: local
@@ -36,5 +35,4 @@ repos:
         name: pyrefly-check
         language: python
         entry: uv run pyrefly check
-        args: [--config, python-core/pyproject.toml]
         pass_filenames: false

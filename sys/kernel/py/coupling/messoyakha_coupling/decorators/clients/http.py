@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 @runtime_checkable
 class _HTTPEndpointProtocol(Protocol):
-    def cohere_http_endpoint(self) -> None:
+    def _cohere_http_endpoint(self) -> None:
         pass
 
 

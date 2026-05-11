@@ -6,8 +6,3 @@ class BinanceIntervalEnum(StrEnum):
     FOUR_HOURS = "4h"
 
     ONE_DAY = "1d"
-
-
-class BinanceMarketEnum(StrEnum):
-    SPOT = "Spot"
-    USDTM = "USDT-M"

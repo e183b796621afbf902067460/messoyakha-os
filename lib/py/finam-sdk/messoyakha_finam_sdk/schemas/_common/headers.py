@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, field_serializer
 
 
-class AuthorizationHeaderSchemaBase(BaseModel):
+class FinamAuthorizationHeaderSchemaBase(BaseModel):
     authorization: str = Field(serialization_alias="Authorization")
 
     @field_serializer("authorization")

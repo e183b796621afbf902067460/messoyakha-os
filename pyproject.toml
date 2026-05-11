@@ -128,20 +128,7 @@ force-wrap-aliases = true
 section-order = ["future", "standard-library", "third-party", "workspace", "first-party", "local-folder"]
 
 # https://docs.astral.sh/ruff/settings/#lint_isort_sections
-sections = {
-    "workspace" = [
-        "messoyakha_coupling",
-
-        "messoyakha_binance_sdk",
-        "messoyakha_finam_sdk",
-        "messoyakha_s3_sdk",
-
-        "messoyakha_cbr_sdk",
-        "messoyakha_dohod_sdk",
-        "messoyakha_fedstat_sdk",
-        "messoyakha_smart_lab_sdk"
-    ]
-}
+sections = { "workspace" = ["messoyakha_coupling", "messoyakha_binance_sdk", "messoyakha_finam_sdk", "messoyakha_s3_sdk", "messoyakha_cbr_sdk", "messoyakha_dohod_sdk", "messoyakha_fedstat_sdk", "messoyakha_smart_lab_sdk"] }
 known-first-party = ["messoyakha_dlh", "messoyakha_dwh"]
 
 [tool.ruff.lint.flake8-tidy-imports]
