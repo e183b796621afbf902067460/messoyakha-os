@@ -3,14 +3,14 @@ from typing import TypeAlias
 
 from attrs import define, field
 from httpx import AsyncClient, Response
-from messoyakha_coupling.adapters.clients.http import HTTPAPIClientBase
-from messoyakha_coupling.decorators.clients.http import route
 
 from messoyakha_binance_sdk.schemas.klines import (
     BinanceKlinesContextSchema,
     BinanceKlinesOutputSchema,
     BinanceKlinesParametersSchema,
 )
+from messoyakha_coupling.adapters.clients.http import HTTPAPIClientBase
+from messoyakha_coupling.decorators.clients.http import route
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
