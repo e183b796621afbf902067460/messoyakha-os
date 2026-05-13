@@ -2,8 +2,8 @@ from attrs import define
 from suds.client import Client
 from suds.xsd.doctor import ImportDoctor
 
-from messoyakha_cbr_sdk.adapters._common.soap import SOAPAPIClientBase
 from messoyakha_cbr_sdk.schemas.key_rate import CBRKeyRateParametersSchema
+from messoyakha_coupling.adapters.clients.soap import SOAPAPIClientBase
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
