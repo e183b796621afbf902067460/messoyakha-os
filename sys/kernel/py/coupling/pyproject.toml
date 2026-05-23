@@ -5,7 +5,7 @@ description = "..."
 requires-python = ">=3.10,<4.0"
 
 [project.urls]
-cohesion-and-coupling-the-difference = "https://habr.com/ru/articles/568216/"
+habr-cohesion-and-coupling-the-difference = "https://habr.com/ru/articles/568216/"
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]

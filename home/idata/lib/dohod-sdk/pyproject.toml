@@ -16,6 +16,9 @@ vcs = "git"
 style = "pep440"
 bump = true
 
+[tool.uv]
+package = true
+
 [tool.uv.sources]
 messoyakha-coupling-py = { workspace = true }
 
@@ -25,9 +28,6 @@ dependencies = [
     "httpx[http2]>=0.28.1,<0.29",
     "messoyakha-coupling-py=={{ version }}",
 ]
-
-[tool.uv]
-package = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["messoyakha_dohod_sdk"]

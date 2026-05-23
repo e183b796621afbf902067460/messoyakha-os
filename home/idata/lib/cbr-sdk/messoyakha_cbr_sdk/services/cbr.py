@@ -18,9 +18,7 @@ class CBRService:
         )
         key_rates = key_rates.select([col("DT").alias("timestamp"), col("Rate").alias("key_rate")])
         return (
-            key_rates.with_columns(
-                col("timestamp").str.to_datetime().dt.replace_time_zone("UTC"), col("key_rate") / 100
-            )
+            key_rates.with_columns(col("timestamp").str.to_datetime(time_zone="UTC"), col("key_rate") / 100)
             .unique()
             .sort(by=col("timestamp"))
         )

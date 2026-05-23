@@ -22,6 +22,9 @@ bump = true
 [tool.uv]
 package = true
 
+[tool.uv.sources]
+messoyakha-coupling-py = { workspace = true }
+
 [tool.hatch.metadata.hooks.uv-dynamic-versioning]
 dependencies = [
     "crawlee[beautifulsoup,playwright]>=1.6.3",

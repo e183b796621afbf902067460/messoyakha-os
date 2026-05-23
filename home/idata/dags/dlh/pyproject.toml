@@ -5,7 +5,7 @@ description = "..."
 requires-python = ">=3.10,<4.0"
 
 [project.urls]
-data-on-ice = "https://habr.com/ru/companies/selectel/articles/875472/"
+habr-data-on-ice = "https://habr.com/ru/companies/selectel/articles/875472/"
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
@@ -21,6 +21,28 @@ bump = true
 
 [tool.uv]
 package = true
+
+[tool.uv.sources]
+messoyakha-cbr-sdk-py = { workspace = true }
+messoyakha-dohod-sdk-py = { workspace = true }
+messoyakha-fedstat-sdk-py = { workspace = true }
+messoyakha-smart-lab-sdk-py = { workspace = true }
+
+[tool.hatch.metadata.hooks.uv-dynamic-versioning]
+dependencies = [
+    "dagster>=1.13.3",
+    "dagster-pandera>=0.29.3",
+    "that-depends>=3.9.2",
+
+    "pyiceberg>=0.11.1",
+    "pyiceberg-core>0.8.0",
+    "fastparquet>=2026.3.0",
+
+    "messoyakha-cbr-sdk-py=={{ version }}",
+    "messoyakha-dohod-sdk-py=={{ version }}",
+    "messoyakha-fedstat-sdk-py=={{ version }}",
+    "messoyakha-smart-lab-sdk-py=={{ version }}",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["messoyakha_dlh"]

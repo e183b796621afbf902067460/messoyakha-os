@@ -6,7 +6,7 @@ from duckdb import DuckDBPyConnection
 from polars import DataFrame
 
 
-@define(slots=True, auto_attribs=True, kw_only=True)
+@define(slots=False, auto_attribs=True, kw_only=True)
 class DuckDBIcebergS3RepositoryBase(ABC):
     _connection: DuckDBPyConnection
 

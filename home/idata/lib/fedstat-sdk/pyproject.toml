@@ -7,6 +7,7 @@ requires-python = ">=3.10,<4.0"
 [project.urls]
 fedstat-cpi = "https://fedstat.ru/indicator/33568"
 fedstat-m2x = "https://fedstat.ru/indicator/59853"
+fedstat-gdp-ppp = "https://fedstat.ru/indicator/40578"
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
@@ -22,6 +23,9 @@ bump = true
 
 [tool.uv]
 package = true
+
+[tool.uv.sources]
+messoyakha-coupling-py = { workspace = true }
 
 [tool.hatch.metadata.hooks.uv-dynamic-versioning]
 dependencies = [

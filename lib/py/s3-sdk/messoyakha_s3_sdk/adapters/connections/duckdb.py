@@ -4,7 +4,7 @@ from duckdb import (
 )
 
 
-def connect(access_key: str, secret_key: str, endpoint: str, region: str) -> DuckDBPyConnection:
+async def connect(access_key: str, secret_key: str, endpoint: str, region: str) -> DuckDBPyConnection:
     connection: DuckDBPyConnection = duckdb_connect(database=":memory")
 
     connection.execute(query="INSTALL httpfs; LOAD httpfs;")
