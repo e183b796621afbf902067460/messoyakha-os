@@ -16,7 +16,7 @@ def route(endpoint: str) -> Callable[[Callable], Callable]:
         @wraps(func)
         async def wrapper(self, *args, endpoint=endpoint, **kwargs):  # type: ignore[method-assign]  # noqa: ANN001, ANN202
             for value in kwargs.values():
-                if isinstance(value, _HTTPEndpointProtocol) and issubclass(value, BaseModel):
+                if isinstance(value, _HTTPEndpointProtocol) and isinstance(value, BaseModel):
                     endpoint: str = endpoint.format(**value.model_dump(by_alias=True))
                     break
             return await func(self, *args, endpoint=endpoint, **kwargs)

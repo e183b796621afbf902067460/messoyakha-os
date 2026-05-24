@@ -43,7 +43,7 @@ def cbr_key_rates() -> None:
 
 
 class Container(BaseContainer):
-    alias: str = "CBRKeyRatesContainer"
+    alias: str | None = "CBRKeyRatesContainer"
 
     settings: Factory[CBRKeyRatesDLHSettings] = Factory(CBRKeyRatesDLHSettings)
     job: Singleton[JobDefinition] = Singleton(
@@ -52,11 +52,11 @@ class Container(BaseContainer):
         resource_defs=Dict(  # type: ignore[bad-argument-type]
             services=Dict(
                 cbr_sdk_service=Factory(CBRService),
-                cbr_dlh_service=Factory(
-                    CBRKeyRatesDLHService,
-                    repository=Factory(
+                cbr_dlh_service=Factory(  # type: ignore[missing-argument]
+                    CBRKeyRatesDLHService,  # type: ignore[bad-argument-type]
+                    repository=Factory(  # type: ignore[missing-argument, unexpected-keyword]
                         CBRKeyRatesS3Repository,
-                        connection=Factory(
+                        connection=Factory(  # type: ignore[unexpected-keyword]
                             connect,
                             access_key=settings.ACCESS_KEY,
                             secret_key=settings.SECRET_KEY,
@@ -68,5 +68,5 @@ class Container(BaseContainer):
             ),
             settings=settings,  # type: ignore[bad-argument-type]
         ),
-        tags=Dict(source=settings.NAMESPACE),
+        tags=Dict(source=settings.NAMESPACE),  # type: ignore[bad-argument-type]
     )

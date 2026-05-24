@@ -32,7 +32,7 @@ class SmartLabNetIncomeOutputSchema(BaseModel):
         cls, net_income: dict[str, str | None], handler: ModelWrapValidatorHandler[Self], info: ValidationInfo
     ) -> Self:
         data: dict = {
-            "ticker": info.context["ticker"],
+            "ticker": info.context["ticker"],  # type: ignore[unsupported-operation]
             "net_income": net_income["net_income"],
             "timestamp": net_income["timestamp"],
         }

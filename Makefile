@@ -4,6 +4,7 @@
 .DEFAULT_GOAL := all
 
 export UV_PROJECT_ENVIRONMENT := .venv
+export VIRTUAL_ENV := .venv
 
 .PHONY: .python
 .python:

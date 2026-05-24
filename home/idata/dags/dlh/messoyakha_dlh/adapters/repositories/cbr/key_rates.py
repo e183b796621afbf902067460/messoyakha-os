@@ -18,7 +18,7 @@ class CBRKeyRatesS3Repository(DuckDBIcebergS3RepositoryBase):
 
     def _v1(self, catalog: Catalog, namespace: str) -> None:
         catalog.create_namespace_if_not_exists(namespace=(namespace, self._namespace))
-        if catalog.namespace_exists(identifier=(namespace, self._namespace)):
+        if catalog.namespace_exists(namespace=(namespace, self._namespace)):
             catalog.create_table_if_not_exists(
                 identifier=(namespace, self._namespace, self._table),
                 schema=Schema(
@@ -27,8 +27,11 @@ class CBRKeyRatesS3Repository(DuckDBIcebergS3RepositoryBase):
                 ),
                 partition_spec=PartitionSpec(
                     PartitionField(
-                        source_id=2, field_id=1000, transform=DayTransform(), name="_partition_by_timestamp"
-                    ),  # type: ignore[missing-argument]
+                        source_id=2,
+                        field_id=1000,
+                        transform=DayTransform(),  # type: ignore[missing-argument]
+                        name="_partition_by_timestamp",
+                    ),
                 ),
             )
 
@@ -50,5 +53,5 @@ class CBRKeyRatesS3Repository(DuckDBIcebergS3RepositoryBase):
                 FROM
                     iceberg_scan('{uri}/{namespace}/{self._namespace}/{self._table}')
             """
-            return self._connection.execute(query=query)
+            return self._query(query=query)
         return catch_up_date

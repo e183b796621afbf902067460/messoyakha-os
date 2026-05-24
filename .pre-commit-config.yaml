@@ -12,18 +12,18 @@ repos:
     hooks:
       - id: ruff-format
         name: ruff-format
-        language: python
+        language: system
         types: [ python ]
         entry: uv run ruff format
       - id: ruff-check
         name: ruff-isort
-        language: python
+        language: system
         types: [ python ]
         entry: uv run ruff check --select I
         args: [--exit-non-zero-on-fix]
       - id: ruff-check
         name: ruff-lint
-        language: python
+        language: system
         types: [ python ]
         entry: uv run ruff check --ignore I --unsafe-fixes
         args: [--exit-non-zero-on-fix]
@@ -33,6 +33,6 @@ repos:
     hooks:
       - id: pyrefly-check
         name: pyrefly-check
-        language: python
+        language: system
         entry: uv run pyrefly check
         pass_filenames: false
