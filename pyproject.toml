@@ -12,6 +12,7 @@ dependencies = [
     "pyarrow>=24.0.0",
     "loguru>=0.7.3,<0.8",
     "tqdm>=4.67.3",
+    "pre-commit>=4.6.0",
     "ruff==0.14.8",
     "pyrefly==0.52.0",
 ]

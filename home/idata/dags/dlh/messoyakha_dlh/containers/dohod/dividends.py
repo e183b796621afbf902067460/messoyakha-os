@@ -77,7 +77,7 @@ class Container(BaseContainer):
                             connect,
                             access_key=settings.ACCESS_KEY,
                             secret_key=settings.SECRET_KEY,
-                            endpoint=settings.ENDPOINT.encoded_string(),
+                            endpoint=settings.ENDPOINT,
                             region=settings.REGION,
                         ),
                     ),

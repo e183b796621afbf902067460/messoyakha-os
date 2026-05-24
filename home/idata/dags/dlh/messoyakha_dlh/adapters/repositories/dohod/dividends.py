@@ -15,7 +15,7 @@ class DohodDividendsS3Repository(DuckDBIcebergS3RepositoryBase):
 
     def _v1(self, catalog: Catalog, namespace: str) -> None:
         catalog.create_namespace_if_not_exists(namespace=(namespace, self._namespace))
-        if catalog.namespace_exists(namespace=(namespace, self._namespace)):
+        if catalog.namespace_exists(identifier=(namespace, self._namespace)):  # type: ignore[unexpected-keyword, missing-argument]
             catalog.create_table_if_not_exists(
                 identifier=(namespace, self._namespace, self._table),
                 schema=Schema(

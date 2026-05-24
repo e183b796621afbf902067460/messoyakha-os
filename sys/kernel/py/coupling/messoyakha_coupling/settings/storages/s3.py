@@ -37,8 +37,8 @@ class IcebergSettingsBase(S3SettingsBase):
             **{
                 "type": self.SQL_TYPE_PROPERTY,
                 "warehouse": f"{self.uri}/",
-                "uri": self.SQL_URI_PROPERTY.encoded_string(),
-                "s3.endpoint": self.ENDPOINT.encoded_string(),
+                "uri": self.SQL_URI_PROPERTY.unicode_string(),
+                "s3.endpoint": self.ENDPOINT.unicode_string(),
                 "s3.access-key-id": self.ACCESS_KEY,
                 "s3.secret-access-key": self.SECRET_KEY,
             },

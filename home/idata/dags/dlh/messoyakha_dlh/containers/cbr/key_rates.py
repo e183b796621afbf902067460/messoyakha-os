@@ -1,6 +1,8 @@
+from datetime import datetime
+
 from dagster import In, JobDefinition, Nothing, OpExecutionContext, graph, op
 from loguru import logger
-from polars import DataFrame
+from polars import DataFrame, col
 from that_depends import BaseContainer
 from that_depends.providers import Dict, Factory, Singleton
 
@@ -19,13 +21,21 @@ def migrate_key_rates(context: OpExecutionContext) -> None:
         context.resources.services["cbr_dlh_service"].migrate_key_rates()
 
 
-@op(ins={"is_migrated": In(Nothing)}, required_resource_keys={"services", "settings"})
-def get_key_rates(context: OpExecutionContext) -> DataFrame:
+@op(ins={"is_migrated": In(Nothing)}, required_resource_keys={"services"})
+def query_latest_timestamp(context: OpExecutionContext) -> datetime:
+    latest_timestamp: datetime = context.resources.services["cbr_dlh_service"].query_latest_timestamp()
+    logger.info(f"Latest CBR key rates timestamp is {latest_timestamp}.")
+    return latest_timestamp
+
+
+@op(required_resource_keys={"services", "settings"})
+def get_key_rates(context: OpExecutionContext, latest_timestamp: datetime) -> DataFrame:
     key_rates: DataFrame = context.resources.services["cbr_sdk_service"].get_key_rates(
         parameters_schema=CBRKeyRateParametersSchema(
-            start_time=context.resources.settings.CATCH_UP_DATE, end_time=context.resources.settings.TRIGGER_DATE
+            start_time=latest_timestamp, end_time=context.resources.settings.TRIGGER_DATE
         )
     )
+    key_rates = key_rates.filter(col("timestamp") > latest_timestamp)
     logger.info(f"Got key rates, shape is {key_rates.shape}.")
     return key_rates
 
@@ -39,7 +49,7 @@ def load_key_rates(context: OpExecutionContext, key_rates: DataFrame) -> None:
 
 @graph
 def cbr_key_rates() -> None:
-    load_key_rates(key_rates=get_key_rates(is_migrated=migrate_key_rates()))
+    load_key_rates(key_rates=get_key_rates(latest_timestamp=query_latest_timestamp(is_migrated=migrate_key_rates())))
 
 
 class Container(BaseContainer):
@@ -60,7 +70,7 @@ class Container(BaseContainer):
                             connect,
                             access_key=settings.ACCESS_KEY,
                             secret_key=settings.SECRET_KEY,
-                            endpoint=settings.ENDPOINT.encoded_string(),
+                            endpoint=settings.ENDPOINT,
                             region=settings.REGION,
                         ),
                     ),

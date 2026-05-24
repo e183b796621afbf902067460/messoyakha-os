@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from attr import define, field
 from polars import DataFrame
@@ -18,7 +18,7 @@ class CBRKeyRatesS3Repository(DuckDBIcebergS3RepositoryBase):
 
     def _v1(self, catalog: Catalog, namespace: str) -> None:
         catalog.create_namespace_if_not_exists(namespace=(namespace, self._namespace))
-        if catalog.namespace_exists(namespace=(namespace, self._namespace)):
+        if catalog.namespace_exists(identifier=(namespace, self._namespace)):  # type: ignore[unexpected-keyword, missing-argument]
             catalog.create_table_if_not_exists(
                 identifier=(namespace, self._namespace, self._table),
                 schema=Schema(
@@ -47,11 +47,12 @@ class CBRKeyRatesS3Repository(DuckDBIcebergS3RepositoryBase):
 
     def query_latest_timestamp(self, uri: str, catalog: Catalog, namespace: str, catch_up_date: datetime) -> datetime:
         if catalog.table_exists(identifier=(namespace, self._namespace, self._table)):
+            path: str = f"{uri}/{namespace}.{self._namespace}/{self._table}"
             query: str = f"""
                 SELECT
                     MAX(timestamp)
                 FROM
-                    iceberg_scan('{uri}/{namespace}/{self._namespace}/{self._table}')
+                    iceberg_scan({path!r})
             """
-            return self._query(query=query)
+            return self._query_one(query=query)[0].replace(tzinfo=timezone.utc)
         return catch_up_date
