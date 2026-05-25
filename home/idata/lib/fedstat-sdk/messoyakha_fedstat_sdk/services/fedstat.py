@@ -12,7 +12,7 @@ from pandas import (
 from polars import (
     DataFrame as PlDf,
     col,
-    date as pl_date,
+    datetime as pl_datetime,
     from_pandas,
 )
 from pydantic import BaseModel
@@ -99,10 +99,12 @@ class FedstatService:
         )
         inflation_rate: PlDf = from_pandas(_parse_fedstat_excel_to_dataframe(fedstat_excel=fedstat_excel))
         return (
-            inflation_rate.filter(
-                pl_date(col("year"), col("month"), 1).is_between(input_schema.start_date, input_schema.end_date)
+            inflation_rate.with_columns(
+                (col("inflation_rate") - 100) / 100,
+                pl_datetime(col("year"), col("month"), 1, time_zone="UTC").alias("timestamp"),
             )
-            .with_columns((col("inflation_rate") - 100) / 100)
+            .filter(col("timestamp").is_between(input_schema.start_date, input_schema.end_date))
+            .drop("year", "month")
             .unique()
-            .sort(by=[col("year"), col("month")])
+            .sort(by=col("timestamp"))
         )

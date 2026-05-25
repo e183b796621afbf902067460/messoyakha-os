@@ -14,7 +14,7 @@ from messoyakha_fedstat_sdk.schemas.inflation_rate import (
 class FedstatAPIClient(HTTPAPIClientBase):
     _session: AsyncClient = field(
         init=False,
-        factory=partial(AsyncClient, base_url="https://www.fedstat.ru/indicator/data.do", timeout=10, http2=True),
+        factory=partial(AsyncClient, base_url="https://www.fedstat.ru/indicator/data.do", timeout=60, http2=True),
     )
 
     async def inflation_rate(

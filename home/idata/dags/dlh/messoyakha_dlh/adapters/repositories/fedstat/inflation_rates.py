@@ -12,9 +12,9 @@ from messoyakha_coupling.adapters.repositories.s3 import DuckDBIcebergS3Reposito
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
-class CBRKeyRatesS3Repository(DuckDBIcebergS3RepositoryBase):
-    _namespace: str = field(init=False, default="cbr")
-    _table: str = field(init=False, default="key-rates")
+class FedstatInflationRatesS3Repository(DuckDBIcebergS3RepositoryBase):
+    _namespace: str = field(init=False, default="fedstat")
+    _table: str = field(init=False, default="inflation-rates")
 
     def _v1(self, catalog: Catalog, namespace: str) -> None:
         catalog.create_namespace_if_not_exists(namespace=(namespace, self._namespace))
@@ -22,7 +22,7 @@ class CBRKeyRatesS3Repository(DuckDBIcebergS3RepositoryBase):
             catalog.create_table_if_not_exists(
                 identifier=(namespace, self._namespace, self._table),
                 schema=Schema(
-                    NestedField(field_id=1, name="key_rate", field_type=DoubleType()),  # type: ignore[missing-argument]
+                    NestedField(field_id=1, name="inflation_rate", field_type=DoubleType()),  # type: ignore[missing-argument]
                     NestedField(field_id=2, name="timestamp", field_type=TimestamptzType()),  # type: ignore[missing-argument]
                 ),
                 partition_spec=PartitionSpec(
@@ -35,12 +35,12 @@ class CBRKeyRatesS3Repository(DuckDBIcebergS3RepositoryBase):
                 ),
             )
 
-    def migrate_key_rates(self, catalog: Catalog, namespace: str) -> None:
+    def migrate_inflation_rates(self, catalog: Catalog, namespace: str) -> None:
         self._v1(namespace=namespace, catalog=catalog)
 
-    def load_key_rates(self, key_rates: DataFrame, catalog: Catalog, namespace: str) -> None:
+    def load_inflation_rates(self, inflation_rates: DataFrame, catalog: Catalog, namespace: str) -> None:
         if catalog.table_exists(identifier=(namespace, self._namespace, self._table)):
-            key_rates.write_iceberg(
+            inflation_rates.write_iceberg(
                 target=catalog.load_table(identifier=(namespace, self._namespace, self._table)),
                 mode="append",
             )
