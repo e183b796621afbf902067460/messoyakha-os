@@ -57,7 +57,7 @@ class _FinamService:
             if next_start_time > input_schema.end_time:
                 break
             input_schema.start_time = next_start_time
-            await sleep(0.5)
+            await sleep(1)
         return DataFrame([bar.model_dump() for bar in bars]).unique().sort(by=col("timestamp"))
 
 

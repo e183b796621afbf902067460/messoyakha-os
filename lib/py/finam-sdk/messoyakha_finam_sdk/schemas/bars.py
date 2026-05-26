@@ -102,8 +102,6 @@ class _FinamBarsInputSchema(BaseModel):
     start_time: datetime
     end_time: datetime
 
-    limit: timedelta = Field(init=False, default=timedelta(days=30))
-
     @property
     def delta(self) -> timedelta:
         return self.end_time - self.start_time
@@ -116,6 +114,16 @@ class _FinamBarsInputSchema(BaseModel):
             return timedelta(hours=4).total_seconds()
         if self.interval == FinamIntervalEnum.ONE_DAY:
             return timedelta(days=1).total_seconds()
+        raise ValueError("Inappropriate interval set (pep-api).")
+
+    @property
+    def limit(self) -> timedelta:
+        if self.interval == FinamIntervalEnum.ONE_HOUR:
+            return timedelta(days=30)
+        if self.interval == FinamIntervalEnum.FOUR_HOURS:
+            return timedelta(days=30)
+        if self.interval == FinamIntervalEnum.ONE_DAY:
+            return timedelta(days=365)
         raise ValueError("Inappropriate interval set (pep-api).")
 
     @field_validator("start_time", mode="after")
