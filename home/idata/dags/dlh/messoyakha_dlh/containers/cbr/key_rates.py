@@ -8,7 +8,7 @@ from that_depends.providers import Dict, Factory, Singleton
 
 from messoyakha_cbr_sdk.schemas.key_rate import CBRKeyRateParametersSchema
 from messoyakha_cbr_sdk.services.cbr import CBRService
-from messoyakha_s3_sdk.adapters.connections.duckdb import connect
+from messoyakha_s3_sdk.adapters.connections.polars import options
 
 from messoyakha_dlh.adapters.repositories.cbr.key_rates import CBRKeyRatesS3Repository
 from messoyakha_dlh.services.cbr.key_rates import CBRKeyRatesDLHService, CBRKeyRatesDLHSettings
@@ -66,8 +66,8 @@ class Container(BaseContainer):
                     CBRKeyRatesDLHService,  # type: ignore[bad-argument-type]
                     repository=Factory(  # type: ignore[missing-argument, unexpected-keyword]
                         CBRKeyRatesS3Repository,
-                        connection=Factory(  # type: ignore[unexpected-keyword]
-                            connect,
+                        options=Factory(  # type: ignore[unexpected-keyword]
+                            options,
                             access_key=settings.ACCESS_KEY,
                             secret_key=settings.SECRET_KEY,
                             endpoint=settings.ENDPOINT,

@@ -21,7 +21,7 @@ from messoyakha_finam_sdk.enums.intervals import FinamIntervalEnum
 from messoyakha_finam_sdk.enums.markets import FinamMarketEnum
 from messoyakha_finam_sdk.schemas.bars import FinamBarsInputSchema
 from messoyakha_finam_sdk.services.finam import FinamMISXService
-from messoyakha_s3_sdk.adapters.connections.duckdb import connect
+from messoyakha_s3_sdk.adapters.connections.polars import options
 
 from messoyakha_dlh.adapters.repositories.finam.ohlcv import FinamOHLCVS3Repository
 from messoyakha_dlh.services.finam.ohlcv import FinamOHLCVDLHService, FinamOHLCVDLHSettings
@@ -105,8 +105,8 @@ class Container(BaseContainer):
                     FinamOHLCVDLHService,  # type: ignore[bad-argument-type]
                     repository=Factory(  # type: ignore[missing-argument, unexpected-keyword]
                         FinamOHLCVS3Repository,
-                        connection=Factory(  # type: ignore[unexpected-keyword]
-                            connect,
+                        options=Factory(  # type: ignore[unexpected-keyword]
+                            options,
                             access_key=settings.ACCESS_KEY,
                             secret_key=settings.SECRET_KEY,
                             endpoint=settings.ENDPOINT,

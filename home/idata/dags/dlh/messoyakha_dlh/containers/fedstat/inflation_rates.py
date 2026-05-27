@@ -8,7 +8,7 @@ from that_depends.providers import Dict, Factory, Singleton
 
 from messoyakha_fedstat_sdk.schemas.inflation_rate import FedstatInflationRateInputSchema
 from messoyakha_fedstat_sdk.services.fedstat import FedstatService
-from messoyakha_s3_sdk.adapters.connections.duckdb import connect
+from messoyakha_s3_sdk.adapters.connections.polars import options
 
 from messoyakha_dlh.adapters.repositories.fedstat.inflation_rates import FedstatInflationRatesS3Repository
 from messoyakha_dlh.services.fedstat.inflation_rates import (
@@ -73,8 +73,8 @@ class Container(BaseContainer):
                     FedstatInflationRatesDLHService,  # type: ignore[bad-argument-type]
                     repository=Factory(  # type: ignore[missing-argument, unexpected-keyword]
                         FedstatInflationRatesS3Repository,
-                        connection=Factory(  # type: ignore[unexpected-keyword]
-                            connect,
+                        options=Factory(  # type: ignore[unexpected-keyword]
+                            options,
                             access_key=settings.ACCESS_KEY,
                             secret_key=settings.SECRET_KEY,
                             endpoint=settings.ENDPOINT,

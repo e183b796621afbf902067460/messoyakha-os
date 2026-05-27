@@ -18,7 +18,7 @@ from that_depends.providers import Dict, Factory, Singleton
 
 from messoyakha_dohod_sdk.schemas.dividends import DohodDividendsInputSchema
 from messoyakha_dohod_sdk.services.dohod import DohodService
-from messoyakha_s3_sdk.adapters.connections.duckdb import connect
+from messoyakha_s3_sdk.adapters.connections.polars import options
 
 from messoyakha_dlh.adapters.repositories.dohod.dividends import DohodDividendsS3Repository
 from messoyakha_dlh.services.dohod.dividends import DohodDividendsDLHService, DohodDividendsDLHSettings
@@ -73,8 +73,8 @@ class Container(BaseContainer):
                     DohodDividendsDLHService,  # type: ignore[bad-argument-type]
                     repository=Factory(  # type: ignore[missing-argument, unexpected-keyword]
                         DohodDividendsS3Repository,
-                        connection=Factory(  # type: ignore[unexpected-keyword]
-                            connect,
+                        options=Factory(  # type: ignore[unexpected-keyword]
+                            options,
                             access_key=settings.ACCESS_KEY,
                             secret_key=settings.SECRET_KEY,
                             endpoint=settings.ENDPOINT,

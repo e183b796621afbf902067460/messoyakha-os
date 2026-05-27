@@ -1,17 +1,17 @@
 from datetime import datetime, timezone
 
 from attr import define, field
-from polars import DataFrame
+from polars import DataFrame, scan_iceberg
 from pyiceberg.catalog import Catalog
 from pyiceberg.partitioning import DayTransform, IdentityTransform, PartitionField, PartitionSpec
 from pyiceberg.schema import NestedField, Schema
 from pyiceberg.types import DoubleType, StringType, TimestamptzType
 
-from messoyakha_coupling.adapters.repositories.s3 import DuckDBIcebergS3RepositoryBase
+from messoyakha_coupling.adapters.repositories.s3 import PolarsIcebergS3RepositoryBase
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
-class FinamOHLCVS3Repository(DuckDBIcebergS3RepositoryBase):
+class FinamOHLCVS3Repository(PolarsIcebergS3RepositoryBase):
     _namespace: str = field(init=False, default="finam")
     _table: str = field(init=False, default="ohlcv")
 
@@ -62,7 +62,6 @@ class FinamOHLCVS3Repository(DuckDBIcebergS3RepositoryBase):
 
     def query_latest_timestamp(
         self,
-        uri: str,
         catalog: Catalog,
         namespace: str,
         ticker: str,
@@ -70,18 +69,23 @@ class FinamOHLCVS3Repository(DuckDBIcebergS3RepositoryBase):
         interval: str,
         catch_up_date: datetime,
     ) -> datetime:
-        if catalog.table_exists(identifier=(namespace, self._namespace, self._table)):
-            path: str = f"{uri}/{namespace}.{self._namespace}/{self._table}"
-            query: str = f"""
-                SELECT
-                    MAX(timestamp)
-                FROM
-                    iceberg_scan({path!r})
-                WHERE
-                    ticker = ?
-                    AND market = ?
-                    AND interval = ?
-            """
-            latest_timestamp: datetime | None = self._query_one(query=query, parameters=[ticker, market, interval])[0]
-            return latest_timestamp.replace(tzinfo=timezone.utc) if latest_timestamp else catch_up_date
-        return catch_up_date
+        self._context.register(
+            name="ohlcv",
+            frame=scan_iceberg(
+                source=catalog.load_table(identifier=(namespace, self._namespace, self._table)),
+                storage_options=self._options,
+            ),
+        )
+        query: str = f"""
+            SELECT
+                COALESCE(MAX(timestamp), {str(catch_up_date)!r})
+            FROM
+                ohlcv
+            WHERE
+                ticker = {ticker!r}
+                AND market = {market!r}
+                AND `interval` = {interval!r}
+        """
+        query_result: str = self._query(query=query).collect().item(row=0, column="timestamp")
+        latest_timestamp: datetime = datetime.fromisoformat(query_result).replace(tzinfo=timezone.utc)
+        return latest_timestamp

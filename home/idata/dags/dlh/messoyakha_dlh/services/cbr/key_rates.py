@@ -31,7 +31,6 @@ class CBRKeyRatesDLHService:
         self, settings: CBRKeyRatesDLHSettings = Provide["CBRKeyRatesContainer.settings"]
     ) -> datetime:
         return self._repository.query_latest_timestamp(
-            uri=settings.uri,
             catalog=settings.catalog,
             namespace=settings.NAMESPACE,
             catch_up_date=settings.CATCH_UP_DATE,

@@ -1,18 +1,18 @@
 from datetime import datetime, timezone
 
 from attr import define, field
-from polars import DataFrame
+from polars import DataFrame, scan_iceberg
 from pyiceberg.catalog import Catalog
 from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import NestedField, Schema
 from pyiceberg.transforms import DayTransform
 from pyiceberg.types import DoubleType, TimestamptzType
 
-from messoyakha_coupling.adapters.repositories.s3 import DuckDBIcebergS3RepositoryBase
+from messoyakha_coupling.adapters.repositories.s3 import PolarsIcebergS3RepositoryBase
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
-class FedstatInflationRatesS3Repository(DuckDBIcebergS3RepositoryBase):
+class FedstatInflationRatesS3Repository(PolarsIcebergS3RepositoryBase):
     _namespace: str = field(init=False, default="fedstat")
     _table: str = field(init=False, default="inflation-rates")
 
@@ -45,15 +45,20 @@ class FedstatInflationRatesS3Repository(DuckDBIcebergS3RepositoryBase):
                 mode="append",
             )
 
-    def query_latest_timestamp(self, uri: str, catalog: Catalog, namespace: str, catch_up_date: datetime) -> datetime:
-        if catalog.table_exists(identifier=(namespace, self._namespace, self._table)):
-            path: str = f"{uri}/{namespace}.{self._namespace}/{self._table}"
-            query: str = f"""
-                SELECT
-                    MAX(timestamp)
-                FROM
-                    iceberg_scan({path!r})
-            """
-            latest_timestamp: datetime | None = self._query_one(query=query)[0]
-            return latest_timestamp.replace(tzinfo=timezone.utc) if latest_timestamp else catch_up_date
-        return catch_up_date
+    def query_latest_timestamp(self, catalog: Catalog, namespace: str, catch_up_date: datetime) -> datetime:
+        self._context.register(
+            name="inflation-rates",
+            frame=scan_iceberg(
+                source=catalog.load_table(identifier=(namespace, self._namespace, self._table)),
+                storage_options=self._options,
+            ),
+        )
+        query: str = f"""
+            SELECT
+                COALESCE(MAX(timestamp), {str(catch_up_date)!r})
+            FROM
+                inflation-rates
+        """
+        query_result: str = self._query(query=query).collect().item(row=0, column="timestamp")
+        latest_timestamp: datetime = datetime.fromisoformat(query_result).replace(tzinfo=timezone.utc)
+        return latest_timestamp
