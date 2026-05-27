@@ -47,7 +47,7 @@ class FedstatInflationRatesS3Repository(PolarsIcebergS3RepositoryBase):
 
     def query_latest_timestamp(self, catalog: Catalog, namespace: str, catch_up_date: datetime) -> datetime:
         self._context.register(
-            name="inflation-rates",
+            name="inflation_rates",
             frame=scan_iceberg(
                 source=catalog.load_table(identifier=(namespace, self._namespace, self._table)),
                 storage_options=self._options,
@@ -57,7 +57,7 @@ class FedstatInflationRatesS3Repository(PolarsIcebergS3RepositoryBase):
             SELECT
                 COALESCE(MAX(timestamp), {str(catch_up_date)!r})
             FROM
-                inflation-rates
+                inflation_rates
         """
         query_result: str = self._query(query=query).collect().item(row=0, column="timestamp")
         latest_timestamp: datetime = datetime.fromisoformat(query_result).replace(tzinfo=timezone.utc)
