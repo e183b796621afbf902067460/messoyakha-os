@@ -42,10 +42,14 @@ messoyakha-smart-lab-sdk-py = { workspace = true }
 messoyakha-dlh-py = { workspace = true }
 messoyakha-dwh-py = { workspace = true }
 
+# home/iquant/ad-hocs/*
+messoyakha-test-strategy-py = { workspace = true }
+
 [tool.uv.workspace]
 members = [
     "home/idata/dags/*",
     "home/idata/lib/*",
+    "home/iquant/ad-hocs/*",
 
     "lib/py/*",
 
@@ -131,7 +135,7 @@ section-order = ["future", "standard-library", "third-party", "workspace", "firs
 
 # https://docs.astral.sh/ruff/settings/#lint_isort_sections
 sections = { "workspace" = ["messoyakha_coupling", "messoyakha_binance_sdk", "messoyakha_finam_sdk", "messoyakha_s3_sdk", "messoyakha_cbr_sdk", "messoyakha_dohod_sdk", "messoyakha_fedstat_sdk", "messoyakha_smart_lab_sdk"] }
-known-first-party = ["messoyakha_dlh", "messoyakha_dwh"]
+known-first-party = ["messoyakha_dlh", "messoyakha_dwh", "messoyakha_test_strategy"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
@@ -166,5 +170,7 @@ search-path = [
     "home/idata/lib/smart-lab-sdk",
 
     "home/idata/dags/dlh",
-    "home/idata/dags/dwh"
+    "home/idata/dags/dwh",
+
+    "home/iquant/ad-hocs/test-strategy"
 ]

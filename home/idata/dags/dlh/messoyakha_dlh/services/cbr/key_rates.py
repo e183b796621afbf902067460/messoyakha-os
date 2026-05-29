@@ -9,7 +9,7 @@ from messoyakha_dlh.settings import DLHSettings
 
 
 class CBRKeyRatesDLHSettings(DLHSettings):
-    CATCH_UP_DATE: datetime = datetime(year=2022, month=1, day=1, tzinfo=timezone.utc)
+    CATCH_UP_DATE: datetime = datetime(year=2013, month=1, day=1, tzinfo=timezone.utc)
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)

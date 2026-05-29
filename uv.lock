@@ -30,6 +30,7 @@ members = [
     "messoyakha-os",
     "messoyakha-s3-sdk-py",
     "messoyakha-smart-lab-sdk-py",
+    "messoyakha-test-strategy-py",
 ]
 
 [[package]]
@@ -1441,6 +1442,32 @@ requires-dist = [
     { name = "crawlee", extras = ["beautifulsoup", "playwright"], specifier = ">=1.6.3" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.28.1,<0.29" },
     { name = "messoyakha-coupling-py", editable = "sys/kernel/py/coupling" },
+]
+
+[[package]]
+name = "messoyakha-test-strategy-py"
+source = { editable = "home/iquant/ad-hocs/test-strategy" }
+dependencies = [
+    { name = "dagster" },
+    { name = "dagster-pandera" },
+    { name = "fastparquet" },
+    { name = "messoyakha-coupling-py" },
+    { name = "messoyakha-s3-sdk-py" },
+    { name = "pyiceberg" },
+    { name = "pyiceberg-core" },
+    { name = "that-depends" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "dagster", specifier = ">=1.13.3" },
+    { name = "dagster-pandera", specifier = ">=0.29.3" },
+    { name = "fastparquet", specifier = ">=2026.3.0" },
+    { name = "messoyakha-coupling-py", editable = "sys/kernel/py/coupling" },
+    { name = "messoyakha-s3-sdk-py", editable = "lib/py/s3-sdk" },
+    { name = "pyiceberg", specifier = ">=0.11.1" },
+    { name = "pyiceberg-core", specifier = ">0.8.0" },
+    { name = "that-depends", specifier = ">=3.9.2" },
 ]
 
 [[package]]
