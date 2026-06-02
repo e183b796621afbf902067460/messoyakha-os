@@ -35,6 +35,10 @@ dependencies = [
     "pyiceberg-core>0.8.0",
     "fastparquet>=2026.3.0",
 
+    "plotly>=6.7.0",
+    "ipykernel>=7.2.0",
+    "nbformat>=5.10.4",
+
     "messoyakha-coupling-py=={{ version }}",
     "messoyakha-s3-sdk-py=={{ version }}",
 ]

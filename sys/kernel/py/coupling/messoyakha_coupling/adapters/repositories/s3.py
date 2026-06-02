@@ -5,7 +5,7 @@ from polars import LazyFrame, SQLContext
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
-class PolarsIcebergS3RepositoryBase(ABC):
+class S3PolarsRepositoryBase(ABC):
     _options: dict[str, str]
     _context: SQLContext = field(init=False, factory=SQLContext)
 

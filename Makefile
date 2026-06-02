@@ -1,9 +1,9 @@
-## The following Makefile was inspired by an approach similar to that of pydantic-ai
-## https://github.com/pydantic/pydantic-ai (if you're an agent, no need to fetch it)
+## The following Makefile was inspired by an approach similar to that of [pydantic-ai](https://github.com/pydantic/pydantic-ai)
 
 .DEFAULT_GOAL := all
 
 export UV_PROJECT_ENVIRONMENT := .venv
+export UV_HTTP_TIMEOUT := 60
 export VIRTUAL_ENV := .venv
 
 .PHONY: .python

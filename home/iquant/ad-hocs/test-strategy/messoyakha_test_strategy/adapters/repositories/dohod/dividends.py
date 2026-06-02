@@ -2,11 +2,11 @@ from attr import define, field
 from polars import DataFrame, scan_iceberg
 from pyiceberg.catalog import Catalog
 
-from messoyakha_coupling.adapters.repositories.s3 import PolarsIcebergS3RepositoryBase
+from messoyakha_coupling.adapters.repositories.s3 import S3PolarsRepositoryBase
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
-class DohodDividendsS3Repository(PolarsIcebergS3RepositoryBase):
+class DohodDividendsS3Repository(S3PolarsRepositoryBase):
     _namespace: str = field(init=False, default="dohod")
     _table: str = field(init=False, default="dividends")
 

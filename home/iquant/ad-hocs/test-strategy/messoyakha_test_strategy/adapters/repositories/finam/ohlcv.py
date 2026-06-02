@@ -2,11 +2,11 @@ from attr import define, field
 from polars import DataFrame, scan_iceberg
 from pyiceberg.catalog import Catalog
 
-from messoyakha_coupling.adapters.repositories.s3 import PolarsIcebergS3RepositoryBase
+from messoyakha_coupling.adapters.repositories.s3 import S3PolarsRepositoryBase
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
-class FinamOHLCVS3Repository(PolarsIcebergS3RepositoryBase):
+class FinamOHLCVS3Repository(S3PolarsRepositoryBase):
     _namespace: str = field(init=False, default="finam")
     _table: str = field(init=False, default="ohlcv")
 

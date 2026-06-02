@@ -5,11 +5,11 @@ from pyiceberg.partitioning import DayTransform, IdentityTransform, PartitionFie
 from pyiceberg.schema import NestedField, Schema
 from pyiceberg.types import DoubleType, StringType, TimestamptzType
 
-from messoyakha_coupling.adapters.repositories.s3 import PolarsIcebergS3RepositoryBase
+from messoyakha_coupling.adapters.repositories.s3 import S3PolarsRepositoryBase
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
-class DohodDividendsS3Repository(PolarsIcebergS3RepositoryBase):
+class DohodDividendsS3Repository(S3PolarsRepositoryBase):
     _namespace: str = field(init=False, default="dohod")
     _table: str = field(init=False, default="dividends")
 

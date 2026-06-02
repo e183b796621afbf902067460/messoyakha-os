@@ -11,9 +11,6 @@
         ]
     },
     "instructions": [
-        "./README.md",
-        "./CONTRIBUTING.md",
-        "./AGENTS.md",
-        "./python-core/CONTRIBUTING.md"
+        "./AGENTS.md"
     ]
 }
