@@ -16,6 +16,7 @@ class FinamOHLCVDLHSettings(DLHSettings):
     TICKERS: list[tuple[str, FinamMarketEnum, FinamIntervalEnum]] = [
         ("SIBN", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
         ("ROSN", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
+        ("NVTK", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
         ("TRNFP", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
         ("PHOR", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
         ("PLZL", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),

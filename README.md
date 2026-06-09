@@ -1,4 +1,4 @@
-# PEP: Personal Endowment Program
+# Messoyakha OS
 
 [Tactical asset allocation](https://en.wikipedia.org/wiki/Tactical_asset_allocation).
 
@@ -15,7 +15,3 @@ PEP offers a modular architecture in which each component plays a crucial role i
 ### Why Is It?
 
 Simpler is generally better for retail market participants due to lack of time, data and capabilities in comparison to financial institutions such as banks, hedge funds and trading firms.
-
-## Contributing to PEP
-
-A detailed overview on how to contribute can be found in the `CONTRIBUTING.md`, and in the corresponding files of each core.
