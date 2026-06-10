@@ -27,6 +27,7 @@ members = [
     "messoyakha-dwh-py",
     "messoyakha-fedstat-sdk-py",
     "messoyakha-finam-sdk-py",
+    "messoyakha-nautilus-benchmark-sdk-py",
     "messoyakha-nautilus-income-sdk-py",
     "messoyakha-os",
     "messoyakha-s3-sdk-py",
@@ -1841,6 +1842,10 @@ requires-dist = [
     { name = "httpx", extras = ["http2"], specifier = ">=0.28.1,<0.29" },
     { name = "messoyakha-coupling-py", editable = "sys/kernel/py/coupling" },
 ]
+
+[[package]]
+name = "messoyakha-nautilus-benchmark-sdk-py"
+source = { editable = "home/iquant/lib/nautilus-benchmark-sdk" }
 
 [[package]]
 name = "messoyakha-nautilus-income-sdk-py"
