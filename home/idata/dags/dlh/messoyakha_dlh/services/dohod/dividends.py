@@ -10,6 +10,7 @@ class DohodDividendsDLHSettings(DLHSettings):
     TICKERS: list[str] = [
         "SIBN",
         "ROSN",
+        "NVTK",
         "TRNFP",
         "PHOR",
         "PLZL",

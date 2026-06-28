@@ -43,9 +43,9 @@ def _parse_fedstat_excel_to_dataframe(fedstat_excel: PdDf) -> PdDf:  # noqa: C90
         for value in row[1:]:
             value_as_string = str(value).strip().lower()
             if value_as_string.isdigit() and len(value_as_string) == 4:  # noqa: PLR2004
-                year_column_id = row.Index  # pyrefly: ignore[bad-assignment]
+                year_column_id = row.Index  # pyrefly: ignore[bad-assignment, missing-attribute]
             if value_as_string in russian_months:
-                month_column_id = row.Index  # pyrefly: ignore[bad-assignment]
+                month_column_id = row.Index  # pyrefly: ignore[bad-assignment, missing-attribute]
     if not year_column_id or not month_column_id:
         return PdDf(columns=["year", "month", "inflation_rate"])
     year_row: Series = fedstat_excel.iloc[year_column_id]
@@ -68,7 +68,7 @@ def _parse_fedstat_excel_to_dataframe(fedstat_excel: PdDf) -> PdDf:  # noqa: C90
 
     inflation_rates: list[_InflationRateRowSchema] = []
     for row in fedstat_excel.itertuples():
-        if row.Index <= month_column_id:  # pyrefly: ignore[unsupported-operation]
+        if row.Index <= month_column_id:  # pyrefly: ignore[unsupported-operation, missing-attribute]
             continue
         region: str | None = row[1]
         if isna(region):

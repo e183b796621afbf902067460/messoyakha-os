@@ -15,6 +15,7 @@ class FinamOHLCVDLHSettings(DLHSettings):
     CATCH_UP_DATE: datetime = datetime(year=2011, month=1, day=1, tzinfo=timezone.utc)
     TICKERS: list[tuple[str, FinamMarketEnum, FinamIntervalEnum]] = [
         ("SIBN", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
+        ("GAZP", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
         ("ROSN", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
         ("NVTK", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
         ("TRNFP", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),

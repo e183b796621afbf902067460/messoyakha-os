@@ -111,7 +111,8 @@ Now all of the styling checks will be run each time you commit changes.
 #### Running `pre-commit` Hooks
 
 <!-- general-rule:3 -->
-Always run all code formatting checks, not specific linter:
+> [!IMPORTANT]
+Always run all code formatting checks using `make` utility, not specific linter using `uv`:
 ```bash
 make pre-commit
 ```

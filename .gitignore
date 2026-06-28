@@ -152,6 +152,7 @@ storage/
 # Agent's context
 .kilo/
 .claude/
+.gortex/
 
 PLAN.md
 TASK.md

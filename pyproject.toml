@@ -17,6 +17,7 @@ dependencies = [
     "pre-commit>=4.6.0",
     "ruff==0.14.8",
     "pyrefly==0.52.0",
+    "yfinance>=1.4.1",
 ]
 requires-python = ">=3.10,<4.0"
 
@@ -32,6 +33,7 @@ messoyakha-coupling-py = { workspace = true }
 # lib/py/*
 messoyakha-binance-sdk-py = { workspace = true }
 messoyakha-finam-sdk-py = { workspace = true }
+messoyakha-moex-iss-sdk-py = { workspace = true }
 messoyakha-s3-sdk-py = { workspace = true }
 
 # home/idata/lib/*
@@ -152,7 +154,7 @@ known-first-party = [
     "messoyakha_coupling",
     "messoyakha_binance_sdk", "messoyakha_finam_sdk",
     "messoyakha_s3_sdk",
-    "messoyakha_cbr_sdk", "messoyakha_fedstat_sdk",
+    "messoyakha_cbr_sdk", "messoyakha_fedstat_sdk", "messoyakha_moex_iss_sdk",
     "messoyakha_dohod_sdk", "messoyakha_smart_lab_sdk",
     "messoyakha_nautilus_benchmark_sdk", "messoyakha_nautilus_income_sdk"
 ]
@@ -187,6 +189,7 @@ search-path = [
     "home/idata/lib/cbr-sdk",
     "home/idata/lib/dohod-sdk",
     "home/idata/lib/fedstat-sdk",
+    "home/idata/lib/moex-iss-sdk",
     "home/idata/lib/smart-lab-sdk",
 
     "home/idata/dags/dlh",
@@ -195,4 +198,6 @@ search-path = [
     "home/iquant/lib/nautilus-benchmark-sdk",
     "home/iquant/lib/nautilus-income-sdk",
     "home/iquant/ad-hocs/test-strategy",
+
+    ".venv/lib/python3.13/site-packages"
 ]
