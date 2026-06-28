@@ -10,7 +10,7 @@ from messoyakha_nautilus_benchmark_sdk.schemas.dca import DCAConfig
 
 class DCAStrategy(Strategy):
     def __init__(self, config: DCAConfig) -> None:
-        Strategy.__init__(self, config)
+        Strategy.__init__(self, config=config)
 
     def on_start(self) -> None:
         self.subscribe_bars(self.config.bars)
