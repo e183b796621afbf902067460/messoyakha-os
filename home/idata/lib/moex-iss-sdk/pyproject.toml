@@ -1,0 +1,41 @@
+[project]
+name = "messoyakha-moex-iss-sdk-py"
+dynamic = ["version", "dependencies"]
+description = "..."
+requires-python = ">=3.10,<4.0"
+
+[project.urls]
+iss-moex-reference = "https://iss.moex.com/iss/reference/"
+iss-moex-security = "https://iss.moex.com/iss/reference/193"
+iss-moex-candles = "https://iss.moex.com/iss/reference/341"
+iss-moex-capitalization = "https://iss.moex.com/iss/reference/105"
+
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "pep440"
+bump = true
+
+[tool.uv]
+package = true
+
+[tool.uv.sources]
+messoyakha-coupling-py = { workspace = true }
+
+[tool.hatch.metadata.hooks.uv-dynamic-versioning]
+dependencies = [
+    "httpx[http2]>=0.28.1,<0.29",
+    "messoyakha-coupling-py=={{ version }}",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["messoyakha_moex_iss_sdk"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["tests"]
