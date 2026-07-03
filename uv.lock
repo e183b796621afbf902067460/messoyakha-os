@@ -21,6 +21,7 @@ members = [
     "messoyakha-moex-iss-sdk-py",
     "messoyakha-nautilus-benchmark-sdk-py",
     "messoyakha-nautilus-income-sdk-py",
+    "messoyakha-nautilus-sdk-py",
     "messoyakha-os",
     "messoyakha-s3-sdk-py",
     "messoyakha-smart-lab-sdk-py",
@@ -1893,6 +1894,10 @@ source = { editable = "home/iquant/lib/nautilus-benchmark-sdk" }
 [[package]]
 name = "messoyakha-nautilus-income-sdk-py"
 source = { editable = "home/iquant/lib/nautilus-income-sdk" }
+
+[[package]]
+name = "messoyakha-nautilus-sdk-py"
+source = { editable = "lib/py/nautilus-sdk" }
 
 [[package]]
 name = "messoyakha-os"

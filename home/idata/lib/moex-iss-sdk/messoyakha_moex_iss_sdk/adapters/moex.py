@@ -33,7 +33,7 @@ class _MOEXAPIClientBase(HTTPAPIClientBase):
         context: MOEXHistorySecurityContextSchema = MOEXHistorySecurityContextSchema(
             ticker=endpoint_schema.ticker,
             currency=parameters_schema.currency,
-            market=parameters_schema.market,
+            product=parameters_schema.product,
             interval=parameters_schema.interval,
         )
         return [

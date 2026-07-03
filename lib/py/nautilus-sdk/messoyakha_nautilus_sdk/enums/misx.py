@@ -1,6 +1,6 @@
 from enum import StrEnum
 
 
-class MOEXMarketEnum(StrEnum):
+class MISXProductEnum(StrEnum):
     SPOT = "Spot"
     FUTURES = "Futures"

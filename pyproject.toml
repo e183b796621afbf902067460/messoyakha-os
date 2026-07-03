@@ -33,13 +33,14 @@ messoyakha-coupling-py = { workspace = true }
 # lib/py/*
 messoyakha-binance-sdk-py = { workspace = true }
 messoyakha-finam-sdk-py = { workspace = true }
-messoyakha-moex-iss-sdk-py = { workspace = true }
+messoyakha-nautilus-sdk-py = { workspace = true }
 messoyakha-s3-sdk-py = { workspace = true }
 
 # home/idata/lib/*
 messoyakha-cbr-sdk-py = { workspace = true }
 messoyakha-dohod-sdk-py = { workspace = true }
 messoyakha-fedstat-sdk-py = { workspace = true }
+messoyakha-moex-iss-sdk-py = { workspace = true }
 messoyakha-smart-lab-sdk-py = { workspace = true }
 
 # home/idata/dags/*
@@ -153,7 +154,7 @@ known-first-party = [
 "sdk" = [
     "messoyakha_coupling",
     "messoyakha_binance_sdk", "messoyakha_finam_sdk",
-    "messoyakha_s3_sdk",
+    "messoyakha_nautilus_sdk", "messoyakha_s3_sdk",
     "messoyakha_cbr_sdk", "messoyakha_fedstat_sdk", "messoyakha_moex_iss_sdk",
     "messoyakha_dohod_sdk", "messoyakha_smart_lab_sdk",
     "messoyakha_nautilus_benchmark_sdk", "messoyakha_nautilus_income_sdk"
@@ -184,6 +185,7 @@ search-path = [
 
     "lib/py/binance-sdk",
     "lib/py/finam-sdk",
+    "lib/py/nautilus-sdk",
     "lib/py/s3-sdk",
 
     "home/idata/lib/cbr-sdk",

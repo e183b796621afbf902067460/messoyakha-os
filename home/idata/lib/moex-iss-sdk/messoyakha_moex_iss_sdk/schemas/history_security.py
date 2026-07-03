@@ -13,8 +13,8 @@ from pydantic import (
 )
 
 from messoyakha_moex_iss_sdk.enums.intervals import MOEXIntervalEnum
-from messoyakha_moex_iss_sdk.enums.markets import MOEXMarketEnum
-from messoyakha_moex_iss_sdk.identifiers import MISX
+from messoyakha_nautilus_sdk.adapters.misx import MISX
+from messoyakha_nautilus_sdk.enums.misx import MISXProductEnum
 
 
 class MOEXHistorySecurityHTTPEndpointSchema(BaseModel):
@@ -29,7 +29,7 @@ class MOEXHistorySecurityHTTPEndpointSchema(BaseModel):
 
 class MOEXHistorySecurityParametersSchema(BaseModel):
     currency: str = Field(exclude=True)
-    market: MOEXMarketEnum = Field(exclude=True)
+    product: MISXProductEnum = Field(exclude=True)
 
     interval: MOEXIntervalEnum
 
@@ -55,7 +55,7 @@ class MOEXHistorySecurityParametersSchema(BaseModel):
 class MOEXHistorySecurityContextSchema(BaseModel):
     ticker: str
     currency: str
-    market: MOEXMarketEnum
+    product: MISXProductEnum
     interval: MOEXIntervalEnum
 
 
@@ -65,7 +65,7 @@ class MOEXHistorySecurityOutputSchema(BaseModel):
 
     ticker: str
     currency: str
-    market: MOEXMarketEnum
+    product: MISXProductEnum
 
     open: float | None
     high: float | None
@@ -82,7 +82,7 @@ class MOEXHistorySecurityOutputSchema(BaseModel):
         data: dict = {
             "ticker": info.context["ticker"],  # type: ignore[unsupported-operation]
             "currency": info.context["currency"],  # type: ignore[unsupported-operation]
-            "market": info.context["market"],  # type: ignore[unsupported-operation]
+            "product": info.context["product"],  # type: ignore[unsupported-operation]
             "interval": info.context["interval"],  # type: ignore[unsupported-operation]
             "open": row[6],
             "high": row[7],
@@ -104,7 +104,7 @@ class _MOEXHistorySecurityInputSchemaBase(BaseModel):
 
     ticker: str
     currency: str
-    market: MOEXMarketEnum
+    product: MISXProductEnum
 
     start_time: datetime
     end_time: datetime
@@ -137,11 +137,11 @@ class _MOEXHistorySecurityInputSchemaBase(BaseModel):
 
 
 class MOEXSpotHistorySecurityInputSchema(_MOEXHistorySecurityInputSchemaBase):
-    market: MOEXMarketEnum = Field(init=False, default=MOEXMarketEnum.SPOT)
+    product: MISXProductEnum = Field(init=False, default=MISXProductEnum.SPOT)
 
 
 class MOEXFuturesHistorySecurityInputSchema(_MOEXHistorySecurityInputSchemaBase):
-    market: MOEXMarketEnum = Field(init=False, default=MOEXMarketEnum.FUTURES)
+    product: MISXProductEnum = Field(init=False, default=MISXProductEnum.FUTURES)
 
 
 MOEXHistorySecurityInputSchemaBase: TypeAlias = (

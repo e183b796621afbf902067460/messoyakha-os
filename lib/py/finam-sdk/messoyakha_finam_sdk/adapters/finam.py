@@ -19,6 +19,10 @@ from messoyakha_finam_sdk.schemas.sessions import FinamSessionsJsonSchema, Finam
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class _FinamAPIClientBase(HTTPAPIClientBase):
+    _session: AsyncClient = field(
+        init=False, factory=partial(AsyncClient, base_url="https://api.finam.ru", timeout=10, http2=True)
+    )
+
     async def _clock(self, headers_schema: FinamClockHeadersSchema, **kwargs) -> None:
         await self._get(headers=headers_schema.model_dump(by_alias=True), **kwargs)
 
@@ -50,10 +54,6 @@ class _FinamAPIClientBase(HTTPAPIClientBase):
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class FinamMISXAPIClient(_FinamAPIClientBase):
-    _session: AsyncClient = field(
-        init=False, factory=partial(AsyncClient, base_url="https://api.finam.ru", timeout=10, http2=True)
-    )
-
     @route("/v1/assets/clock")
     async def clock(self, headers_schema: FinamClockHeadersSchema, **kwargs) -> None:
         await super()._clock(headers_schema=headers_schema, **kwargs)

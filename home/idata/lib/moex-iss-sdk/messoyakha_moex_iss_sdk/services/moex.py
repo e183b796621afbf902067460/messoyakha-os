@@ -37,7 +37,7 @@ class _MOEXService:
                 ),
                 parameters_schema=MOEXHistorySecurityParametersSchema(
                     currency=input_schema.currency,
-                    market=input_schema.market,
+                    product=input_schema.product,
                     interval=input_schema.interval,
                     start_time=input_schema.start_time,
                     end_time=end_time,
@@ -52,6 +52,7 @@ class _MOEXService:
                 break
             input_schema.start_time = next_start_time
             await sleep(1)
+        # TODO: if not history_securities: return empty dataframe with columns
         return DataFrame([candle.model_dump() for candle in history_securities]).unique().sort(by=col("timestamp"))
 
 
