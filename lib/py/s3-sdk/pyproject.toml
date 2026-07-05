@@ -22,6 +22,7 @@ package = true
 [tool.hatch.metadata.hooks.uv-dynamic-versioning]
 dependencies = [
     "duckdb==1.5.1",
+    "pyarrow>=24.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]

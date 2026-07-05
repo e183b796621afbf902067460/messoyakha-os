@@ -11,7 +11,6 @@ dependencies = [
     "ta-lib>=0.6.8",
     "polars>=1.31.0",
     "pandas>=2.3.3",
-    "pyarrow>=24.0.0",
     "loguru>=0.7.3,<0.8",
     "tqdm>=4.67.3",
     "pre-commit>=4.6.0",
@@ -43,9 +42,8 @@ messoyakha-fedstat-sdk-py = { workspace = true }
 messoyakha-moex-iss-sdk-py = { workspace = true }
 messoyakha-smart-lab-sdk-py = { workspace = true }
 
-# home/idata/dags/*
-messoyakha-dlh-py = { workspace = true }
-messoyakha-dwh-py = { workspace = true }
+# home/idata/*
+# messoyakha-dlh-py = { workspace = true }
 
 # home/iquant/lib/*
 messoyakha-nautilus-benchmark-sdk-py = { workspace = true }
@@ -56,14 +54,15 @@ messoyakha-test-strategy-py = { workspace = true }
 
 [tool.uv.workspace]
 members = [
-    "home/idata/dags/*",
-    "home/idata/lib/*",
-    "home/iquant/ad-hocs/*",
-    "home/iquant/lib/*",
+    "sys/kernel/py/*",
 
     "lib/py/*",
 
-    "sys/kernel/py/*",
+    "home/idata/lib/*",
+    "home/idata/dlh/",
+
+    "home/iquant/ad-hocs/*",
+    "home/iquant/lib/*",
 ]
 
 [tool.ruff]
@@ -194,8 +193,7 @@ search-path = [
     "home/idata/lib/moex-iss-sdk",
     "home/idata/lib/smart-lab-sdk",
 
-    "home/idata/dags/dlh",
-    "home/idata/dags/dwh",
+    "home/idata/dlh",
 
     "home/iquant/lib/nautilus-benchmark-sdk",
     "home/iquant/lib/nautilus-income-sdk",

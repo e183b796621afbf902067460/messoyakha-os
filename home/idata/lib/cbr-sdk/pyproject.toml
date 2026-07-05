@@ -22,15 +22,11 @@ bump = true
 [tool.uv]
 package = true
 
-[tool.uv.sources]
-messoyakha-coupling-py = { workspace = true }
-
 [tool.hatch.metadata.hooks.uv-dynamic-versioning]
 dependencies = [
     "httpx[http2]>=0.28.1,<0.29",
     "suds-py3>=1.4.5.0",
     "lxml>=6.1.0",
-    "messoyakha-coupling-py=={{ version }}",
 ]
 
 [tool.hatch.build.targets.wheel]
