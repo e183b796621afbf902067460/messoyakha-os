@@ -8,7 +8,7 @@ from that_depends.providers import Dict, Factory, Singleton
 
 from messoyakha_cbr_sdk.schemas.key_rate import CBRKeyRateParametersSchema
 from messoyakha_cbr_sdk.services.cbr import CBRService
-from messoyakha_s3_sdk.adapters.connections.polars import options
+from messoyakha_sdk.adapters.connections.s3 import options
 
 from messoyakha_dlh.adapters.repositories.cbr.key_rates import CBRKeyRatesS3Repository
 from messoyakha_dlh.services.cbr.key_rates import CBRKeyRatesDLHService, CBRKeyRatesDLHSettings

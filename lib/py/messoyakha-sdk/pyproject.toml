@@ -1,8 +1,11 @@
 [project]
-name = "messoyakha-nautilus-sdk-py"
+name = "messoyakha-sdk-py"
 dynamic = ["version", "dependencies"]
 description = "..."
 requires-python = ">=3.10,<4.0"
+
+[project.urls]
+habr-cohesion-and-coupling-the-difference = "https://habr.com/ru/articles/568216/"
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
@@ -19,8 +22,17 @@ bump = true
 [tool.uv]
 package = true
 
+[tool.hatch.metadata.hooks.uv-dynamic-versioning]
+dependencies = [
+    "httpx[http2]>=0.28.1,<0.29",
+    "crawlee[beautifulsoup,playwright]>=1.6.3",
+    "suds-py3>=1.4.5.0",
+    "duckdb==1.5.1",
+    "pyarrow>=24.0.0",
+]
+
 [tool.hatch.build.targets.wheel]
-packages = ["messoyakha_nautilus_sdk"]
+packages = ["messoyakha_sdk"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["tests"]

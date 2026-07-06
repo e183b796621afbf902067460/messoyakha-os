@@ -8,7 +8,7 @@ from that_depends.providers import Dict, Factory, Singleton
 
 from messoyakha_fedstat_sdk.schemas.inflation_rate import FedstatInflationRateInputSchema
 from messoyakha_fedstat_sdk.services.fedstat import FedstatService
-from messoyakha_s3_sdk.adapters.connections.polars import options
+from messoyakha_sdk.adapters.connections.s3 import options
 
 from messoyakha_dlh.adapters.repositories.fedstat.inflation_rates import FedstatInflationRatesS3Repository
 from messoyakha_dlh.services.fedstat.inflation_rates import (

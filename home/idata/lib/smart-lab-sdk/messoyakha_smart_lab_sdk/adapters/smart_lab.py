@@ -7,8 +7,8 @@ from crawlee.storages import Dataset, RequestQueue
 from httpx import AsyncClient
 from pandas import to_datetime
 
-from messoyakha_coupling.adapters.clients.web import CrawleeWebClientBase
-from messoyakha_coupling.decorators.clients.http import route
+from messoyakha_sdk.adapters.clients.http import route
+from messoyakha_sdk.adapters.clients.web import CrawleeWebClientBase
 from messoyakha_smart_lab_sdk.schemas.net_income import (
     SmartLabNetIncomeContextSchema,
     SmartLabNetIncomeEndpointSchema,

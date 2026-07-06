@@ -9,8 +9,7 @@ from messoyakha_binance_sdk.schemas.klines import (
     BinanceKlinesOutputSchema,
     BinanceKlinesParametersSchema,
 )
-from messoyakha_coupling.adapters.clients.http import HTTPAPIClientBase
-from messoyakha_coupling.decorators.clients.http import route
+from messoyakha_sdk.adapters.clients.http import HTTPAPIClientBase, route
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)

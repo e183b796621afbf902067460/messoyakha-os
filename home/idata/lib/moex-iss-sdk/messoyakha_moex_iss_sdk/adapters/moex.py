@@ -4,14 +4,13 @@ from typing import TypeAlias
 from attrs import define, field
 from httpx import AsyncClient, Response
 
-from messoyakha_coupling.adapters.clients.http import HTTPAPIClientBase
-from messoyakha_coupling.decorators.clients.http import route
 from messoyakha_moex_iss_sdk.schemas.history_security import (
     MOEXHistorySecurityContextSchema,
     MOEXHistorySecurityHTTPEndpointSchema,
     MOEXHistorySecurityOutputSchema,
     MOEXHistorySecurityParametersSchema,
 )
+from messoyakha_sdk.adapters.clients.http import HTTPAPIClientBase, route
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)

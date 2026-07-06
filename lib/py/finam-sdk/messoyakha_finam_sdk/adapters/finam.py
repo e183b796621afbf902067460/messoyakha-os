@@ -4,8 +4,6 @@ from typing import TypeAlias
 from attrs import define, field
 from httpx import AsyncClient, Response
 
-from messoyakha_coupling.adapters.clients.http import HTTPAPIClientBase
-from messoyakha_coupling.decorators.clients.http import route
 from messoyakha_finam_sdk.schemas.bars import (
     FinamBarsContextSchema,
     FinamBarsHeadersSchema,
@@ -15,6 +13,7 @@ from messoyakha_finam_sdk.schemas.bars import (
 )
 from messoyakha_finam_sdk.schemas.clock import FinamClockHeadersSchema
 from messoyakha_finam_sdk.schemas.sessions import FinamSessionsJsonSchema, FinamSessionsOutputSchema
+from messoyakha_sdk.adapters.clients.http import HTTPAPIClientBase, route
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)

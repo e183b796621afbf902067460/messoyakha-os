@@ -21,7 +21,7 @@ from messoyakha_finam_sdk.enums.intervals import FinamIntervalEnum
 from messoyakha_finam_sdk.enums.markets import FinamMarketEnum
 from messoyakha_finam_sdk.schemas.bars import FinamBarsInputSchema
 from messoyakha_finam_sdk.services.finam import FinamMISXService
-from messoyakha_s3_sdk.adapters.connections.polars import options
+from messoyakha_sdk.adapters.connections.s3 import options
 
 from messoyakha_dlh.adapters.repositories.finam.ohlcv import FinamOHLCVS3Repository
 from messoyakha_dlh.services.finam.ohlcv import FinamOHLCVDLHService, FinamOHLCVDLHSettings

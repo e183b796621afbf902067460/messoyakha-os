@@ -13,8 +13,8 @@ from pydantic import (
 )
 
 from messoyakha_moex_iss_sdk.enums.intervals import MOEXIntervalEnum
-from messoyakha_nautilus_sdk.adapters.misx import MISX
-from messoyakha_nautilus_sdk.enums.misx import MISXProductEnum
+from messoyakha_sdk.adapters.venues.misx import MISX
+from messoyakha_sdk.enums.venues.misx import MISXProductEnum
 
 
 class MOEXHistorySecurityHTTPEndpointSchema(BaseModel):

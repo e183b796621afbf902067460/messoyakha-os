@@ -7,13 +7,13 @@ from crawlee.storage_clients.models import DatasetItemsListPage
 from crawlee.storages import Dataset, RequestQueue
 from httpx import AsyncClient
 
-from messoyakha_coupling.adapters.clients.web import CrawleeWebClientBase
-from messoyakha_coupling.decorators.clients.http import route
 from messoyakha_dohod_sdk.schemas.dividends import (
     DohodDividendsContextSchema,
     DohodDividendsEndpointSchema,
     DohodDividendsOutputSchema,
 )
+from messoyakha_sdk.adapters.clients.http import route
+from messoyakha_sdk.adapters.clients.web import CrawleeWebClientBase
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)

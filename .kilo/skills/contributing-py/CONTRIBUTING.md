@@ -28,7 +28,7 @@ There are some general rules to apply while writing code in `python-core/`:
 Annotate code with type hints according to [PEP 484](https://peps.python.org/pep-0484/) (don't use unnecessary `Any` annotations, the use of `cast()` is strongly discouraged) — use built-in generic types (e.g. `list[str]` instead of `typing.List[str]`), use `Union`, `Protocol`, `TypeVar`, or schema-derived types for precision — precise types catch bugs at type-check.
 
 <!-- py-rule:6 -->
-Use `TypedDict` or `pydnatic` model instead of `dict[str, Any]` when structure is known — it enables static type checking, eliminates `cast()` calls, provides runtime validation, and self-documenting expected structure.
+Use `TypedDict` or `pydantic` model instead of `dict[str, Any]` when structure is known — it enables static type checking, eliminates `cast()` calls, provides runtime validation, and self-documenting expected structure.
 
 <!-- py-rule:7 -->
 When `Any` is unavoidable due to external constraints, document expected structure in docstrings.

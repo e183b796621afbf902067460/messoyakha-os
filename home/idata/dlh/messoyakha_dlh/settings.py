@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from messoyakha_coupling.settings.storages.s3 import IcebergSettingsBase
+from messoyakha_sdk.settings.s3 import IcebergSettingsBase
 
 
 class DLHSettings(IcebergSettingsBase):

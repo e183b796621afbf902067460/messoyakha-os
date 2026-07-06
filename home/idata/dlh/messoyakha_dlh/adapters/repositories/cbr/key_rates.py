@@ -8,7 +8,7 @@ from pyiceberg.schema import NestedField, Schema
 from pyiceberg.transforms import DayTransform
 from pyiceberg.types import DoubleType, TimestamptzType
 
-from messoyakha_coupling.adapters.repositories.s3 import S3PolarsRepositoryBase
+from messoyakha_sdk.adapters.repositories.s3 import S3PolarsRepositoryBase
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)

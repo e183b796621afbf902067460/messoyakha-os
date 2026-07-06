@@ -3,11 +3,11 @@ from functools import partial
 from attrs import define, field
 from httpx import AsyncClient, Response
 
-from messoyakha_coupling.adapters.clients.http import HTTPAPIClientBase
 from messoyakha_fedstat_sdk.schemas.inflation_rate import (
     FedstatInflationRateDataSchema,
     FedstatInflationRateParametersSchema,
 )
+from messoyakha_sdk.adapters.clients.http import HTTPAPIClientBase
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)

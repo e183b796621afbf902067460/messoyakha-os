@@ -18,7 +18,7 @@ from that_depends.providers import Dict, Factory, Singleton
 
 from messoyakha_dohod_sdk.schemas.dividends import DohodDividendsInputSchema
 from messoyakha_dohod_sdk.services.dohod import DohodService
-from messoyakha_s3_sdk.adapters.connections.polars import options
+from messoyakha_sdk.adapters.connections.s3 import options
 
 from messoyakha_dlh.adapters.repositories.dohod.dividends import DohodDividendsS3Repository
 from messoyakha_dlh.services.dohod.dividends import DohodDividendsDLHService, DohodDividendsDLHSettings

@@ -19,7 +19,6 @@ resolution-markers = [
 members = [
     "messoyakha-binance-sdk-py",
     "messoyakha-cbr-sdk-py",
-    "messoyakha-coupling-py",
     "messoyakha-dlh-py",
     "messoyakha-dohod-sdk-py",
     "messoyakha-fedstat-sdk-py",
@@ -27,9 +26,8 @@ members = [
     "messoyakha-moex-iss-sdk-py",
     "messoyakha-nautilus-benchmark-sdk-py",
     "messoyakha-nautilus-income-sdk-py",
-    "messoyakha-nautilus-sdk-py",
     "messoyakha-os",
-    "messoyakha-s3-sdk-py",
+    "messoyakha-sdk-py",
     "messoyakha-smart-lab-sdk-py",
     "messoyakha-test-strategy-py",
 ]
@@ -1795,10 +1793,6 @@ requires-dist = [
 ]
 
 [[package]]
-name = "messoyakha-coupling-py"
-source = { editable = "sys/kernel/py/coupling" }
-
-[[package]]
 name = "messoyakha-dlh-py"
 source = { editable = "home/idata/dlh" }
 dependencies = [
@@ -1879,10 +1873,6 @@ name = "messoyakha-nautilus-income-sdk-py"
 source = { editable = "home/iquant/lib/nautilus-income-sdk" }
 
 [[package]]
-name = "messoyakha-nautilus-sdk-py"
-source = { editable = "lib/py/nautilus-sdk" }
-
-[[package]]
 name = "messoyakha-os"
 version = "0.0.1"
 source = { virtual = "." }
@@ -1920,17 +1910,23 @@ requires-dist = [
 ]
 
 [[package]]
-name = "messoyakha-s3-sdk-py"
-source = { editable = "lib/py/s3-sdk" }
+name = "messoyakha-sdk-py"
+source = { editable = "lib/py/messoyakha-sdk" }
 dependencies = [
+    { name = "crawlee", extra = ["beautifulsoup", "playwright"] },
     { name = "duckdb" },
+    { name = "httpx", extra = ["http2"] },
     { name = "pyarrow" },
+    { name = "suds-py3" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "crawlee", extras = ["beautifulsoup", "playwright"], specifier = ">=1.6.3" },
     { name = "duckdb", specifier = "==1.5.1" },
+    { name = "httpx", extras = ["http2"], specifier = ">=0.28.1,<0.29" },
     { name = "pyarrow", specifier = ">=24.0.0" },
+    { name = "suds-py3", specifier = ">=1.4.5.0" },
 ]
 
 [[package]]
@@ -1955,8 +1951,7 @@ dependencies = [
     { name = "dagster-pandera" },
     { name = "fastparquet" },
     { name = "ipykernel" },
-    { name = "messoyakha-coupling-py" },
-    { name = "messoyakha-s3-sdk-py" },
+    { name = "messoyakha-sdk-py" },
     { name = "nbformat" },
     { name = "plotly" },
     { name = "pyiceberg" },
@@ -1970,8 +1965,7 @@ requires-dist = [
     { name = "dagster-pandera", specifier = ">=0.29.3" },
     { name = "fastparquet", specifier = ">=2026.3.0" },
     { name = "ipykernel", specifier = ">=7.2.0" },
-    { name = "messoyakha-coupling-py", editable = "sys/kernel/py/coupling" },
-    { name = "messoyakha-s3-sdk-py", editable = "lib/py/s3-sdk" },
+    { name = "messoyakha-sdk-py", editable = "lib/py/messoyakha-sdk" },
     { name = "nbformat", specifier = ">=5.10.4" },
     { name = "plotly", specifier = ">=6.7.0" },
     { name = "pyiceberg", specifier = ">=0.11.1" },

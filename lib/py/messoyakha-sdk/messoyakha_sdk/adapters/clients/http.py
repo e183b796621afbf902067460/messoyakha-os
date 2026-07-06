@@ -1,8 +1,33 @@
 from abc import ABC
+from collections.abc import Callable
+from functools import wraps
 from http import HTTPMethod
+from typing import Protocol, runtime_checkable
 
 from attrs import define, field
 from httpx import URL, AsyncClient, Response
+from pydantic import BaseModel
+
+
+@runtime_checkable
+class _HTTPEndpointProtocol(Protocol):
+    def _cohere_http_endpoint(self) -> None:
+        pass
+
+
+def route(endpoint: str) -> Callable[[Callable], Callable]:
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        async def wrapper(self, *args, endpoint=endpoint, **kwargs):  # noqa: ANN001, ANN202
+            for value in kwargs.values():
+                if isinstance(value, _HTTPEndpointProtocol) and isinstance(value, BaseModel):
+                    endpoint: str = endpoint.format(**value.model_dump(by_alias=True))
+                    break
+            return await func(self, *args, endpoint=endpoint, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
