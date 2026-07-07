@@ -30,7 +30,6 @@ dependencies = [
 
     "pyiceberg>=0.11.1",
     "pyiceberg-core>0.8.0",
-    "fastparquet>=2026.3.0",
 ]
 
 [tool.hatch.build.targets.wheel]

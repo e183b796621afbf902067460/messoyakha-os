@@ -26,9 +26,9 @@ package = false
 # https://docs.astral.sh/uv/concepts/projects/workspaces/#workspace-sources
 [tool.uv.sources]
 # lib/py/*
+messoyakha-sdk-py = { workspace = true }
 messoyakha-binance-sdk-py = { workspace = true }
 messoyakha-finam-sdk-py = { workspace = true }
-messoyakha-sdk-py = { workspace = true }
 
 # home/idata/lib/*
 messoyakha-cbr-sdk-py = { workspace = true }
@@ -173,9 +173,9 @@ python-interpreter-path = ".venv/bin/python3.13"
 python-platform = "linux"
 search-path = [
 
+    "lib/py/_common",
     "lib/py/binance-sdk",
     "lib/py/finam-sdk",
-    "lib/py/messoyakha-sdk",
 
     "home/idata/lib/cbr-sdk",
     "home/idata/lib/dohod-sdk",
