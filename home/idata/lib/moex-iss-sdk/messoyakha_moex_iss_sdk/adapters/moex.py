@@ -10,7 +10,8 @@ from messoyakha_moex_iss_sdk.schemas.history_security import (
     MOEXHistorySecurityOutputSchema,
     MOEXHistorySecurityParametersSchema,
 )
-from messoyakha_sdk.adapters.clients.http import HTTPAPIClientBase, route
+from messoyakha_sdk.adapters.clients.http import HTTPAPIClientBase
+from messoyakha_sdk.decorators.route import endpoint_route
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
@@ -44,7 +45,7 @@ class _MOEXAPIClientBase(HTTPAPIClientBase):
 @define(slots=False, auto_attribs=True, kw_only=True)
 class MOEXStockIndexAPIClient(_MOEXAPIClientBase):
     # https://iss.moex.com/iss/reference/439
-    @route("/iss/history/engines/stock/markets/index/securities/{security}.json")
+    @endpoint_route("/iss/history/engines/stock/markets/index/securities/{security}.json")
     async def history_security(
         self,
         endpoint_schema: MOEXHistorySecurityHTTPEndpointSchema,

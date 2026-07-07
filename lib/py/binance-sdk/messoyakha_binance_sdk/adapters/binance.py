@@ -9,7 +9,8 @@ from messoyakha_binance_sdk.schemas.klines import (
     BinanceKlinesOutputSchema,
     BinanceKlinesParametersSchema,
 )
-from messoyakha_sdk.adapters.clients.http import HTTPAPIClientBase, route
+from messoyakha_sdk.adapters.clients.http import HTTPAPIClientBase
+from messoyakha_sdk.decorators.route import endpoint_route
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
@@ -37,11 +38,11 @@ class BinanceSpotAPIClient(_BinanceAPIClientBase):
         init=False, factory=partial(AsyncClient, base_url="https://api.binance.com", timeout=10, http2=True)
     )
 
-    @route("/api/v3/ping")
+    @endpoint_route("/api/v3/ping")
     async def ping(self, **kwargs) -> None:
         await super()._ping(**kwargs)
 
-    @route("/api/v3/klines")
+    @endpoint_route("/api/v3/klines")
     async def klines(
         self, parameters_schema: BinanceKlinesParametersSchema, **kwargs
     ) -> list[BinanceKlinesOutputSchema]:
@@ -54,11 +55,11 @@ class BinanceUSDTMAPIClient(_BinanceAPIClientBase):
         init=False, factory=partial(AsyncClient, base_url="https://fapi.binance.com", timeout=10, http2=True)
     )
 
-    @route("/fapi/v1/ping")
+    @endpoint_route("/fapi/v1/ping")
     async def ping(self, **kwargs) -> None:
         await super()._ping(**kwargs)
 
-    @route("/fapi/v1/klines")
+    @endpoint_route("/fapi/v1/klines")
     async def klines(
         self, parameters_schema: BinanceKlinesParametersSchema, **kwargs
     ) -> list[BinanceKlinesOutputSchema]:

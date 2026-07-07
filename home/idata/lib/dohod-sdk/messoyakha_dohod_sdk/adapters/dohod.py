@@ -12,15 +12,15 @@ from messoyakha_dohod_sdk.schemas.dividends import (
     DohodDividendsEndpointSchema,
     DohodDividendsOutputSchema,
 )
-from messoyakha_sdk.adapters.clients.http import route
 from messoyakha_sdk.adapters.clients.web import CrawleeWebClientBase
+from messoyakha_sdk.decorators.route import endpoint_route
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class DohodCrawleeWebClient(CrawleeWebClientBase):
     _session: AsyncClient = field(init=False, factory=partial(AsyncClient, base_url="https://www.dohod.ru"))
 
-    @route("/ik/analytics/dividend/{ticker}")
+    @endpoint_route("/ik/analytics/dividend/{ticker}")
     async def dividend(
         self, endpoint_schema: DohodDividendsEndpointSchema, **kwargs
     ) -> list[DohodDividendsOutputSchema]:

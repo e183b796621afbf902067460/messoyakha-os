@@ -13,7 +13,8 @@ from messoyakha_finam_sdk.schemas.bars import (
 )
 from messoyakha_finam_sdk.schemas.clock import FinamClockHeadersSchema
 from messoyakha_finam_sdk.schemas.sessions import FinamSessionsJsonSchema, FinamSessionsOutputSchema
-from messoyakha_sdk.adapters.clients.http import HTTPAPIClientBase, route
+from messoyakha_sdk.adapters.clients.http import HTTPAPIClientBase
+from messoyakha_sdk.decorators.route import endpoint_route
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
@@ -53,15 +54,15 @@ class _FinamAPIClientBase(HTTPAPIClientBase):
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class FinamMISXAPIClient(_FinamAPIClientBase):
-    @route("/v1/assets/clock")
+    @endpoint_route("/v1/assets/clock")
     async def clock(self, headers_schema: FinamClockHeadersSchema, **kwargs) -> None:
         await super()._clock(headers_schema=headers_schema, **kwargs)
 
-    @route("/v1/sessions")
+    @endpoint_route("/v1/sessions")
     async def sessions(self, json_schema: FinamSessionsJsonSchema, **kwargs) -> FinamSessionsOutputSchema:
         return await super()._sessions(json_schema=json_schema, **kwargs)
 
-    @route("/v1/instruments/{symbol}/bars")
+    @endpoint_route("/v1/instruments/{symbol}/bars")
     async def bars(
         self,
         endpoint_schema: FinamBarsHTTPEndpointSchema,
