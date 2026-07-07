@@ -2156,7 +2156,6 @@ source = { editable = "home/idata/dlh" }
 dependencies = [
     { name = "dagster" },
     { name = "dagster-pandera" },
-    { name = "fastparquet" },
     { name = "pyiceberg" },
     { name = "pyiceberg-core" },
     { name = "that-depends" },
@@ -2166,7 +2165,6 @@ dependencies = [
 requires-dist = [
     { name = "dagster", specifier = ">=1.13.3" },
     { name = "dagster-pandera", specifier = ">=0.29.3" },
-    { name = "fastparquet", specifier = ">=2026.3.0" },
     { name = "pyiceberg", specifier = ">=0.11.1" },
     { name = "pyiceberg-core", specifier = ">0.8.0" },
     { name = "that-depends", specifier = ">=3.9.2" },
@@ -2246,9 +2244,6 @@ dependencies = [
     { name = "pydantic" },
     { name = "pyrefly" },
     { name = "ruff" },
-    { name = "s3fs", version = "2023.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "s3fs", version = "2025.12.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
-    { name = "s3fs", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "ta-lib" },
     { name = "tqdm" },
     { name = "yfinance" },
@@ -2265,7 +2260,6 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.10.6,<3" },
     { name = "pyrefly", specifier = "==0.52.0" },
     { name = "ruff", specifier = "==0.14.8" },
-    { name = "s3fs", specifier = ">=2023.6.0" },
     { name = "ta-lib", specifier = ">=0.6.8" },
     { name = "tqdm", specifier = ">=4.67.3" },
     { name = "yfinance", specifier = ">=1.4.1" },
@@ -2276,16 +2270,22 @@ name = "messoyakha-sdk-py"
 source = { editable = "lib/py/_common" }
 dependencies = [
     { name = "crawlee", extra = ["beautifulsoup", "playwright"] },
+    { name = "fastparquet" },
     { name = "httpx", extra = ["http2"] },
     { name = "pyarrow" },
+    { name = "s3fs", version = "2023.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "s3fs", version = "2025.12.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "s3fs", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "suds-py3" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "crawlee", extras = ["beautifulsoup", "playwright"], specifier = ">=1.6.3" },
+    { name = "fastparquet", specifier = ">=2026.3.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.28.1,<0.29" },
     { name = "pyarrow", specifier = ">=24.0.0" },
+    { name = "s3fs", specifier = ">=2023.6.0" },
     { name = "suds-py3", specifier = ">=1.4.5.0" },
 ]
 
