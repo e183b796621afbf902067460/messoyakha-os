@@ -3,15 +3,17 @@ from functools import cached_property
 from pydantic import Field, HttpUrl
 from pydantic_settings import BaseSettings
 
+from messoyakha_sdk.schemas.s3 import S3StorageOptionsSchema
+
 
 class S3SettingsBase(BaseSettings):
-    ACCESS_KEY: str = Field(validation_alias="S3_ACCESS_KEY")
-    SECRET_KEY: str = Field(validation_alias="S3_SECRET_KEY")
+    ACCESS_KEY: str
+    SECRET_KEY: str
 
-    BUCKET: str = Field(validation_alias="S3_BUCKET")
+    BUCKET: str
 
-    ENDPOINT: HttpUrl = Field(validation_alias="S3_ENDPOINT", default=HttpUrl("https://s3.twcstorage.ru"))
-    REGION: str = Field(validation_alias="S3_REGION", default="ru-1")
+    ENDPOINT: HttpUrl = Field(default=HttpUrl("https://s3.twcstorage.ru"))
+    REGION: str = Field(default="ru-1")
 
     class Config:
         case_sensitive = True
@@ -19,3 +21,9 @@ class S3SettingsBase(BaseSettings):
     @cached_property
     def uri(self) -> str:
         return f"s3://{self.BUCKET}"
+
+    @cached_property
+    def storage_options(self) -> S3StorageOptionsSchema:
+        return S3StorageOptionsSchema(
+            access_key=self.ACCESS_KEY, secret_key=self.SECRET_KEY, region=self.REGION, endpoint=self.ENDPOINT
+        )
