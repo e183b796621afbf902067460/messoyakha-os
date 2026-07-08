@@ -22,8 +22,8 @@ class TestFinamMISXSpotService:
             input_schema=FinamBarsMISXSpotInputSchema(
                 secret=secret,
                 ticker="SBER",
-                currency=str(RUB),
                 interval=FinamIntervalEnum.ONE_DAY,
+                currency=str(RUB),
                 start_time="2026-01-01",
                 end_time="2026-02-20",
             )
