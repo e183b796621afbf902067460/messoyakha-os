@@ -10,17 +10,11 @@ class S3SettingsBase(BaseSettings):
     ACCESS_KEY: str
     SECRET_KEY: str
 
-    BUCKET: str
-
     ENDPOINT: HttpUrl = Field(default=HttpUrl("https://s3.twcstorage.ru"))
     REGION: str = Field(default="ru-1")
 
     class Config:
         case_sensitive = True
-
-    @cached_property
-    def uri(self) -> str:
-        return f"s3://{self.BUCKET}"
 
     @cached_property
     def storage_options(self) -> S3StorageOptionsSchema:
