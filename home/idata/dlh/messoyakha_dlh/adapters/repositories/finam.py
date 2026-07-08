@@ -11,7 +11,7 @@ from messoyakha_sdk.decorators.route import path_route as route
 class FinamS3Repository(S3PolarsRepositoryBase):
     @route(table="ohlcv", path="f8e90488-f511555d-274b-4258-bffc-572dd1900382/finam/ohlcv/**/*.parquet")
     def query_latest_ohlcv_timestamp(
-        self, ticker: str, market: str, interval: str, catch_up_date: datetime
+        self, ticker: str, venue: str, product: str, currency: str, interval: str, catch_up_date: datetime
     ) -> datetime:
         query: str = f"""
             SELECT
@@ -20,8 +20,10 @@ class FinamS3Repository(S3PolarsRepositoryBase):
                 ohlcv
             WHERE
                 _partition_by_ticker = {ticker!r}
-                AND _partition_by_market = {market!r}
                 AND _partition_by_interval = {interval!r}
+                AND _partition_by_product = {product!r}
+                AND _partition_by_venue = {venue!r}
+                AND _partition_by_currency = {currency!r}
         """
         try:
             query_result: str = self._query(query=query).collect().item(row=0, column="timestamp")

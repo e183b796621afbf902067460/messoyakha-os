@@ -3,14 +3,16 @@ from datetime import datetime, timezone
 
 from dagster import DynamicOut, DynamicOutput, JobDefinition, OpExecutionContext, graph, op
 from loguru import logger
+from nautilus_trader.model.currencies import RUB
 from polars import DataFrame, col, concat
 from that_depends import BaseContainer
 from that_depends.providers import Dict, Factory, Singleton
 
 from messoyakha_finam_sdk.enums.intervals import FinamIntervalEnum
-from messoyakha_finam_sdk.enums.markets import FinamMarketEnum
-from messoyakha_finam_sdk.schemas.bars import FinamBarsInputSchema
-from messoyakha_finam_sdk.services.finam import FinamMISXService
+from messoyakha_finam_sdk.schemas.bars import FinamBarsMISXSpotInputSchema
+from messoyakha_finam_sdk.services.finam import FinamMISXSpotService
+from messoyakha_sdk.adapters.venues.misx import MISX
+from messoyakha_sdk.enums.venues.misx import MISXProductEnum
 from messoyakha_sdk.schemas.s3 import S3StorageOptionsSchema
 
 from messoyakha_dlh.adapters.repositories.finam import FinamS3Repository
@@ -19,16 +21,16 @@ from messoyakha_dlh.services.finam import FinamDLHService
 from messoyakha_dlh.settings import DLHSettings
 
 
-class FinamDLHSettings(DLHSettings):
+class _FinamOHLCVDLHSettings(DLHSettings):
     CATCH_UP_DATE: datetime = datetime(year=2011, month=1, day=1, tzinfo=timezone.utc)
-    TICKERS: list[tuple[str, FinamMarketEnum, FinamIntervalEnum]] = [
-        ("SIBN", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
-        ("GAZP", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
-        ("NVTK", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
-        ("TRNFP", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
-        ("PHOR", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
-        ("PLZL", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
-        ("SBER", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
+    TICKERS: list[tuple[str, FinamIntervalEnum, str]] = [
+        ("SIBN", FinamIntervalEnum.ONE_DAY, str(RUB)),
+        ("GAZP", FinamIntervalEnum.ONE_DAY, str(RUB)),
+        ("NVTK", FinamIntervalEnum.ONE_DAY, str(RUB)),
+        ("TRNFP", FinamIntervalEnum.ONE_DAY, str(RUB)),
+        ("PHOR", FinamIntervalEnum.ONE_DAY, str(RUB)),
+        ("PLZL", FinamIntervalEnum.ONE_DAY, str(RUB)),
+        ("SBER", FinamIntervalEnum.ONE_DAY, str(RUB)),
     ]
     FINAM_SECRET: str
 
@@ -36,33 +38,37 @@ class FinamDLHSettings(DLHSettings):
 @op(required_resource_keys={"settings"}, out=DynamicOut())
 def tickers(
     context: OpExecutionContext,
-) -> Generator[DynamicOutput[tuple[str, FinamMarketEnum, FinamIntervalEnum]], None, None]:
-    for ticker, market, interval in context.resources.settings.TICKERS:
-        yield DynamicOutput(value=(ticker, market, interval), mapping_key=f"{ticker}_{market}_{interval}")
+) -> Generator[DynamicOutput[tuple[str, FinamIntervalEnum, str]], None, None]:
+    for ticker, interval, currency in context.resources.settings.TICKERS:
+        yield DynamicOutput(value=(ticker, interval, currency), mapping_key=f"{ticker}_{interval}_{currency}")
 
 
 @op(required_resource_keys={"services", "settings"})
-def query_latest_ohlcv_timestamp(
-    context: OpExecutionContext, item: tuple[str, FinamMarketEnum, FinamIntervalEnum]
-) -> datetime:
-    ticker, market, interval = item
+def query_latest_ohlcv_timestamp(context: OpExecutionContext, item: tuple[str, FinamIntervalEnum, str]) -> datetime:
+    ticker, interval, currency = item
     latest_timestamp: datetime = context.resources.services["finam_dlh_service"].query_latest_ohlcv_timestamp(
-        ticker=ticker, market=market, interval=interval, catch_up_date=context.resources.settings.CATCH_UP_DATE
+        ticker=ticker,
+        venue=MISX,
+        product=MISXProductEnum.SPOT.value,
+        currency=currency,
+        interval=interval,
+        catch_up_date=context.resources.settings.CATCH_UP_DATE,
     )
-    logger.info(f"Latest {ticker}-{market}-{interval} timestamp is {latest_timestamp}.")
+    logger.info(f"Latest {ticker}-{interval}-{currency} timestamp is {latest_timestamp}.")
     return latest_timestamp
 
 
 @op(required_resource_keys={"services", "settings"})
 async def get_ohlcv(
-    context: OpExecutionContext, item: tuple[str, FinamMarketEnum, FinamIntervalEnum], latest_timestamp: datetime
+    context: OpExecutionContext, item: tuple[str, FinamIntervalEnum, str], latest_timestamp: datetime
 ) -> DataFrame:
-    ticker, market, interval = item
+    ticker, interval, currency = item
     ohlcv: DataFrame = await context.resources.services["finam_sdk_service"].get_ohlcv(
-        input_schema=FinamBarsInputSchema(
+        input_schema=FinamBarsMISXSpotInputSchema(
             secret=context.resources.settings.FINAM_SECRET,
             ticker=ticker,
             interval=interval,
+            currency=currency,
             start_time=latest_timestamp,
             end_time=context.resources.settings.TRIGGER_DATE,
         )
@@ -72,7 +78,7 @@ async def get_ohlcv(
         year=col("timestamp").dt.year(),
         month=col("timestamp").dt.month(),
     )
-    logger.info(f"Got {ticker}-{market}-{interval} OHLCV, shape is {ohlcv.shape}.")
+    logger.info(f"Got {ticker}-{interval}-{currency} OHLCV, shape is {ohlcv.shape}.")
     return ohlcv
 
 
@@ -83,8 +89,10 @@ def load_ohlcv(context: OpExecutionContext, data: list[DataFrame]) -> None:
     if not ohlcv.is_empty():
         ohlcv = ohlcv.with_columns(
             _partition_by_ticker=col("ticker"),
-            _partition_by_market=col("market"),
             _partition_by_interval=col("interval"),
+            _partition_by_product=col("product"),
+            _partition_by_venue=col("venue"),
+            _partition_by_currency=col("currency"),
             _partition_by_year=col("year"),
             _partition_by_month=col("month"),
         )
@@ -96,8 +104,10 @@ def load_ohlcv(context: OpExecutionContext, data: list[DataFrame]) -> None:
             path="s3://f8e90488-f511555d-274b-4258-bffc-572dd1900382/finam/ohlcv/",
             partitions=[
                 "_partition_by_ticker",
-                "_partition_by_market",
                 "_partition_by_interval",
+                "_partition_by_product",
+                "_partition_by_venue",
+                "_partition_by_currency",
                 "_partition_by_year",
                 "_partition_by_month",
             ],
@@ -105,7 +115,7 @@ def load_ohlcv(context: OpExecutionContext, data: list[DataFrame]) -> None:
 
 
 @graph
-def process_ticker(item: tuple[str, FinamMarketEnum, FinamIntervalEnum]) -> DataFrame:
+def process_ticker(item: tuple[str, FinamIntervalEnum, str]) -> DataFrame:
     return get_ohlcv(item=item, latest_timestamp=query_latest_ohlcv_timestamp(item=item))
 
 
@@ -115,13 +125,13 @@ def finam_ohlcv() -> None:
 
 
 class Container(BaseContainer):
-    settings: Factory[FinamDLHSettings] = Factory(FinamDLHSettings)
+    settings: Factory[_FinamOHLCVDLHSettings] = Factory(_FinamOHLCVDLHSettings)
     job: Singleton[JobDefinition] = Singleton(
         finam_ohlcv.to_job,
         name=Factory(lambda: finam_ohlcv.__name__),  # type: ignore[missing-attribute]
         resource_defs=Dict(  # type: ignore[bad-argument-type]
             services=Dict(
-                finam_sdk_service=Factory(FinamMISXService),
+                finam_sdk_service=Factory(FinamMISXSpotService),
                 finam_dlh_service=Factory(  # type: ignore[missing-argument]
                     FinamDLHService,  # type: ignore[bad-argument-type]
                     repository=Factory(  # type: ignore[missing-argument, unexpected-keyword]
