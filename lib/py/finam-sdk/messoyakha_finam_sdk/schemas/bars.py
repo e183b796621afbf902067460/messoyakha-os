@@ -34,15 +34,13 @@ class FinamBarsHeadersSchema(FinamAuthorizationHeaderSchemaBase): ...
 
 
 class _FinamBarsParametersSchema(BaseModel):
-    venue: str
-    product: MISXProductEnum
-
     interval: FinamIntervalEnum = Field(serialization_alias="timeframe")
+    product: MISXProductEnum
+    venue: str
+    currency: str = Field(exclude=True)
 
     start_time: datetime = Field(serialization_alias="interval.start_time")
     end_time: datetime = Field(serialization_alias="interval.end_time")
-
-    currency: str = Field(exclude=True)
 
     @field_serializer("start_time")
     def _add_utc_timezone_to_start_time(self, start_time: datetime) -> str:
@@ -72,18 +70,17 @@ FinamBarsParametersSchema: TypeAlias = FinamMISXSpotBarsParametersSchema | Finam
 
 class FinamBarsContextSchema(BaseModel):
     ticker: str
-    currency: str
-    venue: str
-    product: MISXProductEnum
     interval: FinamIntervalEnum
+    product: MISXProductEnum
+    venue: str
+    currency: str
 
 
 class FinamBarsOutputSchema(BaseModel):
-    venue: str
-    product: MISXProductEnum
-    interval: FinamIntervalEnum
-
     ticker: str
+    interval: FinamIntervalEnum
+    product: MISXProductEnum
+    venue: str
     currency: str
 
     open: float
@@ -99,10 +96,10 @@ class FinamBarsOutputSchema(BaseModel):
     def _wrap(cls, bar: dict, handler: ModelWrapValidatorHandler[Self], info: ValidationInfo) -> Self:
         data: dict = {
             "ticker": info.context["ticker"],  # type: ignore[unsupported-operation]
-            "currency": info.context["currency"],  # type: ignore[unsupported-operation]
-            "venue": info.context["venue"],  # type: ignore[unsupported-operation]
-            "product": info.context["product"],  # type: ignore[unsupported-operation]
             "interval": info.context["interval"],  # type: ignore[unsupported-operation]
+            "product": info.context["product"],  # type: ignore[unsupported-operation]
+            "venue": info.context["venue"],  # type: ignore[unsupported-operation]
+            "currency": info.context["currency"],  # type: ignore[unsupported-operation]
             "open": bar["open"]["value"],
             "high": bar["high"]["value"],
             "low": bar["low"]["value"],
@@ -122,10 +119,10 @@ class _FinamBarsInputSchema(BaseModel):
     secret: str
 
     ticker: str
-    venue: str
-    product: MISXProductEnum
-    currency: str
     interval: FinamIntervalEnum
+    product: MISXProductEnum
+    venue: str
+    currency: str
 
     start_time: datetime
     end_time: datetime

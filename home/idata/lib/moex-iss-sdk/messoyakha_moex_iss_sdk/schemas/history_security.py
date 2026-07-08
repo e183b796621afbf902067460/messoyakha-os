@@ -28,10 +28,9 @@ class MOEXHistorySecurityHTTPEndpointSchema(BaseModel):
 
 
 class MOEXHistorySecurityParametersSchema(BaseModel):
-    currency: str = Field(exclude=True)
-    product: MISXProductEnum = Field(exclude=True)
-
     interval: MOEXIntervalEnum
+    product: MISXProductEnum = Field(exclude=True)
+    currency: str = Field(exclude=True)
 
     start_time: datetime = Field(serialization_alias="from")
     end_time: datetime = Field(serialization_alias="till")
@@ -54,18 +53,17 @@ class MOEXHistorySecurityParametersSchema(BaseModel):
 
 class MOEXHistorySecurityContextSchema(BaseModel):
     ticker: str
-    currency: str
-    product: MISXProductEnum
     interval: MOEXIntervalEnum
+    product: MISXProductEnum
+    currency: str
 
 
 class MOEXHistorySecurityOutputSchema(BaseModel):
-    venue: str = Field(init=False, default=MISX)
-    interval: MOEXIntervalEnum
-
     ticker: str
-    currency: str
+    interval: MOEXIntervalEnum
     product: MISXProductEnum
+    venue: str = Field(init=False, default=MISX)
+    currency: str
 
     open: float | None
     high: float | None
@@ -80,9 +78,9 @@ class MOEXHistorySecurityOutputSchema(BaseModel):
     def _wrap(cls, row: list, handler: ModelWrapValidatorHandler[Self], info: ValidationInfo) -> Self:
         data: dict = {
             "ticker": info.context["ticker"],  # type: ignore[unsupported-operation]
-            "currency": info.context["currency"],  # type: ignore[unsupported-operation]
-            "product": info.context["product"],  # type: ignore[unsupported-operation]
             "interval": info.context["interval"],  # type: ignore[unsupported-operation]
+            "product": info.context["product"],  # type: ignore[unsupported-operation]
+            "currency": info.context["currency"],  # type: ignore[unsupported-operation]
             "open": row[6],
             "high": row[7],
             "low": row[8],
@@ -99,11 +97,10 @@ class MOEXHistorySecurityOutputSchema(BaseModel):
 
 
 class _MOEXHistorySecurityInputSchemaBase(BaseModel):
-    interval: MOEXIntervalEnum = Field(init=False, default=MOEXIntervalEnum.ONE_DAY)
-
     ticker: str
-    currency: str
+    interval: MOEXIntervalEnum = Field(init=False, default=MOEXIntervalEnum.ONE_DAY)
     product: MISXProductEnum
+    currency: str
 
     start_time: datetime
     end_time: datetime
