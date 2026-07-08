@@ -72,7 +72,6 @@ class MOEXHistorySecurityOutputSchema(BaseModel):
     low: float | None
     close: float | None
     volume: float | None
-    currency: str
 
     timestamp: datetime
 

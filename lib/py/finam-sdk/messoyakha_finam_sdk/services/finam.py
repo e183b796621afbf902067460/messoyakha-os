@@ -6,13 +6,17 @@ from loguru import logger
 from polars import DataFrame, col
 from tqdm import tqdm
 
-from messoyakha_finam_sdk.adapters.finam import FinamAPIClient, FinamMISXAPIClient
+from messoyakha_finam_sdk.adapters.finam import FinamAPIClient, FinamMISXFuturesAPIClient, FinamMISXSpotAPIClient
 from messoyakha_finam_sdk.schemas.bars import (
     FinamBarsHeadersSchema,
     FinamBarsHTTPEndpointSchema,
     FinamBarsInputSchema,
+    FinamBarsMISXFuturesInputSchema,
+    FinamBarsMISXSpotInputSchema,
     FinamBarsOutputSchema,
     FinamBarsParametersSchema,
+    FinamMISXFuturesBarsParametersSchema,
+    FinamMISXSpotBarsParametersSchema,
 )
 from messoyakha_finam_sdk.schemas.clock import FinamClockHeadersSchema, FinamPingInputSchema
 from messoyakha_finam_sdk.schemas.sessions import FinamSessionsJsonSchema, FinamSessionsOutputSchema
@@ -32,7 +36,11 @@ class _FinamService:
         )
         await self._client.clock(headers_schema=FinamClockHeadersSchema(authorization=session.token))
 
-    async def get_ohlcv(self, input_schema: FinamBarsInputSchema) -> DataFrame:
+    async def _get_ohlcv(
+        self,
+        input_schema: FinamBarsInputSchema,
+        _parameters_schema: type[FinamBarsParametersSchema],
+    ) -> DataFrame:
         session: FinamSessionsOutputSchema = await self._client.sessions(
             json_schema=FinamSessionsJsonSchema(secret=input_schema.secret)
         )
@@ -43,9 +51,12 @@ class _FinamService:
         for _ in tqdm(range(number_of_batches)):
             end_time: datetime = min(input_schema.start_time + input_schema.limit, input_schema.end_time)
             batch: list[FinamBarsOutputSchema] = await self._client.bars(
-                endpoint_schema=FinamBarsHTTPEndpointSchema(ticker=input_schema.ticker, market=input_schema.market),
-                parameters_schema=FinamBarsParametersSchema(
-                    interval=input_schema.interval, start_time=input_schema.start_time, end_time=end_time
+                endpoint_schema=FinamBarsHTTPEndpointSchema(ticker=input_schema.ticker, venue=input_schema.venue),
+                parameters_schema=_parameters_schema(
+                    currency=input_schema.currency,
+                    interval=input_schema.interval,
+                    start_time=input_schema.start_time,
+                    end_time=end_time,
                 ),
                 headers_schema=FinamBarsHeadersSchema(authorization=session.token),
             )
@@ -62,5 +73,18 @@ class _FinamService:
 
 
 @define(slots=True, auto_attribs=True, kw_only=True)
-class FinamMISXService(_FinamService):
-    _client: FinamAPIClient = field(init=False, factory=FinamMISXAPIClient)
+class FinamMISXSpotService(_FinamService):
+    _client: FinamAPIClient = field(init=False, factory=FinamMISXSpotAPIClient)
+
+    async def get_ohlcv(self, input_schema: FinamBarsMISXSpotInputSchema) -> DataFrame:
+        return await super()._get_ohlcv(input_schema=input_schema, _parameters_schema=FinamMISXSpotBarsParametersSchema)
+
+
+@define(slots=True, auto_attribs=True, kw_only=True)
+class FinamMISXFuturesService(_FinamService):
+    _client: FinamAPIClient = field(init=False, factory=FinamMISXFuturesAPIClient)
+
+    async def get_ohlcv(self, input_schema: FinamBarsMISXFuturesInputSchema) -> DataFrame:
+        return await super()._get_ohlcv(
+            input_schema=input_schema, _parameters_schema=FinamMISXFuturesBarsParametersSchema
+        )

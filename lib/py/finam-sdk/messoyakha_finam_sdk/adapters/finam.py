@@ -10,6 +10,8 @@ from messoyakha_finam_sdk.schemas.bars import (
     FinamBarsHTTPEndpointSchema,
     FinamBarsOutputSchema,
     FinamBarsParametersSchema,
+    FinamMISXFuturesBarsParametersSchema,
+    FinamMISXSpotBarsParametersSchema,
 )
 from messoyakha_finam_sdk.schemas.clock import FinamClockHeadersSchema
 from messoyakha_finam_sdk.schemas.sessions import FinamSessionsJsonSchema, FinamSessionsOutputSchema
@@ -23,10 +25,12 @@ class _FinamAPIClientBase(HTTPAPIClientBase):
         init=False, factory=partial(AsyncClient, base_url="https://api.finam.ru", timeout=10, http2=True)
     )
 
-    async def _clock(self, headers_schema: FinamClockHeadersSchema, **kwargs) -> None:
+    @endpoint_route("/v1/assets/clock")
+    async def clock(self, headers_schema: FinamClockHeadersSchema, **kwargs) -> None:
         await self._get(headers=headers_schema.model_dump(by_alias=True), **kwargs)
 
-    async def _sessions(self, json_schema: FinamSessionsJsonSchema, **kwargs) -> FinamSessionsOutputSchema:
+    @endpoint_route("/v1/sessions")
+    async def sessions(self, json_schema: FinamSessionsJsonSchema, **kwargs) -> FinamSessionsOutputSchema:
         response: Response = await self._post(json=json_schema.model_dump(), **kwargs)
         return FinamSessionsOutputSchema(**response.json())
 
@@ -44,7 +48,9 @@ class _FinamAPIClientBase(HTTPAPIClientBase):
         )
         context: FinamBarsContextSchema = FinamBarsContextSchema(
             ticker=endpoint_schema.ticker,
-            market=endpoint_schema.market,
+            venue=parameters_schema.venue,
+            currency=parameters_schema.currency,
+            product=parameters_schema.product,
             interval=parameters_schema.interval,
         )
         return [
@@ -53,20 +59,12 @@ class _FinamAPIClientBase(HTTPAPIClientBase):
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
-class FinamMISXAPIClient(_FinamAPIClientBase):
-    @endpoint_route("/v1/assets/clock")
-    async def clock(self, headers_schema: FinamClockHeadersSchema, **kwargs) -> None:
-        await super()._clock(headers_schema=headers_schema, **kwargs)
-
-    @endpoint_route("/v1/sessions")
-    async def sessions(self, json_schema: FinamSessionsJsonSchema, **kwargs) -> FinamSessionsOutputSchema:
-        return await super()._sessions(json_schema=json_schema, **kwargs)
-
+class FinamMISXSpotAPIClient(_FinamAPIClientBase):
     @endpoint_route("/v1/instruments/{symbol}/bars")
     async def bars(
         self,
         endpoint_schema: FinamBarsHTTPEndpointSchema,
-        parameters_schema: FinamBarsParametersSchema,
+        parameters_schema: FinamMISXSpotBarsParametersSchema,
         headers_schema: FinamBarsHeadersSchema,
         **kwargs,
     ) -> list[FinamBarsOutputSchema]:
@@ -78,4 +76,22 @@ class FinamMISXAPIClient(_FinamAPIClientBase):
         )
 
 
-FinamAPIClient: TypeAlias = FinamMISXAPIClient
+@define(slots=False, auto_attribs=True, kw_only=True)
+class FinamMISXFuturesAPIClient(_FinamAPIClientBase):
+    @endpoint_route("/v1/instruments/{symbol}/bars")
+    async def bars(
+        self,
+        endpoint_schema: FinamBarsHTTPEndpointSchema,
+        parameters_schema: FinamMISXFuturesBarsParametersSchema,
+        headers_schema: FinamBarsHeadersSchema,
+        **kwargs,
+    ) -> list[FinamBarsOutputSchema]:
+        return await super()._bars(
+            endpoint_schema=endpoint_schema,
+            parameters_schema=parameters_schema,
+            headers_schema=headers_schema,
+            **kwargs,
+        )
+
+
+FinamAPIClient: TypeAlias = FinamMISXSpotAPIClient | FinamMISXFuturesAPIClient
