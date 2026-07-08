@@ -1,17 +1,7 @@
 from collections.abc import Generator
-from datetime import datetime
+from datetime import datetime, timezone
 
-from dagster import (
-    DynamicOut,
-    DynamicOutput,
-    In,
-    JobDefinition,
-    Nothing,
-    OpExecutionContext,
-    graph,
-    multiprocess_executor,
-    op,
-)
+from dagster import DynamicOut, DynamicOutput, JobDefinition, OpExecutionContext, graph, op
 from loguru import logger
 from polars import DataFrame, col, concat
 from that_depends import BaseContainer
@@ -21,20 +11,29 @@ from messoyakha_finam_sdk.enums.intervals import FinamIntervalEnum
 from messoyakha_finam_sdk.enums.markets import FinamMarketEnum
 from messoyakha_finam_sdk.schemas.bars import FinamBarsInputSchema
 from messoyakha_finam_sdk.services.finam import FinamMISXService
-from messoyakha_sdk.adapters.connections.s3 import options
+from messoyakha_sdk.schemas.s3 import S3StorageOptionsSchema
 
-from messoyakha_dlh.adapters.repositories.finam.ohlcv import FinamOHLCVS3Repository
-from messoyakha_dlh.services.finam.ohlcv import FinamOHLCVDLHService, FinamOHLCVDLHSettings
-
-
-@op(required_resource_keys={"settings", "services"})
-def migrate_ohlcv(context: OpExecutionContext) -> None:
-    context.resources.settings.catalog.create_namespace_if_not_exists(namespace=context.resources.settings.NAMESPACE)
-    if context.resources.settings.catalog.namespace_exists(identifier=context.resources.settings.NAMESPACE):
-        context.resources.services["finam_dlh_service"].migrate_ohlcv()
+from messoyakha_dlh.adapters.repositories.finam import FinamS3Repository
+from messoyakha_dlh.schemas.finam import FinamOHLCVSchema
+from messoyakha_dlh.services.finam import FinamDLHService
+from messoyakha_dlh.settings import DLHSettings
 
 
-@op(ins={"is_migrated": In(Nothing)}, required_resource_keys={"settings"}, out=DynamicOut())
+class FinamDLHSettings(DLHSettings):
+    CATCH_UP_DATE: datetime = datetime(year=2011, month=1, day=1, tzinfo=timezone.utc)
+    TICKERS: list[tuple[str, FinamMarketEnum, FinamIntervalEnum]] = [
+        ("SIBN", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
+        ("GAZP", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
+        ("NVTK", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
+        ("TRNFP", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
+        ("PHOR", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
+        ("PLZL", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
+        ("SBER", FinamMarketEnum.MISX, FinamIntervalEnum.ONE_DAY),
+    ]
+    FINAM_SECRET: str
+
+
+@op(required_resource_keys={"settings"}, out=DynamicOut())
 def tickers(
     context: OpExecutionContext,
 ) -> Generator[DynamicOutput[tuple[str, FinamMarketEnum, FinamIntervalEnum]], None, None]:
@@ -42,13 +41,13 @@ def tickers(
         yield DynamicOutput(value=(ticker, market, interval), mapping_key=f"{ticker}_{market}_{interval}")
 
 
-@op(required_resource_keys={"services"})
-def query_latest_timestamp(
+@op(required_resource_keys={"services", "settings"})
+def query_latest_ohlcv_timestamp(
     context: OpExecutionContext, item: tuple[str, FinamMarketEnum, FinamIntervalEnum]
 ) -> datetime:
     ticker, market, interval = item
-    latest_timestamp: datetime = context.resources.services["finam_dlh_service"].query_latest_timestamp(
-        ticker=ticker, market=market, interval=interval
+    latest_timestamp: datetime = context.resources.services["finam_dlh_service"].query_latest_ohlcv_timestamp(
+        ticker=ticker, market=market, interval=interval, catch_up_date=context.resources.settings.CATCH_UP_DATE
     )
     logger.info(f"Latest {ticker}-{market}-{interval} timestamp is {latest_timestamp}.")
     return latest_timestamp
@@ -69,6 +68,10 @@ async def get_ohlcv(
         )
     )
     ohlcv = ohlcv.filter(col("timestamp") > latest_timestamp)
+    ohlcv = ohlcv.with_columns(
+        year=col("timestamp").dt.year(),
+        month=col("timestamp").dt.month(),
+    )
     logger.info(f"Got {ticker}-{market}-{interval} OHLCV, shape is {ohlcv.shape}.")
     return ohlcv
 
@@ -78,35 +81,53 @@ def load_ohlcv(context: OpExecutionContext, data: list[DataFrame]) -> None:
     ohlcv: DataFrame = concat(data)
     logger.info(f"Got all OHLCV to load, shape is {ohlcv.shape}.")
     if not ohlcv.is_empty():
-        context.resources.services["finam_dlh_service"].load_ohlcv(ohlcv=ohlcv)
+        ohlcv = ohlcv.with_columns(
+            _partition_by_ticker=col("ticker"),
+            _partition_by_market=col("market"),
+            _partition_by_interval=col("interval"),
+            _partition_by_year=col("year"),
+            _partition_by_month=col("month"),
+        )
+        ohlcv = FinamOHLCVSchema.validate(ohlcv)
+        logger.info(f"OHLCV shape is {ohlcv.shape}.")
+
+        context.resources.services["finam_dlh_service"].load_to_dlh(
+            data=ohlcv,
+            path="s3://f8e90488-f511555d-274b-4258-bffc-572dd1900382/finam/ohlcv/",
+            partitions=[
+                "_partition_by_ticker",
+                "_partition_by_market",
+                "_partition_by_interval",
+                "_partition_by_year",
+                "_partition_by_month",
+            ],
+        )
 
 
 @graph
 def process_ticker(item: tuple[str, FinamMarketEnum, FinamIntervalEnum]) -> DataFrame:
-    return get_ohlcv(item=item, latest_timestamp=query_latest_timestamp(item=item))
+    return get_ohlcv(item=item, latest_timestamp=query_latest_ohlcv_timestamp(item=item))
 
 
 @graph
 def finam_ohlcv() -> None:
-    load_ohlcv(data=tickers(is_migrated=migrate_ohlcv()).map(process_ticker).collect())
+    load_ohlcv(data=tickers().map(process_ticker).collect())
 
 
 class Container(BaseContainer):
-    alias: str | None = "FinamOHLCVContainer"
-
-    settings: Factory[FinamOHLCVDLHSettings] = Factory(FinamOHLCVDLHSettings)
+    settings: Factory[FinamDLHSettings] = Factory(FinamDLHSettings)
     job: Singleton[JobDefinition] = Singleton(
         finam_ohlcv.to_job,
-        name=finam_ohlcv.__name__,  # type: ignore[missing-attribute]
+        name=Factory(lambda: finam_ohlcv.__name__),  # type: ignore[missing-attribute]
         resource_defs=Dict(  # type: ignore[bad-argument-type]
             services=Dict(
                 finam_sdk_service=Factory(FinamMISXService),
                 finam_dlh_service=Factory(  # type: ignore[missing-argument]
-                    FinamOHLCVDLHService,  # type: ignore[bad-argument-type]
+                    FinamDLHService,  # type: ignore[bad-argument-type]
                     repository=Factory(  # type: ignore[missing-argument, unexpected-keyword]
-                        FinamOHLCVS3Repository,
+                        FinamS3Repository,
                         options=Factory(  # type: ignore[unexpected-keyword]
-                            options,
+                            S3StorageOptionsSchema,
                             access_key=settings.ACCESS_KEY,
                             secret_key=settings.SECRET_KEY,
                             endpoint=settings.ENDPOINT,
@@ -117,8 +138,4 @@ class Container(BaseContainer):
             ),
             settings=settings,  # type: ignore[bad-argument-type]
         ),
-        executor_def=Factory(  # type: ignore[bad-argument-type]
-            multiprocess_executor.configured, config_or_config_fn=Dict(max_concurrent=Factory(lambda: 2))
-        ),
-        tags=Dict(source=settings.NAMESPACE),  # type: ignore[bad-argument-type]
     )

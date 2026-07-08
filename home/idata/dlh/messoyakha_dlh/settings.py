@@ -1,14 +1,9 @@
 from datetime import datetime, timezone
 
-from messoyakha_sdk.settings.s3 import IcebergSettingsBase
+from messoyakha_sdk.settings.s3 import S3SettingsBase
 
 
-class DLHSettings(IcebergSettingsBase):
-    NAMESPACE: str = "dlh"
-
-    BUCKET: str = "f8e90488-f511555d-274b-4258-bffc-572dd1900382"
-
+class DLHSettings(S3SettingsBase):
     ACCESS_KEY: str
     SECRET_KEY: str
-
     TRIGGER_DATE: datetime = datetime.now(tz=timezone.utc)
