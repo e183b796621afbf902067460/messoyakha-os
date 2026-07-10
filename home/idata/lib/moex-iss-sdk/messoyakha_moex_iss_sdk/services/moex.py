@@ -6,7 +6,7 @@ from loguru import logger
 from polars import DataFrame, col
 from tqdm import tqdm
 
-from messoyakha_moex_iss_sdk.adapters.moex import MOEXAPIClient, MOEXStockIndexAPIClient
+from messoyakha_moex_iss_sdk.adapters.moex import MOEXAPIClient, MOEXStockIndexAPIClient, MOEXStockSharesAPIClient
 from messoyakha_moex_iss_sdk.schemas.history_security import (
     MOEXHistorySecurityHTTPEndpointSchema,
     MOEXHistorySecurityInputSchemaBase,
@@ -53,10 +53,9 @@ class _MOEXService:
                 break
             input_schema.start_time = next_start_time
             await sleep(1)
-        # TODO: if not history_securities: return empty dataframe with columns
         return DataFrame([candle.model_dump() for candle in history_securities]).unique().sort(by=col("timestamp"))
 
-    async def _get_first_trade_date(self, input_schema: MOEXListedFromInputSchema) -> datetime:
+    async def get_first_trade_date(self, input_schema: MOEXListedFromInputSchema) -> datetime:
         return await self._client.listed_from(
             endpoint_schema=MOEXListedFromHTTPEndpointSchema(
                 ticker=input_schema.ticker,
@@ -71,5 +70,10 @@ class MOEXStockIndexService(_MOEXService):
     async def get_ohlcv(self, input_schema: MOEXSpotHistorySecurityInputSchema) -> DataFrame:
         return await super()._get_ohlcv(input_schema=input_schema)
 
-    async def get_first_trade_date(self, input_schema: MOEXListedFromInputSchema) -> datetime:
-        return await super()._get_first_trade_date(input_schema=input_schema)
+
+@define(slots=True, auto_attribs=True, kw_only=True)
+class MOEXStockSharesService(_MOEXService):
+    _client: MOEXAPIClient = field(init=False, factory=MOEXStockSharesAPIClient)
+
+    async def get_ohlcv(self, input_schema: MOEXSpotHistorySecurityInputSchema) -> DataFrame:
+        return await super()._get_ohlcv(input_schema=input_schema)

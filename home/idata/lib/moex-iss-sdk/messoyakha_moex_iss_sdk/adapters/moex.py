@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from functools import partial
 from typing import TypeAlias
@@ -17,10 +18,14 @@ from messoyakha_sdk.decorators.route import endpoint_route
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
-class _MOEXAPIClientBase(HTTPAPIClientBase):
+class _MOEXAPIClientBase(HTTPAPIClientBase, ABC):
     _session: AsyncClient = field(
         init=False, factory=partial(AsyncClient, base_url="https://iss.moex.com", timeout=10, http2=True)
     )
+
+    @staticmethod
+    @abstractmethod
+    def _parse_history_security(history_security: list) -> list: ...
 
     async def _history_security(
         self,
@@ -39,7 +44,9 @@ class _MOEXAPIClientBase(HTTPAPIClientBase):
             interval=parameters_schema.interval,
         )
         return [
-            MOEXHistorySecurityOutputSchema.model_validate(history_security, context=context.model_dump())
+            MOEXHistorySecurityOutputSchema.model_validate(
+                self._parse_history_security(history_security=history_security), context=context.model_dump()
+            )
             for history_security in response.json()["history"]["data"]
         ]
 
@@ -59,6 +66,10 @@ class _MOEXAPIClientBase(HTTPAPIClientBase):
 
 @define(slots=False, auto_attribs=True, kw_only=True)
 class MOEXStockIndexAPIClient(_MOEXAPIClientBase):
+    @staticmethod
+    def _parse_history_security(history_security: list) -> list:
+        return history_security
+
     # https://iss.moex.com/iss/reference/439
     @endpoint_route("/iss/history/engines/stock/markets/index/securities/{security}.json")
     async def history_security(
@@ -74,4 +85,32 @@ class MOEXStockIndexAPIClient(_MOEXAPIClientBase):
         )
 
 
-MOEXAPIClient: TypeAlias = MOEXStockIndexAPIClient
+@define(slots=False, auto_attribs=True, kw_only=True)
+class MOEXStockSharesAPIClient(_MOEXAPIClientBase):
+    @staticmethod
+    def _parse_history_security(history_security: list) -> list:
+        result: list = [None] * 18
+        result[2] = history_security[1]
+        result[5] = history_security[11]
+        result[6] = history_security[6]
+        result[7] = history_security[8]
+        result[8] = history_security[7]
+        result[17] = history_security[12]
+        return result
+
+    # https://iss.moex.com/iss/reference/439
+    @endpoint_route("/iss/history/engines/stock/markets/shares/securities/{security}.json")
+    async def history_security(
+        self,
+        endpoint_schema: MOEXHistorySecurityHTTPEndpointSchema,
+        parameters_schema: MOEXHistorySecurityParametersSchema,
+        **kwargs,
+    ) -> list[MOEXHistorySecurityOutputSchema]:
+        return await super()._history_security(
+            endpoint_schema=endpoint_schema,
+            parameters_schema=parameters_schema,
+            **kwargs,
+        )
+
+
+MOEXAPIClient: TypeAlias = MOEXStockIndexAPIClient | MOEXStockSharesAPIClient
