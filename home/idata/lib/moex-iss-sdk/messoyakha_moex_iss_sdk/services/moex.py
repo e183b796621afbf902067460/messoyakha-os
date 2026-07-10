@@ -14,6 +14,7 @@ from messoyakha_moex_iss_sdk.schemas.history_security import (
     MOEXHistorySecurityParametersSchema,
     MOEXSpotHistorySecurityInputSchema,
 )
+from messoyakha_moex_iss_sdk.schemas.listed_from import MOEXListedFromHTTPEndpointSchema, MOEXListedFromInputSchema
 
 
 logger.remove()
@@ -55,6 +56,13 @@ class _MOEXService:
         # TODO: if not history_securities: return empty dataframe with columns
         return DataFrame([candle.model_dump() for candle in history_securities]).unique().sort(by=col("timestamp"))
 
+    async def _get_first_trade_date(self, input_schema: MOEXListedFromInputSchema) -> datetime:
+        return await self._client.listed_from(
+            endpoint_schema=MOEXListedFromHTTPEndpointSchema(
+                ticker=input_schema.ticker,
+            ),
+        )
+
 
 @define(slots=True, auto_attribs=True, kw_only=True)
 class MOEXStockIndexService(_MOEXService):
@@ -62,3 +70,6 @@ class MOEXStockIndexService(_MOEXService):
 
     async def get_ohlcv(self, input_schema: MOEXSpotHistorySecurityInputSchema) -> DataFrame:
         return await super()._get_ohlcv(input_schema=input_schema)
+
+    async def get_first_trade_date(self, input_schema: MOEXListedFromInputSchema) -> datetime:
+        return await super()._get_first_trade_date(input_schema=input_schema)

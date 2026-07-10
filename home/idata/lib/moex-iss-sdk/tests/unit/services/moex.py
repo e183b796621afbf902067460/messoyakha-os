@@ -5,6 +5,7 @@ from loguru import logger
 from polars import Config, DataFrame
 
 from messoyakha_moex_iss_sdk.schemas.history_security import MOEXSpotHistorySecurityInputSchema
+from messoyakha_moex_iss_sdk.schemas.listed_from import MOEXListedFromInputSchema
 from messoyakha_moex_iss_sdk.services.moex import MOEXStockIndexService
 
 
@@ -29,3 +30,13 @@ class TestMOEXStockIndexService:
 
         assert isinstance(data, DataFrame)
         assert not data.is_empty()
+
+    @pytest.mark.asyncio
+    async def test_get_first_trade_date(self) -> None:
+        moex: MOEXStockIndexService = MOEXStockIndexService()
+        first_trade_date: datetime = await moex.get_first_trade_date(
+            input_schema=MOEXListedFromInputSchema(ticker="IMOEX"),
+        )
+        logger.info(f"First trade date for IMOEX: {first_trade_date}.")
+
+        assert isinstance(first_trade_date, datetime)
