@@ -22,11 +22,11 @@ Also, the project follows a branching workflow: all the steps need to be complet
 
 ### Cloning Repository
 
-You will need your own copy of `pep` to work on the code, so you will want to clone repository to your machine:
+You will need your own copy of `messoyaka-os` to work on the code, so you will want to clone repository to your machine:
 ```bash
-git clone https://github.com/e183b796621afbf902067460/pep.git
+git clone https://github.com/e183b796621afbf902067460/messoyaka-os.git
 ```
-This creates the directory `pep` and connect your local repository to the upstream `pep` repository.
+This creates the directory `messoyaka-os` and connect your local repository to the upstream `messoyaka-os` repository.
 
 <!-- general-rule:1 -->
 > [!NOTE]
@@ -34,7 +34,7 @@ This creates the directory `pep` and connect your local repository to the upstre
 
 ### Branching Rules
 
-Your local `master` branch must always reflect the current state of `pep` repository: it's a defaul branch in this repository, ensure it's up-to-date with the main repository (assuming you're already in the `master` branch):
+Your local `master` branch must always reflect the current state of `messoyaka-os` repository: it's a defaul branch in this repository, ensure it's up-to-date with the main repository (assuming you're already in the `master` branch):
 ```bash
 git pull master --ff-only
 ```
@@ -44,7 +44,7 @@ Then, create a branch for making your changes, for example for bugfix:
 ```bash
 git checkout -b bug/short-branch-name
 ```
-This changes your working branch from `master` to the `bug/short-branch-name` branch: keep any changes in this branch specific to one bug or feature so it is clear what the branch brings to `pep`.
+This changes your working branch from `master` to the `bug/short-branch-name` branch: keep any changes in this branch specific to one bug or feature so it is clear what the branch brings to `messoyaka-os`.
 
 #### Branch Naming Rules
 
@@ -82,7 +82,7 @@ When you want your changes to appear publicly, push a new local branch that does
 git push --set-upstream origin bug/short-branch-name
 ```
 
-Now your code is not yet a part of the `pep` project: your request then goes to the repository maintainers, and they will review the code. Based on the review you get on your changes, you will probably need to make some adjustments to the code.
+Now your code is not yet a part of the `messoyaka-os` project: your request then goes to the repository maintainers, and they will review the code. Based on the review you get on your changes, you will probably need to make some adjustments to the code.
 
 If there are no conflicts (or they could be fixed automatically), and you can simply push your changes. Instead, you need to solve those conflicts.
 
@@ -123,7 +123,7 @@ Always format and check files with `pre-commit` after writing or editing them to
 ## Code Standards
 
 <!-- general-rule:5 -->
-`pep` codebase contains many current examples, and we strongly encourage copying the style of existing code when working on new task (whether it's a feature, bug, or test)!
+`messoyaka-os` codebase contains many current examples, and we strongly encourage copying the style of existing code when working on new task (whether it's a feature, bug, or test)!
 
 ### Writing Code
 
@@ -161,7 +161,7 @@ There are certain rules for naming enforcements:
 ### Testing Code
 
 <!-- general-rule:15 -->
-`pep` is serious about testing and strongly encourages contributors to embrace [TDD](https://en.wikipedia.org/wiki/Test-driven_development). So, before actually writing any code, you should write your tests. However, it's always worth considering additional use cases and writing corresponding tests. We recommend striving to ensure code you add or change within `pep` is covered by a test.
+`messoyaka-os` is serious about testing and strongly encourages contributors to embrace [TDD](https://en.wikipedia.org/wiki/Test-driven_development). So, before actually writing any code, you should write your tests. However, it's always worth considering additional use cases and writing corresponding tests. We recommend striving to ensure code you add or change within `messoyaka-os` is covered by a test.
 
 All tests must go into `tests` subdirectory of the specific package (or module), and `tests` subdirectoty structure must mirrors source code. Test suite will run automatically on CI: any warnings from these tests will cause the CI to fail, therefore:
 
