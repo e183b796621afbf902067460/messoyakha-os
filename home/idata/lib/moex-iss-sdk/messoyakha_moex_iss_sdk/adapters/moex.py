@@ -43,7 +43,9 @@ class _MOEXAPIClientBase(HTTPAPIClientBase):
             for history_security in response.json()["history"]["data"]
         ]
 
-    async def _listed_from(
+    # https://iss.moex.com/iss/reference/193
+    @endpoint_route("/iss/securities/{security}.json")
+    async def listed_from(
         self,
         endpoint_schema: MOEXListedFromHTTPEndpointSchema,  # noqa: ARG002
         **kwargs,
@@ -68,18 +70,6 @@ class MOEXStockIndexAPIClient(_MOEXAPIClientBase):
         return await super()._history_security(
             endpoint_schema=endpoint_schema,
             parameters_schema=parameters_schema,
-            **kwargs,
-        )
-
-    # https://iss.moex.com/iss/reference/193
-    @endpoint_route("/iss/securities/{security}.json")
-    async def listed_from(
-        self,
-        endpoint_schema: MOEXListedFromHTTPEndpointSchema,
-        **kwargs,
-    ) -> datetime:
-        return await super()._listed_from(
-            endpoint_schema=endpoint_schema,
             **kwargs,
         )
 
