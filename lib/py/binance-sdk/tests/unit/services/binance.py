@@ -19,7 +19,7 @@ class TestBinanceSpotService:
         await binance.ping()
         data: DataFrame = await binance.get_ohlcv(
             input_schema=BinanceKlinesSpotInputSchema(
-                ticker="BTCUSDT",
+                ticker="BTC",
                 interval=BinanceIntervalEnum.ONE_DAY,
                 currency=str(USDT),
                 start_time="2026-07-01",

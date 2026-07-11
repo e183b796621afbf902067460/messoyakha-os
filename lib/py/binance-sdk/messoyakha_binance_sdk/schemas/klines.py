@@ -6,6 +6,7 @@ from pydantic import (
     Field,
     ModelWrapValidatorHandler,
     ValidationInfo,
+    computed_field,
     field_serializer,
     field_validator,
     model_validator,
@@ -20,7 +21,7 @@ _MILLISECONDS_IN_SECOND: Final[int] = 10**3
 
 
 class BinanceKlinesParametersSchema(BaseModel):
-    ticker: str = Field(serialization_alias="symbol")
+    ticker: str = Field(exclude=True)
     interval: BinanceIntervalEnum
     product: BinanceProductEnum = Field(exclude=True)
     venue: str = Field(exclude=True)
@@ -30,6 +31,10 @@ class BinanceKlinesParametersSchema(BaseModel):
     end_time: datetime = Field(serialization_alias="endTime")
 
     limit: int | None = Field(init=False, default=1_000)
+
+    @computed_field(alias="symbol")
+    def _symbol(self) -> str:
+        return f"{self.ticker}{self.currency}"
 
     @field_serializer("start_time")
     def _serialize_start_time_to_milliseconds(self, start_time: int | datetime) -> int:
