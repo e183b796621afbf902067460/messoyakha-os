@@ -12,6 +12,8 @@ from messoyakha_binance_sdk.schemas.klines import (
     BinanceKlinesInputSchema,
     BinanceKlinesOutputSchema,
     BinanceKlinesParametersSchema,
+    BinanceKlinesSpotInputSchema,
+    BinanceKlinesUSDTMInputSchema,
 )
 
 
@@ -26,13 +28,24 @@ class _BinanceServiceBase:
     async def ping(self) -> None:
         await self._client.ping()
 
-    async def get_ohlcv(self, input_schema: BinanceKlinesInputSchema) -> DataFrame:
+    async def _get_ohlcv(
+        self,
+        input_schema: BinanceKlinesInputSchema,
+    ) -> DataFrame:
         number_of_batches: int = int(floor(input_schema.delta.total_seconds() / input_schema.interval_seconds))
 
         klines: list[BinanceKlinesOutputSchema] = []
         for _ in tqdm(range(number_of_batches)):
             batch: list[BinanceKlinesOutputSchema] = await self._client.klines(
-                parameters_schema=BinanceKlinesParametersSchema(**input_schema.model_dump())
+                parameters_schema=BinanceKlinesParametersSchema(
+                    ticker=input_schema.ticker,
+                    interval=input_schema.interval,
+                    product=input_schema.product,
+                    venue=input_schema.venue,
+                    currency=input_schema.currency,
+                    start_time=input_schema.start_time,
+                    end_time=input_schema.end_time,
+                )
             )
             if not batch:
                 break
@@ -50,7 +63,13 @@ class _BinanceServiceBase:
 class BinanceSpotService(_BinanceServiceBase):
     _client: BinanceAPIClient = field(init=False, factory=BinanceSpotAPIClient)
 
+    async def get_ohlcv(self, input_schema: BinanceKlinesSpotInputSchema) -> DataFrame:
+        return await super()._get_ohlcv(input_schema=input_schema)
+
 
 @define(slots=True, auto_attribs=True, kw_only=True)
 class BinanceUSDTMService(_BinanceServiceBase):
     _client: BinanceAPIClient = field(init=False, factory=BinanceUSDTMAPIClient)
+
+    async def get_ohlcv(self, input_schema: BinanceKlinesUSDTMInputSchema) -> DataFrame:
+        return await super()._get_ohlcv(input_schema=input_schema)

@@ -33,10 +33,10 @@ class FinamBarsHTTPEndpointSchema(BaseModel):
 class FinamBarsHeadersSchema(FinamAuthorizationHeaderSchemaBase): ...
 
 
-class _FinamBarsParametersSchema(BaseModel):
+class FinamBarsParametersSchema(BaseModel):
     interval: FinamIntervalEnum = Field(serialization_alias="timeframe")
-    product: MISXProductEnum
-    venue: str
+    product: MISXProductEnum = Field(exclude=True)
+    venue: str = Field(exclude=True)
     currency: str = Field(exclude=True)
 
     start_time: datetime = Field(serialization_alias="interval.start_time")
@@ -53,19 +53,6 @@ class _FinamBarsParametersSchema(BaseModel):
         if isinstance(end_time, datetime):
             return end_time.strftime("%Y-%m-%dT%H:%M:%SZ")
         return end_time
-
-
-class FinamMISXSpotBarsParametersSchema(_FinamBarsParametersSchema):
-    venue: str = Field(init=False, exclude=True, default=MISX)
-    product: MISXProductEnum = Field(init=False, exclude=True, default=MISXProductEnum.SPOT)
-
-
-class FinamMISXFuturesBarsParametersSchema(_FinamBarsParametersSchema):
-    venue: str = Field(init=False, exclude=True, default=MISX)
-    product: MISXProductEnum = Field(init=False, exclude=True, default=MISXProductEnum.FUTURES)
-
-
-FinamBarsParametersSchema: TypeAlias = FinamMISXSpotBarsParametersSchema | FinamMISXFuturesBarsParametersSchema
 
 
 class FinamBarsContextSchema(BaseModel):

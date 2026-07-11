@@ -10,8 +10,6 @@ from messoyakha_finam_sdk.schemas.bars import (
     FinamBarsHTTPEndpointSchema,
     FinamBarsOutputSchema,
     FinamBarsParametersSchema,
-    FinamMISXFuturesBarsParametersSchema,
-    FinamMISXSpotBarsParametersSchema,
 )
 from messoyakha_finam_sdk.schemas.clock import FinamClockHeadersSchema
 from messoyakha_finam_sdk.schemas.sessions import FinamSessionsJsonSchema, FinamSessionsOutputSchema
@@ -64,7 +62,7 @@ class FinamMISXSpotAPIClient(_FinamAPIClientBase):
     async def bars(
         self,
         endpoint_schema: FinamBarsHTTPEndpointSchema,
-        parameters_schema: FinamMISXSpotBarsParametersSchema,
+        parameters_schema: FinamBarsParametersSchema,
         headers_schema: FinamBarsHeadersSchema,
         **kwargs,
     ) -> list[FinamBarsOutputSchema]:
@@ -82,7 +80,7 @@ class FinamMISXFuturesAPIClient(_FinamAPIClientBase):
     async def bars(
         self,
         endpoint_schema: FinamBarsHTTPEndpointSchema,
-        parameters_schema: FinamMISXFuturesBarsParametersSchema,
+        parameters_schema: FinamBarsParametersSchema,
         headers_schema: FinamBarsHeadersSchema,
         **kwargs,
     ) -> list[FinamBarsOutputSchema]:

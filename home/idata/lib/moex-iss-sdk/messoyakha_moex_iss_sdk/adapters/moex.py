@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from datetime import datetime, timezone
 from functools import partial
 from typing import TypeAlias
@@ -18,14 +18,15 @@ from messoyakha_sdk.decorators.route import endpoint_route
 
 
 @define(slots=False, auto_attribs=True, kw_only=True)
-class _MOEXAPIClientBase(HTTPAPIClientBase, ABC):
+class _MOEXAPIClientBase(HTTPAPIClientBase):
     _session: AsyncClient = field(
         init=False, factory=partial(AsyncClient, base_url="https://iss.moex.com", timeout=10, http2=True)
     )
 
     @staticmethod
     @abstractmethod
-    def _parse_history_security(history_security: list) -> list: ...
+    def _parse_history_security(history_security: list) -> list:
+        raise NotImplementedError("`_parse_history_security` method not implemented.")
 
     async def _history_security(
         self,

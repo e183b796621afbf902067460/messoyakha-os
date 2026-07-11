@@ -12,7 +12,8 @@ from pydantic import (
 )
 
 from messoyakha_binance_sdk.enums.intervals import BinanceIntervalEnum
-from messoyakha_binance_sdk.enums.markets import BinanceMarketEnum
+from messoyakha_sdk.adapters.venues.binance import BINANCE
+from messoyakha_sdk.enums.venues.binance import BinanceProductEnum
 
 
 _MILLISECONDS_IN_SECOND: Final[int] = 10**3
@@ -20,8 +21,10 @@ _MILLISECONDS_IN_SECOND: Final[int] = 10**3
 
 class BinanceKlinesParametersSchema(BaseModel):
     ticker: str = Field(serialization_alias="symbol")
-    market: BinanceMarketEnum = Field(exclude=True)
     interval: BinanceIntervalEnum
+    product: BinanceProductEnum = Field(exclude=True)
+    venue: str = Field(exclude=True)
+    currency: str = Field(exclude=True)
 
     start_time: datetime = Field(serialization_alias="startTime")
     end_time: datetime = Field(serialization_alias="endTime")
@@ -43,14 +46,18 @@ class BinanceKlinesParametersSchema(BaseModel):
 
 class BinanceKlinesContextSchema(BaseModel):
     ticker: str
-    market: BinanceMarketEnum
     interval: BinanceIntervalEnum
+    product: BinanceProductEnum
+    venue: str
+    currency: str
 
 
 class _BinanceKlinesInputSchemaBase(BaseModel):
     ticker: str
-    market: BinanceMarketEnum = Field(init=False)
     interval: BinanceIntervalEnum
+    product: BinanceProductEnum = Field(init=False)
+    venue: str = Field(init=False)
+    currency: str
 
     start_time: datetime
     end_time: datetime
@@ -81,17 +88,24 @@ class _BinanceKlinesInputSchemaBase(BaseModel):
 
 
 class BinanceKlinesSpotInputSchema(_BinanceKlinesInputSchemaBase):
-    market: BinanceMarketEnum = Field(init=False, default=BinanceMarketEnum.SPOT)
+    product: BinanceProductEnum = Field(init=False, default=BinanceProductEnum.SPOT)
+    venue: str = Field(init=False, default=BINANCE)
 
 
 class BinanceKlinesUSDTMInputSchema(_BinanceKlinesInputSchemaBase):
-    market: BinanceMarketEnum = Field(init=False, default=BinanceMarketEnum.USDTM)
+    product: BinanceProductEnum = Field(init=False, default=BinanceProductEnum.USDT_M_FUTURES)
+    venue: str = Field(init=False, default=BINANCE)
+
+
+BinanceKlinesInputSchema: TypeAlias = BinanceKlinesSpotInputSchema | BinanceKlinesUSDTMInputSchema
 
 
 class BinanceKlinesOutputSchema(BaseModel):
     ticker: str
-    market: BinanceMarketEnum
     interval: BinanceIntervalEnum
+    product: BinanceProductEnum
+    venue: str
+    currency: str
 
     open: float
     high: float
@@ -106,8 +120,10 @@ class BinanceKlinesOutputSchema(BaseModel):
     def _wrap(cls, kline: list, handler: ModelWrapValidatorHandler[Self], info: ValidationInfo) -> Self:
         data: dict = {
             "ticker": info.context["ticker"],  # type: ignore[unsupported-operation]
-            "market": info.context["market"],  # type: ignore[unsupported-operation]
             "interval": info.context["interval"],  # type: ignore[unsupported-operation]
+            "product": info.context["product"],  # type: ignore[unsupported-operation]
+            "venue": info.context["venue"],  # type: ignore[unsupported-operation]
+            "currency": info.context["currency"],  # type: ignore[unsupported-operation]
             "open": kline[1],
             "high": kline[2],
             "low": kline[3],
@@ -121,6 +137,3 @@ class BinanceKlinesOutputSchema(BaseModel):
     @classmethod
     def _update_timestamp_timezone(cls, timestamp: datetime) -> datetime:
         return timestamp.replace(tzinfo=timezone.utc)
-
-
-BinanceKlinesInputSchema: TypeAlias = BinanceKlinesSpotInputSchema | BinanceKlinesUSDTMInputSchema

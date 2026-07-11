@@ -24,8 +24,10 @@ class _BinanceAPIClientBase(HTTPAPIClientBase):
         response: Response = await self._get(parameters=parameters_schema.model_dump(by_alias=True), **kwargs)
         context: BinanceKlinesContextSchema = BinanceKlinesContextSchema(
             ticker=parameters_schema.ticker,
-            market=parameters_schema.market,
             interval=parameters_schema.interval,
+            product=parameters_schema.product,
+            venue=parameters_schema.venue,
+            currency=parameters_schema.currency,
         )
         return [
             BinanceKlinesOutputSchema.model_validate(kline, context=context.model_dump()) for kline in response.json()
