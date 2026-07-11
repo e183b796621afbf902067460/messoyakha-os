@@ -27,13 +27,11 @@ class FinamDLHService:
         product: str,
         venue: str,
         currency: str,
-        catch_up_date: datetime,
-    ) -> datetime:
+    ) -> datetime | None:
         return self._repository.query_latest_ohlcv_timestamp(
             ticker=ticker,
             venue=venue,
             product=product,
             currency=currency,
             interval=interval.value,
-            catch_up_date=catch_up_date,
         )

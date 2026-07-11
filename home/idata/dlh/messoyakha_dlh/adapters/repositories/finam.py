@@ -11,11 +11,11 @@ from messoyakha_sdk.decorators.route import path_route as route
 class FinamS3Repository(S3PolarsRepositoryBase):
     @route(table="ohlcv", path="f8e90488-f511555d-274b-4258-bffc-572dd1900382/finam/ohlcv/**/*.parquet")
     def query_latest_ohlcv_timestamp(
-        self, ticker: str, venue: str, product: str, currency: str, interval: str, catch_up_date: datetime
-    ) -> datetime:
+        self, ticker: str, venue: str, product: str, currency: str, interval: str
+    ) -> datetime | None:
         query: str = f"""
             SELECT
-                COALESCE(MAX(timestamp), {str(catch_up_date)!r}) AS timestamp
+                MAX(timestamp) AS timestamp
             FROM
                 ohlcv
             WHERE
@@ -25,8 +25,10 @@ class FinamS3Repository(S3PolarsRepositoryBase):
                 AND _partition_by_venue = {venue!r}
                 AND _partition_by_currency = {currency!r}
         """
+
+        latest_timestamp: datetime | None = None
         try:
-            query_result: str = self._query(query=query).collect().item(row=0, column="timestamp")
+            query_result: str | None = self._query(query=query).collect().item(row=0, column="timestamp")
         except ComputeError:
-            return catch_up_date.replace(tzinfo=timezone.utc)
-        return datetime.fromisoformat(query_result).replace(tzinfo=timezone.utc)
+            return latest_timestamp
+        return datetime.fromisoformat(query_result).replace(tzinfo=timezone.utc) if query_result else latest_timestamp

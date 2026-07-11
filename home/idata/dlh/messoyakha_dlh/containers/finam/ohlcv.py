@@ -1,5 +1,5 @@
 from collections.abc import Generator
-from datetime import datetime, timezone
+from datetime import datetime
 
 from dagster import DynamicOut, DynamicOutput, JobDefinition, OpExecutionContext, graph, op
 from loguru import logger
@@ -11,6 +11,8 @@ from that_depends.providers import Dict, Factory, Singleton
 from messoyakha_finam_sdk.enums.intervals import FinamIntervalEnum
 from messoyakha_finam_sdk.schemas.bars import FinamBarsMISXSpotInputSchema
 from messoyakha_finam_sdk.services.finam import FinamMISXSpotService
+from messoyakha_moex_iss_sdk.schemas.listed_from import MOEXListedFromInputSchema
+from messoyakha_moex_iss_sdk.services.moex import MOEXStockSharesService
 from messoyakha_sdk.adapters.venues.misx import MISX
 from messoyakha_sdk.enums.venues.misx import MISXProductEnum
 from messoyakha_sdk.schemas.s3 import S3StorageOptionsSchema
@@ -22,7 +24,6 @@ from messoyakha_dlh.settings import DLHSettings
 
 
 class _FinamOHLCVDLHSettings(DLHSettings):
-    CATCH_UP_DATE: datetime = datetime(year=2011, month=1, day=1, tzinfo=timezone.utc)
     TICKERS: list[tuple[str, FinamIntervalEnum, str]] = [
         ("SIBN", FinamIntervalEnum.ONE_DAY, str(RUB)),
         ("GAZP", FinamIntervalEnum.ONE_DAY, str(RUB)),
@@ -43,17 +44,23 @@ def tickers(
         yield DynamicOutput(value=(ticker, interval, currency), mapping_key=f"{ticker}_{interval}_{currency}")
 
 
-@op(required_resource_keys={"services", "settings"})
-def query_latest_ohlcv_timestamp(context: OpExecutionContext, item: tuple[str, FinamIntervalEnum, str]) -> datetime:
+@op(required_resource_keys={"services"})
+async def query_latest_ohlcv_timestamp(
+    context: OpExecutionContext, item: tuple[str, FinamIntervalEnum, str]
+) -> datetime:
     ticker, interval, currency = item
-    latest_timestamp: datetime = context.resources.services["finam_dlh_service"].query_latest_ohlcv_timestamp(
+    latest_timestamp: datetime | None = context.resources.services["finam_dlh_service"].query_latest_ohlcv_timestamp(
         ticker=ticker,
         venue=MISX,
         product=MISXProductEnum.SPOT.value,
         currency=currency,
         interval=interval,
-        catch_up_date=context.resources.settings.CATCH_UP_DATE,
     )
+    if not latest_timestamp:
+        logger.info(f"Got no latest timestamp for {ticker}-{interval}-{currency}, querying MOEX ISS.")
+        latest_timestamp = await context.resources.services["moex_iss_sdk_service"].get_first_trade_date(
+            input_schema=MOEXListedFromInputSchema(ticker=ticker)
+        )
     logger.info(f"Latest {ticker}-{interval}-{currency} timestamp is {latest_timestamp}.")
     return latest_timestamp
 
@@ -132,6 +139,7 @@ class Container(BaseContainer):
         resource_defs=Dict(  # type: ignore[bad-argument-type]
             services=Dict(
                 finam_sdk_service=Factory(FinamMISXSpotService),
+                moex_iss_sdk_service=Factory(MOEXStockSharesService),  # type: ignore[bad-argument-type]
                 finam_dlh_service=Factory(  # type: ignore[missing-argument]
                     FinamDLHService,  # type: ignore[bad-argument-type]
                     repository=Factory(  # type: ignore[missing-argument, unexpected-keyword]
