@@ -3,6 +3,7 @@ from io import BytesIO
 
 from attrs import define, field
 from babel.dates import get_month_names
+from nautilus_trader.model.currencies import RUB
 from pandas import (
     DataFrame as PdDf,
     Series,
@@ -14,6 +15,7 @@ from polars import (
     col,
     datetime as pl_datetime,
     from_pandas,
+    lit,
 )
 from pydantic import BaseModel
 
@@ -100,6 +102,7 @@ class FedstatService:
         inflation_rate: PlDf = from_pandas(_parse_fedstat_excel_to_dataframe(fedstat_excel=fedstat_excel))
         return (
             inflation_rate.with_columns(
+                lit(str(RUB)).alias("currency"),
                 (col("inflation_rate") - 100) / 100,
                 pl_datetime(col("year"), col("month"), 1, time_zone="UTC").alias("timestamp"),
             )
