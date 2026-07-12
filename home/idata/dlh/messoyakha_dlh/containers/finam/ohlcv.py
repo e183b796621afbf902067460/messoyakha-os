@@ -26,7 +26,6 @@ from messoyakha_dlh.settings import DLHSettings
 class _FinamOHLCVDLHSettings(DLHSettings):
     TICKERS: list[tuple[str, FinamIntervalEnum, str]] = [
         ("SIBN", FinamIntervalEnum.ONE_DAY, str(RUB)),
-        ("GAZP", FinamIntervalEnum.ONE_DAY, str(RUB)),
         ("NVTK", FinamIntervalEnum.ONE_DAY, str(RUB)),
         ("TRNFP", FinamIntervalEnum.ONE_DAY, str(RUB)),
         ("PHOR", FinamIntervalEnum.ONE_DAY, str(RUB)),

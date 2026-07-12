@@ -6,6 +6,7 @@ from messoyakha_dohod_sdk.schemas.dividends import (
     DohodDividendsEndpointSchema,
     DohodDividendsInputSchema,
     DohodDividendsOutputSchema,
+    DohodDividendsParametersSchema,
 )
 
 
@@ -15,6 +16,10 @@ class DohodService:
 
     async def crawl_dividends(self, input_schema: DohodDividendsInputSchema) -> DataFrame:
         dividends: list[DohodDividendsOutputSchema] = await self._client.dividend(
-            endpoint_schema=DohodDividendsEndpointSchema(ticker=input_schema.ticker)
+            endpoint_schema=DohodDividendsEndpointSchema(ticker=input_schema.ticker),
+            parameters_schema=DohodDividendsParametersSchema(
+                venue=input_schema.venue,
+                currency=input_schema.currency,
+            ),
         )
         return DataFrame([dividend.model_dump() for dividend in dividends]).unique().sort(by=col("timestamp"))

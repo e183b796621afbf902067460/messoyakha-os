@@ -11,6 +11,7 @@ from messoyakha_dohod_sdk.schemas.dividends import (
     DohodDividendsContextSchema,
     DohodDividendsEndpointSchema,
     DohodDividendsOutputSchema,
+    DohodDividendsParametersSchema,
 )
 from messoyakha_sdk.adapters.clients.web import CrawleeWebClientBase
 from messoyakha_sdk.decorators.route import endpoint_route
@@ -22,7 +23,10 @@ class DohodCrawleeWebClient(CrawleeWebClientBase):
 
     @endpoint_route("/ik/analytics/dividend/{ticker}")
     async def dividend(
-        self, endpoint_schema: DohodDividendsEndpointSchema, **kwargs
+        self,
+        endpoint_schema: DohodDividendsEndpointSchema,
+        parameters_schema: DohodDividendsParametersSchema,
+        **kwargs,
     ) -> list[DohodDividendsOutputSchema]:
         queue: RequestQueue = await self._get(**kwargs)
         crawler: BeautifulSoupCrawler = BeautifulSoupCrawler(request_manager=queue, configure_logging=False)
@@ -43,7 +47,11 @@ class DohodCrawleeWebClient(CrawleeWebClientBase):
         await crawler.run()
         dataset: Dataset = await Dataset.open()
         response: DatasetItemsListPage = await dataset.get_data()
-        context: DohodDividendsContextSchema = DohodDividendsContextSchema(ticker=endpoint_schema.ticker)
+        context: DohodDividendsContextSchema = DohodDividendsContextSchema(
+            ticker=endpoint_schema.ticker,
+            venue=parameters_schema.venue,
+            currency=parameters_schema.currency,
+        )
         return [
             DohodDividendsOutputSchema.model_validate(item, context=context.model_dump()) for item in response.items
         ]
