@@ -33,7 +33,7 @@ warnings.filterwarnings("ignore")
 class _InflationRateRowSchema(BaseModel):
     year: int
     month: int
-    inflation_rate: float
+    rate: float
 
 
 def _parse_fedstat_excel_to_dataframe(fedstat_excel: PdDf) -> PdDf:  # noqa: C901
@@ -79,7 +79,7 @@ def _parse_fedstat_excel_to_dataframe(fedstat_excel: PdDf) -> PdDf:  # noqa: C90
             year: int | None = years.get(id)
             if year:
                 value = row[id + 1]
-                inflation_rates.append(_InflationRateRowSchema(year=year, month=month, inflation_rate=float(value)))
+                inflation_rates.append(_InflationRateRowSchema(year=year, month=month, rate=float(value)))
     return PdDf([inflation_rate.model_dump() for inflation_rate in inflation_rates])
 
 
@@ -103,7 +103,7 @@ class FedstatService:
         return (
             inflation_rate.with_columns(
                 lit(str(RUB)).alias("currency"),
-                (col("inflation_rate") - 100) / 100,
+                (col("rate") - 100) / 100,
                 pl_datetime(col("year"), col("month"), 1, time_zone="UTC").alias("timestamp"),
             )
             .filter(col("timestamp").is_between(input_schema.start_date, input_schema.end_date))
