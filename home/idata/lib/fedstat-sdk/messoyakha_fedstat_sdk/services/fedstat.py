@@ -87,7 +87,7 @@ def _parse_fedstat_excel_to_dataframe(fedstat_excel: PdDf) -> PdDf:  # noqa: C90
 class FedstatService:
     _client: FedstatAPIClient = field(init=False, factory=FedstatAPIClient)
 
-    async def get_inflation_rate(self, input_schema: FedstatInflationRateInputSchema) -> PlDf:
+    async def get_inflation_rates(self, input_schema: FedstatInflationRateInputSchema) -> PlDf:
         fedstat_excel: PdDf = read_excel(
             BytesIO(
                 await self._client.inflation_rate(

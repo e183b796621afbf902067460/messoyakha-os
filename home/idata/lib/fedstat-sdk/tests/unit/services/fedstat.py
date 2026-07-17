@@ -16,7 +16,7 @@ class TestFedstatService:
     @pytest.mark.asyncio
     async def test_get_inflation_rate(self) -> None:
         fedstat: FedstatService = FedstatService()
-        data: DataFrame = await fedstat.get_inflation_rate(
+        data: DataFrame = await fedstat.get_inflation_rates(
             input_schema=FedstatInflationRateInputSchema(
                 start_date=datetime(2025, 1, 1, tzinfo=timezone.utc),
                 end_date=datetime(2026, 1, 1, tzinfo=timezone.utc),

@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 from messoyakha_fedstat_sdk.enums.months import FedstatMonthEnum
 
@@ -75,3 +75,13 @@ class FedstatInflationRateDataSchema(_FedstatDataSchemaBase):
 class FedstatInflationRateInputSchema(BaseModel):
     start_date: datetime
     end_date: datetime
+
+    @field_validator("start_date", mode="after")
+    @classmethod
+    def _update_start_date_timezone(cls, start_date: datetime) -> datetime:
+        return start_date.replace(tzinfo=timezone.utc)
+
+    @field_validator("end_date", mode="after")
+    @classmethod
+    def _update_end_date_timezone(cls, end_date: datetime) -> datetime:
+        return end_date.replace(tzinfo=timezone.utc)
