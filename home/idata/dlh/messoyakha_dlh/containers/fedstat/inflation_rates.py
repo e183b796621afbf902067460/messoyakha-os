@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
 from dagster import JobDefinition, OpExecutionContext, graph, op
 from loguru import logger
@@ -8,6 +8,8 @@ from that_depends.providers import Dict, Factory, Singleton
 
 from messoyakha_fedstat_sdk.schemas.inflation_rate import FedstatInflationRateInputSchema
 from messoyakha_fedstat_sdk.services.fedstat import FedstatService
+from messoyakha_moex_iss_sdk.schemas.listed_from import MOEXListedFromInputSchema
+from messoyakha_moex_iss_sdk.services.moex import MOEXStockIndexService
 from messoyakha_sdk.schemas.s3 import S3StorageOptionsSchema
 
 from messoyakha_dlh.adapters.repositories.fedstat import FedStatS3Repository
@@ -17,12 +19,14 @@ from messoyakha_dlh.settings import DLHSettings
 
 
 @op(required_resource_keys={"services"})
-def query_latest_inflation_rate_timestamp(context: OpExecutionContext) -> datetime:
+async def query_latest_inflation_rate_timestamp(context: OpExecutionContext) -> datetime:
     latest_timestamp: datetime | None = context.resources.services[
         "fedstat_dlh_service"
     ].query_latest_inflation_rate_timestamp()
     if not latest_timestamp:
-        latest_timestamp = datetime(year=2003, month=1, day=1, tzinfo=timezone.utc)
+        latest_timestamp = await context.resources.services["moex_iss_sdk_service"].get_first_trade_date(
+            input_schema=MOEXListedFromInputSchema(ticker="IMOEX")
+        )
     logger.info(f"Latest Fedstat inflation rate timestamp is {latest_timestamp}.")
     return latest_timestamp
 
@@ -66,10 +70,11 @@ class Container(BaseContainer):
     settings: Factory[DLHSettings] = Factory(DLHSettings)
     job: Singleton[JobDefinition] = Singleton(
         fedstat_inflation_rates.to_job,
-        name=lambda: fedstat_inflation_rates.__name__,  # type: ignore[missing-attribute]
+        name=Factory(lambda: fedstat_inflation_rates.__name__),  # type: ignore[missing-attribute]
         resource_defs=Dict(  # type: ignore[bad-argument-type]
             services=Dict(
                 fedstat_sdk_service=Factory(FedstatService),
+                moex_iss_sdk_service=Factory(MOEXStockIndexService),  # type: ignore[bad-argument-type]
                 fedstat_dlh_service=Factory(  # type: ignore[missing-argument]
                     FedstatDLHService,  # type: ignore[bad-argument-type]
                     repository=Factory(  # type: ignore[missing-argument, unexpected-keyword]
