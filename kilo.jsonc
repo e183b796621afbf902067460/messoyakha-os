@@ -6,5 +6,16 @@
     "instructions": [
         "./AGENTS.md",
         "./CONTRIBUTING.md"
-    ]
+    ],
+    "mcp": {
+        "codegraph": {
+        "type": "local",
+        "command": [
+            "codegraph",
+            "serve",
+            "--mcp"
+        ],
+        "enabled": true
+        }
+    }
 }
