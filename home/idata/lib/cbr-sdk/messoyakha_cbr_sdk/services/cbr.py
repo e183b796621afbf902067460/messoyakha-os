@@ -31,10 +31,10 @@ class CBRService:
         interest_rates = interest_rates.select([col("DT").alias("timestamp"), col("Rate").alias("rate")])
         return (
             interest_rates.with_columns(
-                lit(str(RUB)).alias("currency"),
                 lit(CBR).alias("bank"),
-                col("timestamp").str.to_datetime(time_zone="UTC"),
+                lit(str(RUB)).alias("currency"),
                 col("rate") / 100,
+                col("timestamp").str.to_datetime(time_zone="UTC"),
             )
             .unique()
             .sort(by=col("timestamp"))

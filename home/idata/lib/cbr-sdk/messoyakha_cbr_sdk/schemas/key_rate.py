@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
-from pydantic import BaseModel, Field, field_serializer
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 
 class CBRKeyRateParametersSchema(BaseModel):
@@ -23,3 +23,13 @@ class CBRKeyRateParametersSchema(BaseModel):
 class CBRInterestRateInputSchema(BaseModel):
     start_time: datetime
     end_time: datetime
+
+    @field_validator("start_time", mode="after")
+    @classmethod
+    def _update_start_time_timezone(cls, start_time: datetime) -> datetime:
+        return start_time.replace(tzinfo=timezone.utc)
+
+    @field_validator("end_time", mode="after")
+    @classmethod
+    def _update_end_time_timezone(cls, end_time: datetime) -> datetime:
+        return end_time.replace(tzinfo=timezone.utc)
