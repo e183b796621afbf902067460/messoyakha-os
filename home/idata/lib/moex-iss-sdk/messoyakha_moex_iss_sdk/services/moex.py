@@ -53,7 +53,11 @@ class _MOEXService:
                 break
             input_schema.start_time = next_start_time
             await sleep(1)
-        return DataFrame([candle.model_dump() for candle in history_securities]).unique().sort(by=col("timestamp"))
+        return (
+            DataFrame([candle.model_dump() for candle in history_securities], infer_schema_length=None)
+            .unique()
+            .sort(by=col("timestamp"))
+        )
 
     async def get_first_trade_date(self, input_schema: MOEXListedFromInputSchema) -> datetime:
         return await self._client.listed_from(
