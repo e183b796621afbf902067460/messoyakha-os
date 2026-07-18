@@ -1,0 +1,33 @@
+[project]
+name = "messoyakha-equity-portfolio-py"
+dynamic = ["version", "dependencies"]
+description = "..."
+requires-python = ">=3.10,<4.0"
+
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "pep440"
+bump = true
+
+[tool.uv]
+package = true
+
+[tool.hatch.metadata.hooks.uv-dynamic-versioning]
+dependencies = [
+    "dagster>=1.13.3",
+    "dagster-pandera>=0.29.3",
+    "that-depends>=3.9.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["messoyakha_equity_portfolio"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["tests"]
