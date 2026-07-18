@@ -22,7 +22,7 @@ from messoyakha_dlh.settings import DLHSettings
 async def query_latest_interest_rate_timestamp(context: OpExecutionContext) -> datetime:
     latest_timestamp: datetime | None = context.resources.services[
         "cbr_dlh_service"
-    ].query_latest_interest_rate_timestamp()
+    ].query_latest_interest_rates_timestamp()
     if not latest_timestamp:
         latest_timestamp = await context.resources.services["moex_iss_sdk_service"].get_first_trade_date(
             input_schema=MOEXListedFromInputSchema(ticker="IMOEX")

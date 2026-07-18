@@ -18,5 +18,10 @@ class CBRDLHService:
     ) -> None:
         self._repository._write(data=data, path=path, partition_columns=partitions)  # noqa: SLF001
 
-    def query_latest_interest_rate_timestamp(self) -> datetime | None:
-        return self._repository.query_latest_interest_rate_timestamp()
+    def query_latest_interest_rates_timestamp(self) -> datetime | None:
+        return self._repository.query_latest_interest_rates_timestamp()
+
+    def query_interest_rates(self, since_date: datetime | None) -> DataFrame:
+        if since_date:
+            return self._repository.query_interest_rates_since_date(since_date=since_date)
+        return self._repository.query_interest_rates()
