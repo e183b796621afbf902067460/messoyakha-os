@@ -1,11 +1,8 @@
 [project]
-name = "messoyakha-dlh-py"
+name = "messoyakha-dwh-py"
 dynamic = ["version", "dependencies"]
 description = "..."
 requires-python = ">=3.10,<4.0"
-
-[project.urls]
-habr-data-on-ice = "https://habr.com/ru/companies/selectel/articles/875472/"
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
@@ -30,7 +27,7 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["messoyakha_dlh"]
+packages = ["messoyakha_dwh"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["tests"]

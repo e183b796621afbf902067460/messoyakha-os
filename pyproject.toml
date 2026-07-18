@@ -7,8 +7,9 @@ license = { file = "LICENSE" }
 dependencies = [
     "attrs>=25.1.0,<26",
     "pydantic>=2.10.6,<3",
-    "nautilus-trader>=1.202.0",
     "ta-lib>=0.6.8",
+    "nautilus-trader>=1.202.0",
+    "skfolio>=0.20.1",
     "polars>=1.31.0",
     "pandas>=2.3.3",
     "pandera[polars]>=0.32.1",
@@ -42,24 +43,25 @@ messoyakha-smart-lab-sdk-py = { workspace = true }
 
 # home/idata/*
 messoyakha-dlh-py = { workspace = true }
+messoyakha-dwh-py = { workspace = true }
 
 # home/iquant/lib/*
 messoyakha-nautilus-benchmark-sdk-py = { workspace = true }
 messoyakha-nautilus-income-sdk-py = { workspace = true }
 
-# home/iquant/ad-hocs/*
-messoyakha-test-strategy-py = { workspace = true }
+# home/iquant/equity-portfolio
+messoyakha-equity-portfolio-py = { workspace = true }
 
 [tool.uv.workspace]
 members = [
-
     "lib/py/*",
 
     "home/idata/lib/*",
     "home/idata/dlh/",
+    "home/idata/dwh/",
 
-    "home/iquant/ad-hocs/*",
     "home/iquant/lib/*",
+    "home/idata/equity-portfolio/",
 ]
 
 [tool.ruff]
@@ -142,7 +144,7 @@ section-order = ["future", "standard-library", "third-party", "sdk", "first-part
 known-first-party = [
     "messoyakha_dlh",
     "messoyakha_dwh",
-    "messoyakha_test_strategy"
+    "messoyakha_equity_portfolio"
 ]
 
 # https://docs.astral.sh/ruff/settings/#lint_isort_sections
@@ -178,7 +180,6 @@ skip-magic-trailing-comma = false
 python-interpreter-path = ".venv/bin/python3.13"
 python-platform = "linux"
 search-path = [
-
     "lib/py/_common",
     "lib/py/binance-sdk",
     "lib/py/finam-sdk",
@@ -190,10 +191,11 @@ search-path = [
     "home/idata/lib/smart-lab-sdk",
 
     "home/idata/dlh",
+    "home/idata/dwh",
 
     "home/iquant/lib/nautilus-benchmark-sdk",
     "home/iquant/lib/nautilus-income-sdk",
-    "home/iquant/ad-hocs/test-strategy",
+    "home/iquant/equity-portfolio",
 
     ".venv/lib/python3.13/site-packages"
 ]
