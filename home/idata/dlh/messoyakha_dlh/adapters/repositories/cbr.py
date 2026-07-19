@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from attr import define
+from polars import DataFrame
 from polars.exceptions import ComputeError
 
 from messoyakha_sdk.adapters.repositories.s3 import S3PolarsRepositoryBase
@@ -37,8 +38,8 @@ class CBRS3Repository(S3PolarsRepositoryBase):
         """
         try:
             return self._query(query=query).collect()
-        except ComputeError:
-            raise ...
+        except ComputeError as error:
+            raise FileNotFoundError("There is no data for CBR interest rates.") from error
 
     @route(table="interest_rates", path="f8e90488-f511555d-274b-4258-bffc-572dd1900382/cbr/interest-rates/**/*.parquet")
     def query_interest_rates_since_date(self, since_date: datetime) -> DataFrame:
@@ -55,5 +56,5 @@ class CBRS3Repository(S3PolarsRepositoryBase):
         """
         try:
             return self._query(query=query).collect()
-        except ComputeError:
-            raise ...
+        except ComputeError as error:
+            raise FileNotFoundError("There is no data for CBR interest rates.") from error

@@ -1,7 +1,7 @@
 from dagster import JobDefinition
 from that_depends import Provide
 
-from messoyakha_dlh.containers.dohod.dividends import Container
+from messoyakha_dwh.containers.interest_rates import Container
 
 
 @Container.inject

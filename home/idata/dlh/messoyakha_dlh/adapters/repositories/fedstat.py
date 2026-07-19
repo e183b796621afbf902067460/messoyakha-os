@@ -25,5 +25,4 @@ class FedStatS3Repository(S3PolarsRepositoryBase):
             query_result: datetime = self._query(query=query).collect().item(row=0, column="timestamp")
         except ComputeError:
             return latest_timestamp
-        latest_timestamp = query_result.replace(tzinfo=timezone.utc)
-        return latest_timestamp
+        return query_result.replace(tzinfo=timezone.utc)
