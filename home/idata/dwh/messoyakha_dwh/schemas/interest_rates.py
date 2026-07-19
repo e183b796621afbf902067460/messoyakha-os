@@ -9,7 +9,7 @@ class InterestRatesSchema(DataFrameModel):
 
     timestamp: datetime
 
-    partition_by_bank: int = Field(alias="_partition_by_bank")
+    partition_by_bank: str = Field(alias="_partition_by_bank")
     partition_by_month: int = Field(alias="_partition_by_month")
     partition_by_year: int = Field(alias="_partition_by_year")
 

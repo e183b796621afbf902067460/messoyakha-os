@@ -25,10 +25,13 @@ async def process_cbr(context: OpExecutionContext) -> DataFrame:
     interest_rates: DataFrame = context.resources.services["cbr_dlh_service"].query_interest_rates(
         since_date=latest_timestamp
     )
-    return interest_rates.with_columns(
+    interest_rates = interest_rates.with_columns(
         month=col("timestamp").dt.month(),
         year=col("timestamp").dt.year(),
     )
+    logger.info(f"Got CBR interest rates with shape: {interest_rates.shape}.")
+
+    return interest_rates
 
 
 @op(required_resource_keys={"services"})
@@ -74,10 +77,10 @@ class Container(BaseContainer):
                         CBRS3Repository,
                         options=Factory(  # type: ignore[unexpected-keyword]
                             S3StorageOptionsSchema,
-                            access_key=settings.DLH.ACCESS_KEY,
-                            secret_key=settings.DLH.SECRET_KEY,
-                            endpoint=settings.DLH.ENDPOINT,
-                            region=settings.DLH.REGION,
+                            access_key=settings.ACCESS_KEY,
+                            secret_key=settings.SECRET_KEY,
+                            endpoint=settings.ENDPOINT,
+                            region=settings.REGION,
                         ),
                     ),
                 ),
