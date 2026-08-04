@@ -197,5 +197,5 @@ search-path = [
     "home/iquant/lib/nautilus-income-sdk",
     "home/iquant/equity-portfolio",
 
-    ".venv/lib/python3.13/site-packages"
+    ".venv/lib/**/site-packages"
 ]

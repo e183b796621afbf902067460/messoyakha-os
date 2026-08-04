@@ -93,8 +93,7 @@ def load_ohlcv(context: OpExecutionContext, data: list[DataFrame]) -> None:
             _partition_by_currency=col("currency"),
             _partition_by_year=col("year"),
             _partition_by_month=col("month"),
-        )
-        ohlcv = MOEXISSOHLCVSchema.validate(ohlcv)
+        ).pipe(MOEXISSOHLCVSchema.validate)
         logger.info(f"OHLCV shape is {ohlcv.shape}.")
 
         context.resources.services["moex_iss_dlh_service"].load_to_dlh(

@@ -54,8 +54,7 @@ def load_interest_rates(context: OpExecutionContext, interest_rates: DataFrame) 
         interest_rates = interest_rates.with_columns(
             _partition_by_year=col("year"),
             _partition_by_month=col("month"),
-        )
-        interest_rates = CBRInterestRateSchema.validate(interest_rates)
+        ).pipe(CBRInterestRateSchema.validate)
         logger.info(f"Interest rates shape after validation is {interest_rates.shape}.")
 
         context.resources.services["cbr_dlh_service"].load_to_dlh(

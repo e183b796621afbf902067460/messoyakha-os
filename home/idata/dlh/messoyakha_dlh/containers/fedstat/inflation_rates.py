@@ -51,7 +51,7 @@ async def get_inflation_rates(context: OpExecutionContext, latest_timestamp: dat
 def load_inflation_rates(context: OpExecutionContext, inflation_rates: DataFrame) -> None:
     logger.info(f"Got inflation rates to load, shape is {inflation_rates.shape}.")
     if not inflation_rates.is_empty():
-        inflation_rates = FedstatInflationRateSchema.validate(inflation_rates)
+        inflation_rates = inflation_rates.pipe(FedstatInflationRateSchema.validate)
         logger.info(f"Inflation rates shape after validation is {inflation_rates.shape}.")
 
         context.resources.services["fedstat_dlh_service"].load_to_dlh(

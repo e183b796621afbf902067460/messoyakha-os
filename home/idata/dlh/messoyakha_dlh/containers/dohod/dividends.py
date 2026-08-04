@@ -53,8 +53,7 @@ def load_dividends(context: OpExecutionContext, data: list[DataFrame]) -> None:
             _partition_by_currency=col("currency"),
             _partition_by_month=col("timestamp").dt.month(),
             _partition_by_year=col("timestamp").dt.year(),
-        )
-        dividends = DohodDividendsSchema.validate(dividends)
+        ).pipe(DohodDividendsSchema.validate)
         logger.info(f"Dividends shape after validation is {dividends.shape}.")
 
         context.resources.services["dohod_dlh_service"].truncate_dlh(
