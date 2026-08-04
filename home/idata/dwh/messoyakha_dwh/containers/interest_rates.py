@@ -30,7 +30,6 @@ async def process_cbr(context: OpExecutionContext) -> DataFrame:
         year=col("timestamp").dt.year(),
     )
     logger.info(f"Got CBR interest rates with shape: {interest_rates.shape}.")
-
     return interest_rates
 
 
@@ -38,14 +37,12 @@ async def process_cbr(context: OpExecutionContext) -> DataFrame:
 def load_interest_rates(context: OpExecutionContext, data: list[DataFrame]) -> None:
     interest_rates: DataFrame = concat(data)
     logger.info(f"Got interest rates to load, shape is {interest_rates.shape}.")
-
     if not interest_rates.is_empty():
         interest_rates = interest_rates.with_columns(
             _partition_by_bank=col("bank"),
             _partition_by_month=col("month"),
             _partition_by_year=col("year"),
-        )
-        interest_rates = InterestRatesSchema.validate(interest_rates)
+        ).pipe(InterestRatesSchema.validate)
         logger.info(f"Interest rates shape after validation is {interest_rates.shape}.")
 
         context.resources.services["interest_rates_dwh_service"].load_to_dwh(

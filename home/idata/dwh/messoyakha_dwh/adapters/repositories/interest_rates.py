@@ -17,7 +17,7 @@ class InterestRatesS3Repository(S3PolarsRepositoryBase):
             FROM
                 interest_rates
             WHERE
-                bank = {bank!r}
+                _partition_by_bank = {bank!r}
         """
         latest_timestamp: datetime | None = None
         try:

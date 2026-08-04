@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from attrs import define
 from polars import DataFrame
 
@@ -18,3 +20,10 @@ class DohodDLHService:
         partitions: list[str],
     ) -> None:
         self._repository._write(data=data, path=path, partition_columns=partitions)  # noqa: SLF001
+
+    def query_dividends(self, ticker: str, venue: str, currency: str, since_date: datetime | None) -> DataFrame:
+        if since_date:
+            return self._repository.query_dividends_since_date(
+                ticker=ticker, venue=venue, currency=currency, since_date=since_date
+            )
+        return self._repository.query_dividends(ticker=ticker, venue=venue, currency=currency)

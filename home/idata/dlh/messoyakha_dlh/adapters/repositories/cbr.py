@@ -52,7 +52,7 @@ class CBRS3Repository(S3PolarsRepositoryBase):
             FROM
                 interest_rates
             WHERE
-                timestamp > CAST({since_date.strftime("%Y-%m-%d %H:%M:%S")!r} AS DATETIME)
+                CAST(timestamp AS DATE) > {since_date.date().isoformat()!r}
         """
         try:
             return self._query(query=query).collect()
