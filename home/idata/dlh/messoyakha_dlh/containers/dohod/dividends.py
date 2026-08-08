@@ -21,8 +21,11 @@ class _DohodDividendsDLHSettings(DLHSettings):
         "SIBN",
         "NVTK",
         "TRNFP",
+        "RAGR",
         "PHOR",
+        "GMKN",
         "PLZL",
+        "CHMF",
         "SBER",
     ]
 

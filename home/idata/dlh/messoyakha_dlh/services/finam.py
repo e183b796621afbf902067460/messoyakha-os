@@ -35,3 +35,29 @@ class FinamDLHService:
             currency=currency,
             interval=interval.value,
         )
+
+    def query_ohlcv(
+        self,
+        ticker: str,
+        interval: FinamIntervalEnum,
+        product: str,
+        venue: str,
+        currency: str,
+        since_date: datetime | None,
+    ) -> DataFrame:
+        if since_date:
+            return self._repository.query_ohlcv_since_date(
+                ticker=ticker,
+                venue=venue,
+                product=product,
+                currency=currency,
+                interval=interval.value,
+                since_date=since_date,
+            )
+        return self._repository.query_ohlcv(
+            ticker=ticker,
+            venue=venue,
+            product=product,
+            currency=currency,
+            interval=interval.value,
+        )

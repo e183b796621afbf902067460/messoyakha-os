@@ -21,7 +21,7 @@ class InterestRatesS3Repository(S3PolarsRepositoryBase):
         """
         latest_timestamp: datetime | None = None
         try:
-            query_result: datetime = self._query(query=query).collect().item(row=0, column="timestamp")
+            query_result: datetime | None = self._query(query=query).collect().item(row=0, column="timestamp")
         except ComputeError:
             return latest_timestamp
-        return query_result.replace(tzinfo=timezone.utc)
+        return query_result.replace(tzinfo=timezone.utc) if query_result else latest_timestamp

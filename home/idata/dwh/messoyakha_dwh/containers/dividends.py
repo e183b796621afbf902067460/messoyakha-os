@@ -24,8 +24,11 @@ class _DividendsDWHSettings(DWHSettings):
         ("SIBN", MISX, str(RUB)),
         ("NVTK", MISX, str(RUB)),
         ("TRNFP", MISX, str(RUB)),
+        ("RAGR", MISX, str(RUB)),
         ("PHOR", MISX, str(RUB)),
         ("PLZL", MISX, str(RUB)),
+        ("GMKN", MISX, str(RUB)),
+        ("CHMF", MISX, str(RUB)),
         ("SBER", MISX, str(RUB)),
     ]
 

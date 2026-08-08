@@ -20,10 +20,10 @@ class CBRS3Repository(S3PolarsRepositoryBase):
         """
         latest_timestamp: datetime | None = None
         try:
-            query_result: datetime = self._query(query=query).collect().item(row=0, column="timestamp")
+            query_result: datetime | None = self._query(query=query).collect().item(row=0, column="timestamp")
         except ComputeError:
             return latest_timestamp
-        return query_result.replace(tzinfo=timezone.utc)
+        return query_result.replace(tzinfo=timezone.utc) if query_result else latest_timestamp
 
     @route(table="interest_rates", path="f8e90488-f511555d-274b-4258-bffc-572dd1900382/cbr/interest-rates/**/*.parquet")
     def query_interest_rates(self) -> DataFrame:

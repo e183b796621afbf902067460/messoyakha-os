@@ -28,8 +28,12 @@ class _FinamOHLCVDLHSettings(DLHSettings):
         ("SIBN", FinamIntervalEnum.ONE_DAY, str(RUB)),
         ("NVTK", FinamIntervalEnum.ONE_DAY, str(RUB)),
         ("TRNFP", FinamIntervalEnum.ONE_DAY, str(RUB)),
+        ("RAGR", FinamIntervalEnum.ONE_DAY, str(RUB)),
+        ("AGRO", FinamIntervalEnum.ONE_DAY, str(RUB)),
         ("PHOR", FinamIntervalEnum.ONE_DAY, str(RUB)),
         ("PLZL", FinamIntervalEnum.ONE_DAY, str(RUB)),
+        ("GMKN", FinamIntervalEnum.ONE_DAY, str(RUB)),
+        ("CHMF", FinamIntervalEnum.ONE_DAY, str(RUB)),
         ("SBER", FinamIntervalEnum.ONE_DAY, str(RUB)),
     ]
     FINAM_SECRET: str
