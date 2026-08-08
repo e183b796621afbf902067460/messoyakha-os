@@ -49,8 +49,8 @@ messoyakha-dwh-py = { workspace = true }
 messoyakha-nautilus-benchmark-sdk-py = { workspace = true }
 messoyakha-nautilus-income-sdk-py = { workspace = true }
 
-# home/iquant/equity-portfolio
-messoyakha-equity-portfolio-py = { workspace = true }
+# home/iquant/northern-weather
+messoyakha-northern-weather-py = { workspace = true }
 
 [tool.uv.workspace]
 members = [
@@ -61,7 +61,7 @@ members = [
     "home/idata/dwh/",
 
     "home/iquant/lib/*",
-    "home/idata/equity-portfolio/",
+    "home/idata/northern-weather/",
 ]
 
 [tool.ruff]
@@ -144,7 +144,7 @@ section-order = ["future", "standard-library", "third-party", "sdk", "first-part
 known-first-party = [
     "messoyakha_dlh",
     "messoyakha_dwh",
-    "messoyakha_equity_portfolio"
+    "messoyakha_northern_weather"
 ]
 
 # https://docs.astral.sh/ruff/settings/#lint_isort_sections
@@ -177,7 +177,7 @@ skip-magic-trailing-comma = false
 "**/tests/**/*.py" = ["S101"]
 
 [tool.pyrefly]
-python-interpreter-path = ".venv/bin/python3.13"
+python-interpreter-path = ".venv/bin/python"
 python-platform = "linux"
 search-path = [
     "lib/py/_common",
@@ -195,7 +195,8 @@ search-path = [
 
     "home/iquant/lib/nautilus-benchmark-sdk",
     "home/iquant/lib/nautilus-income-sdk",
-    "home/iquant/equity-portfolio",
+
+    "home/iquant/northern-weather",
 
     ".venv/lib/**/site-packages"
 ]

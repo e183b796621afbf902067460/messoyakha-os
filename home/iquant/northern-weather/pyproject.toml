@@ -1,5 +1,5 @@
 [project]
-name = "messoyakha-equity-portfolio-py"
+name = "messoyakha-northern-weather-py"
 dynamic = ["version", "dependencies"]
 description = "..."
 requires-python = ">=3.10,<4.0"
@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["messoyakha_equity_portfolio"]
+packages = ["messoyakha_northern_weather"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["tests"]
