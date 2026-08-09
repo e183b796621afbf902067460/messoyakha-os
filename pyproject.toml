@@ -61,7 +61,7 @@ members = [
     "home/idata/dwh/",
 
     "home/iquant/lib/*",
-    "home/idata/northern-weather/",
+    "home/iquant/northern-weather/",
 ]
 
 [tool.ruff]

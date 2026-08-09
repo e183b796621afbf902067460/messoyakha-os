@@ -20,6 +20,7 @@ members = [
     "messoyakha-moex-iss-sdk-py",
     "messoyakha-nautilus-benchmark-sdk-py",
     "messoyakha-nautilus-income-sdk-py",
+    "messoyakha-northern-weather-py",
     "messoyakha-os",
     "messoyakha-sdk-py",
     "messoyakha-smart-lab-sdk-py",
@@ -2113,6 +2114,22 @@ source = { editable = "home/iquant/lib/nautilus-benchmark-sdk" }
 [[package]]
 name = "messoyakha-nautilus-income-sdk-py"
 source = { editable = "home/iquant/lib/nautilus-income-sdk" }
+
+[[package]]
+name = "messoyakha-northern-weather-py"
+source = { editable = "home/iquant/northern-weather" }
+dependencies = [
+    { name = "dagster" },
+    { name = "dagster-pandera" },
+    { name = "that-depends" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "dagster", specifier = ">=1.13.3" },
+    { name = "dagster-pandera", specifier = ">=0.29.3" },
+    { name = "that-depends", specifier = ">=3.9.2" },
+]
 
 [[package]]
 name = "messoyakha-os"
