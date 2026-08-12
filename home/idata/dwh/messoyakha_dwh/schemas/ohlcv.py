@@ -4,11 +4,11 @@ from pandera.polars import DataFrameModel, Field
 
 
 class OHLCVSchema(DataFrameModel):
-    open: float
-    high: float
-    low: float
-    close: float
-    volume: float
+    open: float = Field(nullable=True)
+    high: float = Field(nullable=True)
+    low: float = Field(nullable=True)
+    close: float = Field(nullable=True)
+    volume: float = Field(nullable=True)
 
     timestamp: datetime
 

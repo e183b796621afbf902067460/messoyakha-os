@@ -11,7 +11,7 @@ from messoyakha_sdk.decorators.route import path_route as route
 class OHLCVS3Repository(S3PolarsRepositoryBase):
     @route(table="ohlcv", path="54bb0ca3-5204-4d58-ad1b-3a731de6a032/ohlcv/**/*.parquet")
     def query_latest_timestamp(
-        self, ticker: str, venue: str, product: str, currency: str, interval: str
+        self, ticker: str, interval: str, product: str, venue: str, currency: str
     ) -> datetime | None:
         query: str = f"""
             SELECT

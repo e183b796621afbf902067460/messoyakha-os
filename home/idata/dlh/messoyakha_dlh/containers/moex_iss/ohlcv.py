@@ -25,6 +25,7 @@ from messoyakha_dlh.settings import DLHSettings
 class _MOEXISSOHLCVDLHSettings(DLHSettings):
     TICKERS: list[tuple[str, MOEXIntervalEnum, str]] = [
         ("IMOEX", MOEXIntervalEnum.ONE_DAY, str(RUB)),
+        ("MCFTRR", MOEXIntervalEnum.ONE_DAY, str(RUB)),
     ]
 
 
@@ -82,7 +83,7 @@ async def get_ohlcv(
 
 @op(required_resource_keys={"settings", "services"})
 def load_ohlcv(context: OpExecutionContext, data: list[DataFrame]) -> None:
-    ohlcv: DataFrame = concat(data)
+    ohlcv: DataFrame = concat(data, how="diagonal_relaxed")
     logger.info(f"Got all OHLCV to load, shape is {ohlcv.shape}.")
     if not ohlcv.is_empty():
         ohlcv = ohlcv.with_columns(

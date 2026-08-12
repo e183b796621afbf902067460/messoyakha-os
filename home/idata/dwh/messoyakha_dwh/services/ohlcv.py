@@ -3,6 +3,8 @@ from datetime import datetime
 from attrs import define
 from polars import DataFrame
 
+from messoyakha_sdk.enums.intervals import MessoyakhaIntervalEnum
+
 from messoyakha_dwh.adapters.repositories.ohlcv import OHLCVS3Repository
 
 
@@ -19,8 +21,8 @@ class OHLCVService:
         self._repository._write(data=data, path=path, partition_columns=partitions)  # noqa: SLF001
 
     def query_latest_timestamp(
-        self, ticker: str, venue: str, product: str, currency: str, interval: str
+        self, ticker: str, interval: MessoyakhaIntervalEnum, product: str, venue: str, currency: str
     ) -> datetime | None:
         return self._repository.query_latest_timestamp(
-            ticker=ticker, venue=venue, product=product, currency=currency, interval=interval
+            ticker=ticker, interval=interval.value, product=product, venue=venue, currency=currency
         )
