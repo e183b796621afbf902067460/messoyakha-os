@@ -27,6 +27,7 @@ class _OHLCVSettings(NorthernWeatherSettings):
         ("GMKN", MISX, MessoyakhaIntervalEnum.ONE_DAY, str(RUB)),
         ("CHMF", MISX, MessoyakhaIntervalEnum.ONE_DAY, str(RUB)),
         ("SBER", MISX, MessoyakhaIntervalEnum.ONE_DAY, str(RUB)),
+        ("MCFTRR", MISX, MessoyakhaIntervalEnum.ONE_DAY, str(RUB)),
     ]
 
 
@@ -47,7 +48,7 @@ def query_ohlcv(context: OpExecutionContext, item: tuple[str, str, MessoyakhaInt
         venue=venue,
         product=MISXProductEnum.SPOT.value,
         currency=currency,
-        interval=interval.value,
+        interval=interval,
     )
     logger.info(f"Got OHLCV for {ticker}-{venue}-{interval}-{currency}, shape is {ohlcv.shape}.")
     return ohlcv

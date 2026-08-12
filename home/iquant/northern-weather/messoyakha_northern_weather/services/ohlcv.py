@@ -1,6 +1,8 @@
 from attrs import define
 from polars import DataFrame
 
+from messoyakha_sdk.enums.intervals import MessoyakhaIntervalEnum
+
 from messoyakha_northern_weather.adapters.ohlcv import OHLCVS3Repository
 
 
@@ -8,7 +10,9 @@ from messoyakha_northern_weather.adapters.ohlcv import OHLCVS3Repository
 class OHLCVService:
     _repository: OHLCVS3Repository
 
-    def query_ohlcv(self, ticker: str, venue: str, product: str, currency: str, interval: str) -> DataFrame:
+    def query_ohlcv(
+        self, ticker: str, interval: MessoyakhaIntervalEnum, product: str, venue: str, currency: str
+    ) -> DataFrame:
         return self._repository.query_ohlcv(
-            ticker=ticker, venue=venue, product=product, currency=currency, interval=interval
+            ticker=ticker, interval=interval.value, product=product, venue=venue, currency=currency
         )
