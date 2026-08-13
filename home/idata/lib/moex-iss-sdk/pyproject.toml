@@ -5,10 +5,12 @@ description = "..."
 requires-python = ">=3.10,<4.0"
 
 [project.urls]
-iss-moex-reference = "https://iss.moex.com/iss/reference/"
+iss-moex = "https://iss.moex.com/iss/reference/"
 iss-moex-security = "https://iss.moex.com/iss/reference/193"
 iss-moex-candles = "https://iss.moex.com/iss/reference/341"
 iss-moex-capitalization = "https://iss.moex.com/iss/reference/105"
+moex-indices = "https://www.moex.com/ru/indices"
+moex-moexallw = "https://www.moex.com/ru/index/MOEXALLW"
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]

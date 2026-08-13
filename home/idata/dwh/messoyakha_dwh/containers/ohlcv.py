@@ -47,6 +47,7 @@ class _OHLCVDWHSettings(DWHSettings):
     MOEX_TICKERS: list[tuple[str, str, MOEXIntervalEnum, str]] = [
         ("IMOEX", MISX, MOEXIntervalEnum.ONE_DAY, str(RUB)),
         ("MCFTRR", MISX, MOEXIntervalEnum.ONE_DAY, str(RUB)),
+        ("RGBITR", MISX, MOEXIntervalEnum.ONE_DAY, str(RUB)),
     ]
 
 

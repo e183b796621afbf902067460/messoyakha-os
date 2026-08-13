@@ -26,6 +26,7 @@ class _MOEXISSOHLCVDLHSettings(DLHSettings):
     TICKERS: list[tuple[str, MOEXIntervalEnum, str]] = [
         ("IMOEX", MOEXIntervalEnum.ONE_DAY, str(RUB)),
         ("MCFTRR", MOEXIntervalEnum.ONE_DAY, str(RUB)),
+        ("RGBITR", MOEXIntervalEnum.ONE_DAY, str(RUB)),
     ]
 
 
