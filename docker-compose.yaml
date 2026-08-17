@@ -31,7 +31,7 @@ services:
     environment:
       ROUTER_AI_API_KEY:
 
-      OPENVIKING_ROOT_API_KEY:
+      OPENVIKING_ROOT_API_KEY: openssl rand -hex 32
       OPENVIKING_SERVER_HOST: 0.0.0.0
       OPENVIKING_SERVER_PORT: 1933
       OPENVIKING_WITH_BOT: 0
@@ -56,7 +56,7 @@ services:
       ROUTER_AI_API_KEY:
 
       OPENVIKING_ENDPOINT: http://openviking:1933
-      OPENVIKING_API_KEY:
+      OPENVIKING_API_KEY: openssl rand -hex 32
       OPENVIKING_ACCOUNT: default
       OPENVIKING_USER: default
       OPENVIKING_AGENT: hermes
