@@ -4,8 +4,7 @@
         "urls": []
     },
     "instructions": [
-        "./AGENTS.md",
-        "./CONTRIBUTING.md"
+        "./AGENTS.md"
     ],
     "mcp": {
         "codegraph": {

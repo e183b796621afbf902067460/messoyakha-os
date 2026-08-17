@@ -4,6 +4,11 @@ dynamic = ["version", "dependencies"]
 description = "..."
 requires-python = ">=3.10,<4.0"
 
+[project.urls]
+dohod-dsi = "https://www.dohod.ru/ik/analytics/dividend/pdf/dsi.pdf"
+alfabank-fcf-yield = "https://alfabank.ru/alfa-investor/t/chto-takoe-fcf-yield/"
+curvo-ray-dalio-all-weather-portfolio = "https://curvo.eu/backtest/en/portfolio/ray-dalio-all-weather--NoIgSghgngBAIhANgSwPYwIKMTA6gUwgBcALfAJxABphQBJAUQAYmAhAFgBkBWATQE4AHAGZqTAHTCAujRCMWrYQDVcAOW4BGQWPEbuM+szYAxALIA2ACoBhbtqoT2BuUY6q4w80wBMOpgHZ9WXk2OGNOdgAFDV8HcQD9KSkgA"
+
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
 build-backend = "hatchling.build"

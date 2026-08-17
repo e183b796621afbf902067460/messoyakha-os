@@ -23,8 +23,6 @@ class _DividendsSettings(NorthernWeatherSettings):
         ("PHOR", MISX, str(RUB)),
         ("PLZL", MISX, str(RUB)),
         ("GMKN", MISX, str(RUB)),
-        ("CHMF", MISX, str(RUB)),
-        ("SBER", MISX, str(RUB)),
     ]
 
 

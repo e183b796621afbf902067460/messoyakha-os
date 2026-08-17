@@ -1,0 +1,82 @@
+# https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers
+memory:
+  provider: openviking
+
+agent:
+  api_max_retries: 3
+
+  # https://hermes-agent.nousresearch.com/docs/reference/toolsets-reference
+  enabled_toolsets: [
+    "clarify", "todo",
+    "delegation", "skills",
+    "file", "terminal", "code_execution",
+    "cronjob",
+  ]
+
+  # https://hermes-agent.nousresearch.com/docs/user-guide/configuration#tool-use-enforcement
+  tool_use_enforcement: true
+
+providers:
+  router-ai:
+    base_url: https://routerai.ru/api/v1
+    key_env: ROUTER_AI_API_KEY
+    request_timeout_seconds: 30
+    stale_timeout_seconds: 30
+    discover_models: false
+    models:
+      - google/gemini-3.7-flash
+      - openai/gpt-5.6-luna-pro
+      - deepseek/deepseek-v4-flash-0731
+      - poolside/laguna-s-2.1
+      - upstage/solar-pro4
+
+# https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents
+moa:
+  default_preset: i-coder
+
+  presets:
+    i-quant:
+      reference_models:
+        - provider: custom:router-ai
+          model: deepseek/deepseek-v4-flash-0731
+          reasoning_effort: xhigh
+        - provider: custom:router-ai
+          model: openai/gpt-5.6-luna-pro
+          reasoning_effort: xhigh
+      aggregator:
+        provider: custom:router-ai
+        model: google/gemini-3.7-flash
+        reasoning_effort: medium
+      enabled: true
+
+    i-coder:
+      reference_models:
+        - provider: custom:router-ai
+          model: upstage/solar-pro4
+          reasoning_effort: xhigh
+        - provider: custom:router-ai
+          model: poolside/laguna-s-2.1
+          reasoning_effort: xhigh
+      aggregator:
+        provider: custom:router-ai
+        model: deepseek/deepseek-v4-flash-0731
+        reasoning_effort: medium
+      enabled: true
+
+delegation:
+  provider: custom:router-ai
+  model: deepseek/deepseek-v4-flash-0731
+  reasoning_effort: medium
+
+model:
+  provider: moa
+  default: i-coder
+
+terminal:
+  cwd: /code
+
+compression:
+  enabled: false
+
+streaming:
+  enabled: true

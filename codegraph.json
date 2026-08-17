@@ -1,0 +1,10 @@
+{
+  "include": [
+    "home/", "lib/",
+    ".pre-commit-config.yaml",
+    "AGENTS.md",
+    "Makefile",
+    "README.md",
+    "pyproject.toml"
+  ]
+}

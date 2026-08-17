@@ -25,9 +25,6 @@ class _OHLCVSettings(NorthernWeatherSettings):
         ("PHOR", MISX, MessoyakhaIntervalEnum.ONE_DAY, str(RUB)),
         ("PLZL", MISX, MessoyakhaIntervalEnum.ONE_DAY, str(RUB)),
         ("GMKN", MISX, MessoyakhaIntervalEnum.ONE_DAY, str(RUB)),
-        ("CHMF", MISX, MessoyakhaIntervalEnum.ONE_DAY, str(RUB)),
-        ("SBER", MISX, MessoyakhaIntervalEnum.ONE_DAY, str(RUB)),
-        ("MCFTRR", MISX, MessoyakhaIntervalEnum.ONE_DAY, str(RUB)),
     ]
 
 
