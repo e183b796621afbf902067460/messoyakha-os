@@ -1,8 +1,10 @@
 FROM nousresearch/hermes-agent:v2026.8.13
 
+ENV PATH="/root/.local/bin:${PATH}"
+
 USER root
 RUN apt-get update \
-    && apt-get install -y git wget curl \
+    && apt-get install -y git curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /code
