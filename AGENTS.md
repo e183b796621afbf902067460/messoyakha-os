@@ -148,18 +148,3 @@ We use docstrings to document the code! Update (or add) all relevant documentati
 
 <!-- reviewing-python-code-rule:1 -->
 Do self-review and verify that every change is related to the task (instead, remove any unrelated changes).
-
-## Codegraph
-
-<!-- codebase-search-rule:1 [!IMPORTANT] -->
-In repositories indexed by `codegraph` (a `.codegraph/` directory exists at the repo root), always reach for it before running `grep`, `find` or `read` commands when you need to understand or locate code!
-
-<!-- codebase-search-rule:2 -->
-`codegraph explore "your-query-to-run"` answers most code questions in one call — the relevant symbols' verbatim source and the call paths between them, including dynamic-dispatch hops `grep` can't follow: name a file or symbol in the query to read its current line-numbered source; if it's listed but deferred, load it by name via tool search. prints the same output.
-
-<!-- codebase-search-rule:3 -->
-If there is no `.codegraph/` directory, skip `codegraph` entirely — indexing is the user's decision.
-
-## Openviking
-
-...

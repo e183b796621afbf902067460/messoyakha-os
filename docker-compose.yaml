@@ -6,7 +6,6 @@ services:
   openviking:
     image: openviking/openviking:v0.4.12.6
     container_name: openviking
-    command: /code/entrypoint.sh
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "openviking-entrypoint", "--healthcheck"]
@@ -16,7 +15,8 @@ services:
       start_period: 30s
 
     volumes:
-      - ./openviking/ov.conf:/code/ov.conf:ro
+      - ./.openviking/ov.conf:/app/.openviking/ov.conf:ro
+      - ./.openviking/resources:/resources:ro
     ports:
       - "1933:1933"
     deploy:
@@ -40,18 +40,31 @@ services:
 
   # https://hermes-agent.nousresearch.com/docs/user-guide/features/acp
   hermes:
-    image: nousresearch/hermes-agent:v2026.8.13
+    build:
+      context: ./.hermes
+      dockerfile: Dockerfile
     container_name: hermes
     command: ["sleep", "infinity"]
     restart: unless-stopped
 
-    user: "${UID}:${GID}"
     working_dir: /code
     volumes:
-      - .:/code:rw
+      # https://hermes-agent.nousresearch.com/docs/user-guide/docker
+      - ./home:/code/home:rw
+      - ./lib:/code/lib:rw
+      - ./pyproject.toml:/code/pyproject.toml:rw
+      - ./uv.lock:/code/uv.lock:rw
 
-      - ./hermes/config.yaml:/opt/data/config.yaml:ro
-      - ./hermes/.no-bundled-skills:/opt/data/.no-bundled-skills:ro
+      - ./.gitignore:/code/.gitignore:ro
+      - ./.pre-commit-config.yaml:/code/.pre-commit-config.yaml:ro
+      - ./AGENTS.md:/code/AGENTS.md:ro
+      - ./codegraph.json:/code/codegraph.json:ro
+      - ./Makefile:/code/Makefile:ro
+      - ./README.md:/code/README.md:ro
+
+      - ./.hermes/config.yaml:/opt/data/config.yaml:ro
+      - ./.hermes/SOUL.md:/opt/data/SOUL.md:ro
+      - ./.hermes/.no-bundled-skills:/opt/data/.no-bundled-skills:ro
     environment:
       ROUTER_AI_API_KEY:
 
@@ -60,6 +73,8 @@ services:
       OPENVIKING_ACCOUNT: default
       OPENVIKING_USER: default
       OPENVIKING_AGENT: hermes
+
+      HERMES_WRITE_SAFE_ROOT: /code
     depends_on:
       openviking:
         condition: service_healthy

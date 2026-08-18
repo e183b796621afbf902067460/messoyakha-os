@@ -75,6 +75,21 @@ model:
 terminal:
   cwd: /code
 
+mcp_servers:
+  codegraph:
+    command: "codegraph"
+    args: ["serve", "--mcp"]
+
+skills:
+  external_dirs:
+    - /skills
+
+tool_loop_guardrails:
+  hard_stop_enabled: true
+  hard_stop_after:
+    exact_failure: 3
+    idempotent_no_progress: 3
+
 compression:
   enabled: false
 

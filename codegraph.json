@@ -1,6 +1,6 @@
 {
   "include": [
-    "home/", "lib/",
+    "home/**", "lib/**",
     ".pre-commit-config.yaml",
     "AGENTS.md",
     "Makefile",
