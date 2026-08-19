@@ -16,7 +16,7 @@ export VIRTUAL_ENV := .venv
 
 .PHONY: .pre-commit
 .pre-commit: .uv
-	@pre-commit -V || { echo "Please install pre-commit: https://pre-commit.com/ (>=4.5.1)"; exit 1; }
+	@uv pip show pre-commit || { echo "Please install pre-commit: https://pre-commit.com/ (>=4.5.1)"; exit 1; }
 
 .PHONY: sync
 sync: .uv

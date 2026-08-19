@@ -3,6 +3,7 @@ version: "3.8"
 services:
 
   # https://docs.openviking.ai/en/getting-started/01-introduction
+  # https://docs.byteplus.com/en/docs/ModelArk/2288685#ebf140a1
   openviking:
     image: openviking/openviking:v0.4.12.6
     container_name: openviking
@@ -41,10 +42,10 @@ services:
   # https://hermes-agent.nousresearch.com/docs/user-guide/features/acp
   hermes:
     build:
-      context: ./.hermes
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./.hermes/Dockerfile
     container_name: hermes
-    command: ["sleep", "infinity"]
+    command: ["sh", "-c", "sleep infinity"]
     restart: unless-stopped
 
     working_dir: /code
@@ -53,20 +54,14 @@ services:
       - ./home:/code/home:rw
       - ./lib:/code/lib:rw
       - ./pyproject.toml:/code/pyproject.toml:rw
-      - ./uv.lock:/code/uv.lock:rw
-
-      - ./.gitignore:/code/.gitignore:ro
-      - ./.pre-commit-config.yaml:/code/.pre-commit-config.yaml:ro
-      - ./AGENTS.md:/code/AGENTS.md:ro
-      - ./codegraph.json:/code/codegraph.json:ro
-      - ./Makefile:/code/Makefile:ro
-      - ./README.md:/code/README.md:ro
 
       - ./.hermes/config.yaml:/opt/data/config.yaml:ro
       - ./.hermes/SOUL.md:/opt/data/SOUL.md:ro
+      - ./.hermes/USER.md:/opt/data/memories/USER.md:ro
       - ./.hermes/.no-bundled-skills:/opt/data/.no-bundled-skills:ro
+
     environment:
-      ROUTER_AI_API_KEY:
+      ROUTER_AI_API_KEY: 
 
       OPENVIKING_ENDPOINT: http://openviking:1933
       OPENVIKING_API_KEY: openssl rand -hex 32
@@ -74,7 +69,8 @@ services:
       OPENVIKING_USER: default
       OPENVIKING_AGENT: hermes
 
-      HERMES_WRITE_SAFE_ROOT: /code
+      HERMES_UID: ${UID:-10000}
+      HERMES_GID: ${GID:-10000}
     depends_on:
       openviking:
         condition: service_healthy
