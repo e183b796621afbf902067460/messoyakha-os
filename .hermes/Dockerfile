@@ -19,13 +19,14 @@ RUN apt-get update \
 
 WORKDIR /skills
 RUN git clone --branch v6.3.0 https://github.com/obra/superpowers.git
+RUN git clone --branch v1.13.18 https://github.com/dagster-io/skills.git
 
 RUN chown -R root:root /skills \
     && chmod -R 555 /skills
 
-RUN mkdir -p /opt/data/memories /opt/data/skills \
-    && chown -R root:root /opt/data/memories /opt/data/skills \
-    && chmod -R 555 /opt/data/memories /opt/data/skills
+RUN mkdir -p /opt/data/memories /opt/data/skills /opt/data/skills/.hub \
+    && chmod -R 555 /opt/data/memories /opt/data/skills \
+    && chmod -R 777 /opt/data/skills/.hub
 
 WORKDIR /code
 RUN curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh \
