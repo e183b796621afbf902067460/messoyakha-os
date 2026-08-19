@@ -12,6 +12,12 @@ from messoyakha_moex_iss_sdk.schemas.history_security import (
     MOEXHistorySecurityOutputSchema,
     MOEXHistorySecurityParametersSchema,
 )
+from messoyakha_moex_iss_sdk.schemas.history_security_total import (
+    MOEXHistorySecurityTotalContextSchema,
+    MOEXHistorySecurityTotalHTTPEndpointSchema,
+    MOEXHistorySecurityTotalOutputSchema,
+    MOEXHistorySecurityTotalParametersSchema,
+)
 from messoyakha_moex_iss_sdk.schemas.listed_from import MOEXListedFromHTTPEndpointSchema
 from messoyakha_sdk.adapters.clients.http import HTTPAPIClientBase
 from messoyakha_sdk.decorators.route import endpoint_route
@@ -49,6 +55,28 @@ class _MOEXAPIClientBase(HTTPAPIClientBase):
                 self._parse_history_security(history_security=history_security), context=context.model_dump()
             )
             for history_security in response.json()["history"]["data"]
+        ]
+
+    async def _history_security_total(
+        self,
+        endpoint_schema: MOEXHistorySecurityTotalHTTPEndpointSchema,
+        parameters_schema: MOEXHistorySecurityTotalParametersSchema,
+        **kwargs,
+    ) -> list[MOEXHistorySecurityTotalOutputSchema]:
+        response: Response = await self._get(
+            parameters=parameters_schema.model_dump(by_alias=True),
+            **kwargs,
+        )
+        context: MOEXHistorySecurityTotalContextSchema = MOEXHistorySecurityTotalContextSchema(
+            ticker=endpoint_schema.ticker,
+            currency=parameters_schema.currency,
+        )
+        return [
+            MOEXHistorySecurityTotalOutputSchema.model_validate(
+                history_security_total,
+                context=context.model_dump(),
+            )
+            for history_security_total in response.json()["security"]["data"]
         ]
 
     # https://iss.moex.com/iss/reference/193
@@ -108,6 +136,20 @@ class MOEXStockSharesAPIClient(_MOEXAPIClientBase):
         **kwargs,
     ) -> list[MOEXHistorySecurityOutputSchema]:
         return await super()._history_security(
+            endpoint_schema=endpoint_schema,
+            parameters_schema=parameters_schema,
+            **kwargs,
+        )
+
+    # https://iss.moex.com/iss/reference/509
+    @endpoint_route("/iss/history/engines/stock/totals/boards/MRKT/securities/{security}.json")
+    async def history_security_total(
+        self,
+        endpoint_schema: MOEXHistorySecurityTotalHTTPEndpointSchema,
+        parameters_schema: MOEXHistorySecurityTotalParametersSchema,
+        **kwargs,
+    ) -> list[MOEXHistorySecurityTotalOutputSchema]:
+        return await super()._history_security_total(
             endpoint_schema=endpoint_schema,
             parameters_schema=parameters_schema,
             **kwargs,

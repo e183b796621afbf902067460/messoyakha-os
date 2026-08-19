@@ -14,6 +14,12 @@ from messoyakha_moex_iss_sdk.schemas.history_security import (
     MOEXHistorySecurityParametersSchema,
     MOEXSpotHistorySecurityInputSchema,
 )
+from messoyakha_moex_iss_sdk.schemas.history_security_total import (
+    MOEXHistorySecurityTotalHTTPEndpointSchema,
+    MOEXHistorySecurityTotalInputSchema,
+    MOEXHistorySecurityTotalOutputSchema,
+    MOEXHistorySecurityTotalParametersSchema,
+)
 from messoyakha_moex_iss_sdk.schemas.listed_from import MOEXListedFromHTTPEndpointSchema, MOEXListedFromInputSchema
 
 
@@ -77,7 +83,22 @@ class MOEXStockIndexService(_MOEXService):
 
 @define(slots=True, auto_attribs=True, kw_only=True)
 class MOEXStockSharesService(_MOEXService):
-    _client: MOEXAPIClient = field(init=False, factory=MOEXStockSharesAPIClient)
+    _client: MOEXStockSharesAPIClient = field(init=False, factory=MOEXStockSharesAPIClient)  # type: ignore[bad-override]
 
     async def get_ohlcv(self, input_schema: MOEXSpotHistorySecurityInputSchema) -> DataFrame:
         return await super()._get_ohlcv(input_schema=input_schema)
+
+    async def get_total_supply(self, input_schema: MOEXHistorySecurityTotalInputSchema) -> DataFrame:
+        history_security_totals: list[MOEXHistorySecurityTotalOutputSchema] = await self._client.history_security_total(
+            endpoint_schema=MOEXHistorySecurityTotalHTTPEndpointSchema(
+                ticker=input_schema.ticker,
+            ),
+            parameters_schema=MOEXHistorySecurityTotalParametersSchema(
+                currency=input_schema.currency,
+                start_time=input_schema.start_time,
+                end_time=input_schema.end_time,
+            ),
+        )
+        return DataFrame([item.model_dump() for item in history_security_totals], infer_schema_length=None).sort(
+            by=col("timestamp")
+        )
