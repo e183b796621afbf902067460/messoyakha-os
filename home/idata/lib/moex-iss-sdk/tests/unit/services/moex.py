@@ -77,10 +77,10 @@ class TestMOEXStockSharesService:
         moex: MOEXStockSharesService = MOEXStockSharesService()
         data: DataFrame = await moex.get_total_supply(
             input_schema=MOEXHistorySecurityTotalInputSchema(
-                ticker="SBERP",
+                ticker="SBER",
                 currency="RUB",
                 start_time=datetime(2015, 1, 1, tzinfo=timezone.utc),
-                end_time=datetime(2015, 2, 20, tzinfo=timezone.utc),
+                end_time=datetime(2015, 10, 28, tzinfo=timezone.utc),
             )
         )
         logger.info(data.head())

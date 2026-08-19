@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Self
 
 from pydantic import (
@@ -78,6 +78,14 @@ class MOEXHistorySecurityTotalInputSchema(BaseModel):
     currency: str
     start_time: datetime
     end_time: datetime
+
+    @property
+    def delta(self) -> timedelta:
+        return self.end_time - self.start_time
+
+    @property
+    def limit(self) -> timedelta:
+        return timedelta(days=100)
 
     @field_validator("start_time", mode="after")
     @classmethod

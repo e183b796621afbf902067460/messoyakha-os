@@ -89,16 +89,33 @@ class MOEXStockSharesService(_MOEXService):
         return await super()._get_ohlcv(input_schema=input_schema)
 
     async def get_total_supply(self, input_schema: MOEXHistorySecurityTotalInputSchema) -> DataFrame:
-        history_security_totals: list[MOEXHistorySecurityTotalOutputSchema] = await self._client.history_security_total(
-            endpoint_schema=MOEXHistorySecurityTotalHTTPEndpointSchema(
-                ticker=input_schema.ticker,
-            ),
-            parameters_schema=MOEXHistorySecurityTotalParametersSchema(
-                currency=input_schema.currency,
-                start_time=input_schema.start_time,
-                end_time=input_schema.end_time,
-            ),
-        )
-        return DataFrame([item.model_dump() for item in history_security_totals], infer_schema_length=None).sort(
-            by=col("timestamp")
+        number_of_batches: int = max(1, int(input_schema.delta.total_seconds() / input_schema.limit.total_seconds()))
+
+        history_security_totals: list[MOEXHistorySecurityTotalOutputSchema] = []
+        for _ in tqdm(range(number_of_batches)):
+            end_time: datetime = min(input_schema.start_time + input_schema.limit, input_schema.end_time)
+
+            batch: list[MOEXHistorySecurityTotalOutputSchema] = await self._client.history_security_total(
+                endpoint_schema=MOEXHistorySecurityTotalHTTPEndpointSchema(
+                    ticker=input_schema.ticker,
+                ),
+                parameters_schema=MOEXHistorySecurityTotalParametersSchema(
+                    currency=input_schema.currency,
+                    start_time=input_schema.start_time,
+                    end_time=end_time,
+                ),
+            )
+            if not batch:
+                break
+            history_security_totals.extend(batch)
+
+            next_start_time: datetime = batch[-1].timestamp + timedelta(days=1)
+            if next_start_time > input_schema.end_time:
+                break
+            input_schema.start_time = next_start_time
+            await sleep(1)
+        return (
+            DataFrame([item.model_dump() for item in history_security_totals], infer_schema_length=None)
+            .unique()
+            .sort(by=col("timestamp"))
         )
