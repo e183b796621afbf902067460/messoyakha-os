@@ -36,6 +36,18 @@ class MOEXISSDLHService:
             currency=currency,
         )
 
+    def query_latest_total_supply_timestamp(
+        self,
+        ticker: str,
+        venue: str,
+        currency: str,
+    ) -> datetime | None:
+        return self._repository.query_latest_total_supply_timestamp(
+            ticker=ticker,
+            venue=venue,
+            currency=currency,
+        )
+
     def query_ohlcv(
         self,
         ticker: str,

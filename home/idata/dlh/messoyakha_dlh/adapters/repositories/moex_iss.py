@@ -33,6 +33,28 @@ class MOEXISSS3Repository(S3PolarsRepositoryBase):
             return latest_timestamp
         return query_result.replace(tzinfo=timezone.utc) if query_result else latest_timestamp
 
+    @route(
+        table="total_supply",
+        path="f8e90488-f511555d-274b-4258-bffc-572dd1900382/moex-iss/total-supply/**/*.parquet",
+    )
+    def query_latest_total_supply_timestamp(self, ticker: str, venue: str, currency: str) -> datetime | None:
+        query: str = f"""
+            SELECT
+                MAX(timestamp) AS timestamp
+            FROM
+                total_supply
+            WHERE
+                _partition_by_ticker = {ticker!r}
+                AND _partition_by_venue = {venue!r}
+                AND _partition_by_currency = {currency!r}
+        """
+        latest_timestamp: datetime | None = None
+        try:
+            query_result: datetime | None = self._query(query=query).collect().item(row=0, column="timestamp")
+        except ComputeError:
+            return latest_timestamp
+        return query_result.replace(tzinfo=timezone.utc) if query_result else latest_timestamp
+
     @route(table="ohlcv", path="f8e90488-f511555d-274b-4258-bffc-572dd1900382/moex-iss/ohlcv/**/*.parquet")
     def query_ohlcv(self, ticker: str, venue: str, product: str, currency: str, interval: str) -> DataFrame:
         query: str = f"""

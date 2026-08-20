@@ -23,3 +23,19 @@ class MOEXISSOHLCVSchema(DataFrameModel):
     class Config:  # type: ignore[bad-override]
         strict = "filter"
         coerce = True
+
+
+class MOEXISSTotalSupplySchema(DataFrameModel):
+    total_supply: float = Field(nullable=True)
+
+    timestamp: datetime
+
+    partition_by_ticker: str = Field(alias="_partition_by_ticker")
+    partition_by_venue: str = Field(alias="_partition_by_venue")
+    partition_by_currency: str = Field(alias="_partition_by_currency")
+    partition_by_month: int = Field(alias="_partition_by_month")
+    partition_by_year: int = Field(alias="_partition_by_year")
+
+    class Config:  # type: ignore[bad-override]
+        strict = "filter"
+        coerce = True
