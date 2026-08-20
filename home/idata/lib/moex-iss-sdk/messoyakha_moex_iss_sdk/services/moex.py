@@ -89,6 +89,7 @@ class MOEXStockSharesService(_MOEXService):
         return await super()._get_ohlcv(input_schema=input_schema)
 
     async def get_total_supply(self, input_schema: MOEXHistorySecurityTotalInputSchema) -> DataFrame:
+        start_time: datetime = input_schema.start_time
         number_of_batches: int = max(1, int(input_schema.delta.total_seconds() / input_schema.limit.total_seconds()))
 
         history_security_totals: list[MOEXHistorySecurityTotalOutputSchema] = []
@@ -105,6 +106,15 @@ class MOEXStockSharesService(_MOEXService):
                     end_time=end_time,
                 ),
             )
+            if not batch and _ < 1:
+                batch = await self._client.history_security_total(
+                    endpoint_schema=MOEXHistorySecurityTotalHTTPEndpointSchema(
+                        ticker=input_schema.ticker,
+                    ),
+                    parameters_schema=MOEXHistorySecurityTotalParametersSchema(
+                        currency=input_schema.currency,
+                    ),
+                )
             if not batch:
                 break
             history_security_totals.extend(batch)
@@ -117,5 +127,6 @@ class MOEXStockSharesService(_MOEXService):
         return (
             DataFrame([item.model_dump() for item in history_security_totals], infer_schema_length=None)
             .unique()
+            .filter(col("timestamp").is_between(start_time, input_schema.end_time))
             .sort(by=col("timestamp"))
         )

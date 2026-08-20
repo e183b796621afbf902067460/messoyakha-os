@@ -26,7 +26,7 @@ from messoyakha_sdk.decorators.route import endpoint_route
 @define(slots=False, auto_attribs=True, kw_only=True)
 class _MOEXAPIClientBase(HTTPAPIClientBase):
     _session: AsyncClient = field(
-        init=False, factory=partial(AsyncClient, base_url="https://iss.moex.com", timeout=10, http2=True)
+        init=False, factory=partial(AsyncClient, base_url="https://iss.moex.com", timeout=60, http2=True)
     )
 
     @staticmethod
@@ -55,28 +55,6 @@ class _MOEXAPIClientBase(HTTPAPIClientBase):
                 self._parse_history_security(history_security=history_security), context=context.model_dump()
             )
             for history_security in response.json()["history"]["data"]
-        ]
-
-    async def _history_security_total(
-        self,
-        endpoint_schema: MOEXHistorySecurityTotalHTTPEndpointSchema,
-        parameters_schema: MOEXHistorySecurityTotalParametersSchema,
-        **kwargs,
-    ) -> list[MOEXHistorySecurityTotalOutputSchema]:
-        response: Response = await self._get(
-            parameters=parameters_schema.model_dump(by_alias=True),
-            **kwargs,
-        )
-        context: MOEXHistorySecurityTotalContextSchema = MOEXHistorySecurityTotalContextSchema(
-            ticker=endpoint_schema.ticker,
-            currency=parameters_schema.currency,
-        )
-        return [
-            MOEXHistorySecurityTotalOutputSchema.model_validate(
-                history_security_total,
-                context=context.model_dump(),
-            )
-            for history_security_total in response.json()["security"]["data"]
         ]
 
     # https://iss.moex.com/iss/reference/193
@@ -149,11 +127,25 @@ class MOEXStockSharesAPIClient(_MOEXAPIClientBase):
         parameters_schema: MOEXHistorySecurityTotalParametersSchema,
         **kwargs,
     ) -> list[MOEXHistorySecurityTotalOutputSchema]:
-        return await super()._history_security_total(
-            endpoint_schema=endpoint_schema,
-            parameters_schema=parameters_schema,
+        response: Response = await self._get(
+            parameters=(
+                parameters_schema.model_dump(by_alias=True)
+                if parameters_schema.start_time and parameters_schema.end_time
+                else None
+            ),
             **kwargs,
         )
+        context: MOEXHistorySecurityTotalContextSchema = MOEXHistorySecurityTotalContextSchema(
+            ticker=endpoint_schema.ticker,
+            currency=parameters_schema.currency,
+        )
+        return [
+            MOEXHistorySecurityTotalOutputSchema.model_validate(
+                history_security_total,
+                context=context.model_dump(),
+            )
+            for history_security_total in response.json()["security"]["data"]
+        ]
 
 
 MOEXAPIClient: TypeAlias = MOEXStockIndexAPIClient | MOEXStockSharesAPIClient

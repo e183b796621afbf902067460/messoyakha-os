@@ -28,8 +28,8 @@ class MOEXHistorySecurityTotalHTTPEndpointSchema(BaseModel):
 class MOEXHistorySecurityTotalParametersSchema(BaseModel):
     currency: str = Field(exclude=True)
 
-    start_time: datetime = Field(serialization_alias="from")
-    end_time: datetime = Field(serialization_alias="till")
+    start_time: datetime | None = Field(serialization_alias="from", default=None)
+    end_time: datetime | None = Field(serialization_alias="till", default=None)
 
     @field_serializer("start_time")
     def _serialize_start_time(self, start_time: datetime) -> str:
