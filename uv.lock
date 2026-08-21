@@ -24,6 +24,7 @@ members = [
     "messoyakha-os",
     "messoyakha-sdk-py",
     "messoyakha-smart-lab-sdk-py",
+    "messoyakha-yf-sdk-py",
 ]
 
 [[package]]
@@ -2153,7 +2154,6 @@ dependencies = [
     { name = "skfolio" },
     { name = "ta-lib" },
     { name = "tqdm" },
-    { name = "yfinance" },
 ]
 
 [package.metadata]
@@ -2173,7 +2173,6 @@ requires-dist = [
     { name = "skfolio", specifier = ">=0.20.1" },
     { name = "ta-lib", specifier = ">=0.6.8" },
     { name = "tqdm", specifier = ">=4.67.3" },
-    { name = "yfinance", specifier = ">=1.4.1" },
 ]
 
 [[package]]
@@ -2212,6 +2211,20 @@ dependencies = [
 requires-dist = [
     { name = "crawlee", extras = ["beautifulsoup", "playwright"], specifier = ">=1.6.3" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.28.1,<0.29" },
+]
+
+[[package]]
+name = "messoyakha-yf-sdk-py"
+source = { editable = "home/idata/lib/yf-sdk" }
+dependencies = [
+    { name = "httpx", extra = ["http2"] },
+    { name = "yfinance" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", extras = ["http2"], specifier = ">=0.28.1,<0.29" },
+    { name = "yfinance", specifier = ">=1.4.1" },
 ]
 
 [[package]]

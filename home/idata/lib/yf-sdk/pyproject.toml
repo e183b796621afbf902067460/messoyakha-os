@@ -1,0 +1,33 @@
+[project]
+name = "messoyakha-yf-sdk-py"
+dynamic = ["version", "dependencies"]
+description = "..."
+requires-python = ">=3.10,<4.0"
+
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "pep440"
+bump = true
+fallback-version = "0.0.0"
+
+[tool.uv]
+package = true
+
+[tool.hatch.metadata.hooks.uv-dynamic-versioning]
+dependencies = [
+    "httpx[http2]>=0.28.1,<0.29",
+    "yfinance>=1.4.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["messoyakha_yf_sdk"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["tests"]

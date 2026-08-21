@@ -20,7 +20,6 @@ dependencies = [
     "pre-commit>=4.6.0",
     "ruff==0.14.8",
     "pyrefly==0.52.0",
-    "yfinance>=1.4.1",
 ]
 requires-python = ">=3.10,<4.0"
 
@@ -40,6 +39,7 @@ messoyakha-dohod-sdk-py = { workspace = true }
 messoyakha-fedstat-sdk-py = { workspace = true }
 messoyakha-moex-iss-sdk-py = { workspace = true }
 messoyakha-smart-lab-sdk-py = { workspace = true }
+messoyakha-yf-sdk-py = { workspace = true }
 
 # home/idata/*
 messoyakha-dlh-py = { workspace = true }
@@ -150,10 +150,17 @@ known-first-party = [
 # https://docs.astral.sh/ruff/settings/#lint_isort_sections
 [tool.ruff.lint.isort.sections]
 "sdk" = [
-    "messoyakha_binance_sdk", "messoyakha_finam_sdk", "messoyakha_sdk",
-    "messoyakha_cbr_sdk", "messoyakha_fedstat_sdk", "messoyakha_moex_iss_sdk",
-    "messoyakha_dohod_sdk", "messoyakha_smart_lab_sdk",
-    "messoyakha_nautilus_benchmark_sdk", "messoyakha_nautilus_income_sdk"
+    "messoyakha_sdk",
+    "messoyakha_binance_sdk",
+    "messoyakha_finam_sdk",
+    "messoyakha_cbr_sdk",
+    "messoyakha_dohod_sdk",
+    "messoyakha_fedstat_sdk",
+    "messoyakha_moex_iss_sdk",
+    "messoyakha_smart_lab_sdk",
+    "messoyakha_yf_sdk",
+    "messoyakha_nautilus_benchmark_sdk",
+    "messoyakha_nautilus_income_sdk"
 ]
 
 [tool.ruff.lint.flake8-tidy-imports]
@@ -189,6 +196,7 @@ search-path = [
     "home/idata/lib/fedstat-sdk",
     "home/idata/lib/moex-iss-sdk",
     "home/idata/lib/smart-lab-sdk",
+    "home/idata/lib/yf-sdk",
 
     "home/idata/dlh",
     "home/idata/dwh",
