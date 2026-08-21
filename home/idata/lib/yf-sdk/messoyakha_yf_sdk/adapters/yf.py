@@ -24,5 +24,5 @@ class YFAPIClient:
         )
 
     def history_min_date(self, ticker: str) -> datetime:
-        history: DataFrame = Ticker(ticker).history(period="max", interval="1d", auto_adjust=True, actions=False)
+        history: DataFrame = Ticker(ticker).history(period="max", auto_adjust=True, actions=False)
         return history.index.min().to_pydatetime()
