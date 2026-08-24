@@ -8,6 +8,7 @@ ARG HERMES_GID
 
 USER root
 
+# Grant Hermes Agent same permissions as User has
 RUN groupmod -g ${HERMES_GID} hermes \
     && usermod -u ${HERMES_UID} -g ${HERMES_GID} hermes \
     && mkdir -p /code \
@@ -17,6 +18,7 @@ RUN apt-get update \
     && apt-get install -y git curl \
     && rm -rf /var/lib/apt/lists/*
 
+# External Skills
 WORKDIR /skills
 RUN git clone --branch v6.3.0 https://github.com/obra/superpowers.git
 RUN git clone --branch v1.13.18 https://github.com/dagster-io/skills.git
@@ -28,11 +30,10 @@ RUN mkdir -p /opt/data/memories /opt/data/skills /opt/data/skills/.hub \
     && chmod -R 555 /opt/data/memories /opt/data/skills \
     && chmod -R 777 /opt/data/skills/.hub
 
+USER ${HERMES_UID}
 WORKDIR /code
-RUN curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh \
-    && codegraph init \
-    && codegraph sync
 
+# Dependencies
 COPY ./home /code/home
 COPY ./lib /code/lib
 
@@ -46,5 +47,9 @@ COPY ./pyproject.toml \
     ./README.md \
     /code/
 
-USER ${HERMES_UID}
 RUN make sync
+
+# External Tools
+RUN curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh \
+    && codegraph init \
+    && codegraph sync

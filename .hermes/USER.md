@@ -17,7 +17,4 @@ If there is no `.codegraph/` directory, skip `codegraph` entirely — indexing i
 Always prefer its read‑only memory/resource lookup tools when you need persistent user context or shared resources — Openviking is a searchable context database that unifies resources in a file‑system‑style hierarchy.
 
 <!-- openviking-context-rule:2 -->
-You can only use Openviking’s read‑only retrieval tools (e.g., `viking_search`, `viking_read`, `viking_browse`) to answer questions, but never call tools that can mutate persistent memory/resources (e.g.,`viking_remember`, `viking_forget`, or `viking_add_resource`) — these mutate persistent memory/resources and are reserved for the user!
-
-<!-- openviking-context-rule:3 -->
 If Openviking is not configured — skip it entirely — enabling or managing memory providers is the user’s decision.
