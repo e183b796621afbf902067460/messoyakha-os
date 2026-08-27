@@ -1,7 +1,7 @@
 from typing import Self
 
-from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.core.data import Data
+from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.model.custom import customdataclass
 from nautilus_trader.model.objects import Currency
 from pandas import DataFrame, Timestamp

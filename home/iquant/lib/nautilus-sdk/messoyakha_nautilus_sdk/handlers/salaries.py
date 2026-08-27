@@ -34,5 +34,11 @@ def salaries(
             cutoff -= timedelta(days=1)
         if cutoff.weekday() == 6:  # noqa: PLR2004
             cutoff -= timedelta(days=2)
-        data.append(SalaryIncomeData._from_params(income=income / len(days), currency=currency, timestamp=cutoff))
+        data.append(
+            SalaryIncomeData._from_params(  # noqa: SLF001
+                income=income / len(days), 
+                currency=currency, 
+                timestamp=cutoff
+                )
+        )
     return data
