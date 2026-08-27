@@ -1,19 +1,29 @@
 from nautilus_trader.accounting.accounts.base import Account
-from nautilus_trader.model.data import Bar
+from nautilus_trader.config import StrategyConfig
+from nautilus_trader.model.data import Bar, BarType
 from nautilus_trader.model.enums import OrderSide
-from nautilus_trader.model.objects import Quantity
+from nautilus_trader.model.identifiers import ClientId, InstrumentId, Venue
+from nautilus_trader.model.objects import Currency, Quantity
 from nautilus_trader.trading.strategy import Strategy
 from numpy import floor
 
-from messoyakha_nautilus_benchmark_sdk.schemas.dca import DCAConfig
+
+class DCAStrategyConfig(StrategyConfig, frozen=True):
+    id: InstrumentId
+    bar: BarType
+    product: str
+    venue: Venue
+    currency: Currency
+
+    client: ClientId
 
 
 class DCAStrategy(Strategy):
-    def __init__(self, config: DCAConfig) -> None:
+    def __init__(self, config: DCAStrategyConfig) -> None:
         Strategy.__init__(self, config=config)
 
     def on_start(self) -> None:
-        self.subscribe_bars(self.config.bars)
+        self.subscribe_bars(self.config.bar)
 
     def on_bar(self, bar: Bar) -> None:
         account: Account = self.portfolio.account(self.config.venue)

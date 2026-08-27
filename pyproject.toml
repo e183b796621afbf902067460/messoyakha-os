@@ -20,6 +20,7 @@ dependencies = [
     "pre-commit>=4.6.0",
     "ruff==0.14.8",
     "pyrefly==0.52.0",
+    "akshare>=1.18.88",
 ]
 requires-python = ">=3.10,<4.0"
 
@@ -46,8 +47,7 @@ messoyakha-dlh-py = { workspace = true }
 messoyakha-dwh-py = { workspace = true }
 
 # home/iquant/lib/*
-messoyakha-nautilus-benchmark-sdk-py = { workspace = true }
-messoyakha-nautilus-income-sdk-py = { workspace = true }
+messoyakha-nautilus-sdk-py = { workspace = true }
 
 # home/iquant/northern-weather
 messoyakha-northern-weather-py = { workspace = true }
@@ -159,8 +159,7 @@ known-first-party = [
     "messoyakha_moex_iss_sdk",
     "messoyakha_smart_lab_sdk",
     "messoyakha_yf_sdk",
-    "messoyakha_nautilus_benchmark_sdk",
-    "messoyakha_nautilus_income_sdk"
+    "messoyakha_nautilus_sdk"
 ]
 
 [tool.ruff.lint.flake8-tidy-imports]
@@ -201,8 +200,7 @@ search-path = [
     "home/idata/dlh",
     "home/idata/dwh",
 
-    "home/iquant/lib/nautilus-benchmark-sdk",
-    "home/iquant/lib/nautilus-income-sdk",
+    "home/iquant/lib/nautilus-sdk",
 
     "home/iquant/northern-weather",
 
