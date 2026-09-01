@@ -17,12 +17,12 @@ class IncomeData(Data):
         return Currency.from_str(self.currency)
 
     @classmethod
-    def _from_params(cls, income: float, currency: str, timestamp: Timestamp, *args, **kwargs) -> Self:
+    def _from_params(cls, income: float, currency: str, timestamp: Timestamp, *args, **kwargs) -> Self:  # noqa: ARG003
         ts: int = dt_to_unix_nanos(dt=timestamp)
 
         data: Self = cls(income=income, currency=currency, **kwargs)
-        data._ts_event = ts
-        data._ts_init = ts
+        data._ts_event = ts  # noqa: SLF001
+        data._ts_init = ts  # noqa: SLF001
         return data
 
     @staticmethod

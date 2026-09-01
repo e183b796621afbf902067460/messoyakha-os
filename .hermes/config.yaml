@@ -18,6 +18,21 @@ agent:
   tool_use_enforcement: true
 
 providers:
+  openrouter-ai:
+    base_url: https://openrouter.ai/api/v1
+    key_env: OPENROUTER_AI_API_KEY
+    request_timeout_seconds: 30
+    stale_timeout_seconds: 30
+    discover_models: false
+    models:
+      - z-ai/glm-5.3-flash
+      - google/gemini-3.7-flash
+      - openai/gpt-5.6-luna-pro
+      - deepseek/deepseek-v4-flash-0731
+      - poolside/laguna-s-2.1
+      - upstage/solar-pro4
+      - qwen/qwen3.8-flash
+
   router-ai:
     base_url: https://routerai.ru/api/v1
     key_env: ROUTER_AI_API_KEY
@@ -25,44 +40,44 @@ providers:
     stale_timeout_seconds: 30
     discover_models: false
     models:
-      - stealth/ox-alpha
+      - z-ai/glm-5.3-flash
       - google/gemini-3.7-flash
       - openai/gpt-5.6-luna-pro
       - deepseek/deepseek-v4-flash-0731
       - poolside/laguna-s-2.1
       - upstage/solar-pro4
-      - qwen/qwen3.7-flash
+      - qwen/qwen3.8-flash
 
 # https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents
 moa:
-  default_preset: i-coder
+  default_preset: i-router
 
   presets:
-    i-quant:
+    i-openrouter:
       reference_models:
-        - provider: custom:router-ai
-          model: poolside/laguna-s-2.1
-          reasoning_effort: xhigh
-        - provider: custom:router-ai
-          model: upstage/solar-pro4
-          reasoning_effort: xhigh
+        - provider: custom:openrouter-ai
+          model: qwen/qwen3.8-flash
+          reasoning_effort: medium
+        - provider: custom:openrouter-ai
+          model: deepseek/deepseek-v4-flash-0731
+          reasoning_effort: medium
       aggregator:
-        provider: custom:router-ai
-        model: deepseek/deepseek-v4-flash-0731
-        reasoning_effort: xhigh
+        provider: custom:openrouter-ai
+        model: z-ai/glm-5.3-flash
+        reasoning_effort: medium
       enabled: true
 
-    i-coder:
+    i-router:
       reference_models:
+        - provider: custom:router-ai
+          model: qwen/qwen3.8-flash
+          reasoning_effort: medium
         - provider: custom:router-ai
           model: deepseek/deepseek-v4-flash-0731
           reasoning_effort: medium
-        - provider: custom:router-ai
-          model: poolside/laguna-s-2.1
-          reasoning_effort: medium
       aggregator:
         provider: custom:router-ai
-        model: stealth/ox-alpha
+        model: z-ai/glm-5.3-flash
         reasoning_effort: medium
       enabled: true
 
@@ -73,7 +88,7 @@ delegation:
 
 model:
   provider: moa
-  default: i-coder
+  default: i-router
 
 terminal:
   cwd: /code
@@ -84,7 +99,6 @@ mcp_servers:
     args: ["serve", "--mcp"]
 
 skills:
-  search_paths:
   external_dirs:
     - /skills
   write_approval: true

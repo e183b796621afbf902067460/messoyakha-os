@@ -36,9 +36,7 @@ def salaries(
             cutoff -= timedelta(days=2)
         data.append(
             SalaryIncomeData._from_params(  # noqa: SLF001
-                income=income / len(days), 
-                currency=currency, 
-                timestamp=cutoff
-                )
+                income=income / len(days), currency=currency, timestamp=cutoff
+            )
         )
     return data

@@ -21,7 +21,7 @@ RUN apt-get update \
 # External Skills
 WORKDIR /skills
 RUN git clone --branch v6.3.0 https://github.com/obra/superpowers.git
-RUN git clone --branch v1.13.18 https://github.com/dagster-io/skills.git
+RUN git clone --branch v1.13.18 https://github.com/dagster-io/skills.git dagster-skills
 
 RUN chown -R root:root /skills \
     && chmod -R 555 /skills

@@ -8,7 +8,8 @@ from nautilus_trader.trading.strategy import Strategy
 from numpy import floor
 
 
-class DCAStrategyConfig(StrategyConfig, frozen=True):
+# https://nautilustrader.io/docs/python-api-latest/config.html#nautilus_trader.config.StrategyConfig
+class LSStrategyConfig(StrategyConfig, frozen=True):
     id: InstrumentId
     bar: BarType
     product: str
@@ -18,8 +19,9 @@ class DCAStrategyConfig(StrategyConfig, frozen=True):
     client: ClientId
 
 
-class DCAStrategy(Strategy):
-    def __init__(self, config: DCAStrategyConfig) -> None:
+# https://nautilustrader.io/docs/python-api-latest/trading.html#nautilus_trader.trading.Strategy
+class LSStrategy(Strategy):
+    def __init__(self, config: LSStrategyConfig) -> None:
         Strategy.__init__(self, config=config)
 
     def on_start(self) -> None:
