@@ -1,0 +1,35 @@
+name: messoyakha-quant-ops
+version: 1.0.0
+description: "Autonomous QuantOps assistant."
+hermes_requires: ">=0.21.0"
+author: "e183b796621afbf902067460"
+license: "MIT"
+
+env_requires:
+  - name: OPENROUTER_API_KEY
+    description: "OpenRouter API key."
+    required: true
+  - name: ROUTERAI_API_KEY
+    description: "RouterAI API key."
+    required: true
+
+  - name: OPENVIKING_ENDPOINT
+    description: "OpenViking endpoint."
+    default: http://0.0.0.0:1933
+    required: true
+  - name: OPENVIKING_API_KEY
+    description: "OpenViking API key."
+    default: "7c00813f14bb275af2ec8114218145beb605730a0cd3e5e844e45b652f27c320"
+    required: true
+  - name: OPENVIKING_ACCOUNT
+    description: "OpenViking account."
+    default: "default"
+    required: true
+  - name: OPENVIKING_USER
+    description: "OpenViking user."
+    default: "default"
+    required: true
+  - name: OPENVIKING_AGENT
+    description: "OpenViking agent."
+    default: "hermes"
+    required: true

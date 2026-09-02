@@ -26,8 +26,6 @@ providers:
     discover_models: false
     models:
       - z-ai/glm-5.3-flash
-      - google/gemini-3.7-flash
-      - openai/gpt-5.6-luna-pro
       - deepseek/deepseek-v4-flash-0731
       - poolside/laguna-s-2.1
       - upstage/solar-pro4
@@ -41,8 +39,6 @@ providers:
     discover_models: false
     models:
       - z-ai/glm-5.3-flash
-      - google/gemini-3.7-flash
-      - openai/gpt-5.6-luna-pro
       - deepseek/deepseek-v4-flash-0731
       - poolside/laguna-s-2.1
       - upstage/solar-pro4
@@ -56,14 +52,14 @@ moa:
     i-openrouter:
       reference_models:
         - provider: custom:openrouter-ai
-          model: qwen/qwen3.8-flash
+          model: poolside/laguna-s-2.1
           reasoning_effort: medium
         - provider: custom:openrouter-ai
-          model: deepseek/deepseek-v4-flash-0731
+          model: z-ai/glm-5.3-flash
           reasoning_effort: medium
       aggregator:
         provider: custom:openrouter-ai
-        model: z-ai/glm-5.3-flash
+        model: deepseek/deepseek-v4-flash-0731
         reasoning_effort: medium
       enabled: true
 
