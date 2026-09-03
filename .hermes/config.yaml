@@ -20,29 +20,29 @@ agent:
 providers:
   openrouter-ai:
     base_url: https://openrouter.ai/api/v1
-    key_env: OPENROUTER_AI_API_KEY
+    key_env: OPENROUTER_API_KEY
     request_timeout_seconds: 30
     stale_timeout_seconds: 30
     discover_models: false
     models:
       - z-ai/glm-5.3-flash
       - deepseek/deepseek-v4-flash-0731
+      - qwen/qwen3.8-flash
       - poolside/laguna-s-2.1
       - upstage/solar-pro4
-      - qwen/qwen3.8-flash
 
   router-ai:
     base_url: https://routerai.ru/api/v1
-    key_env: ROUTER_AI_API_KEY
+    key_env: ROUTERAI_API_KEY
     request_timeout_seconds: 30
     stale_timeout_seconds: 30
     discover_models: false
     models:
       - z-ai/glm-5.3-flash
       - deepseek/deepseek-v4-flash-0731
+      - qwen/qwen3.8-flash
       - poolside/laguna-s-2.1
       - upstage/solar-pro4
-      - qwen/qwen3.8-flash
 
 # https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents
 moa:
@@ -66,14 +66,14 @@ moa:
     i-router:
       reference_models:
         - provider: custom:router-ai
-          model: qwen/qwen3.8-flash
+          model: poolside/laguna-s-2.1
           reasoning_effort: medium
         - provider: custom:router-ai
-          model: deepseek/deepseek-v4-flash-0731
+          model: z-ai/glm-5.3-flash
           reasoning_effort: medium
       aggregator:
         provider: custom:router-ai
-        model: z-ai/glm-5.3-flash
+        model: deepseek/deepseek-v4-flash-0731
         reasoning_effort: medium
       enabled: true
 
@@ -86,17 +86,12 @@ model:
   provider: moa
   default: i-router
 
-terminal:
-  cwd: /code
-
 mcp_servers:
   codegraph:
     command: "codegraph"
     args: ["serve", "--mcp"]
 
 skills:
-  external_dirs:
-    - /skills
   write_approval: true
 
 tool_loop_guardrails:
@@ -106,7 +101,7 @@ tool_loop_guardrails:
     idempotent_no_progress: 3
 
 compression:
-  enabled: false
+  enabled: true
 
 streaming:
   enabled: true

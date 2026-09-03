@@ -19,7 +19,7 @@ env_requires:
     required: true
   - name: OPENVIKING_API_KEY
     description: "OpenViking API key."
-    default: "7c00813f14bb275af2ec8114218145beb605730a0cd3e5e844e45b652f27c320"
+    default: openssl rand -hex 32
     required: true
   - name: OPENVIKING_ACCOUNT
     description: "OpenViking account."
