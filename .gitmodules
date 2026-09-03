@@ -1,0 +1,6 @@
+[submodule ".hermes/skills/superpowers"]
+	path = .hermes/skills/superpowers
+	url = https://github.com/obra/superpowers.git
+[submodule ".hermes/skills/dagster-skills"]
+	path = .hermes/skills/dagster-skills
+	url = https://github.com/dagster-io/skills.git
