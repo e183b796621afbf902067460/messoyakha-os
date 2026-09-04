@@ -3,7 +3,6 @@ version: "3.8"
 services:
 
   # https://docs.openviking.ai/en/getting-started/01-introduction
-  # https://docs.byteplus.com/en/docs/ModelArk/2288685#ebf140a1
   openviking:
     image: openviking/openviking:v0.4.12.6
     container_name: openviking
