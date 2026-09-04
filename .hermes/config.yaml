@@ -2,6 +2,7 @@
 memory:
   provider: openviking
   write_approval: true
+  user_profile_enabled: false
 
 agent:
   api_max_retries: 3
@@ -81,6 +82,7 @@ delegation:
   provider: custom:router-ai
   model: deepseek/deepseek-v4-flash-0731
   reasoning_effort: medium
+  inherit_mcp_toolsets: true
 
 model:
   provider: moa
@@ -105,3 +107,6 @@ compression:
 
 streaming:
   enabled: true
+
+curator:
+  enabled: false

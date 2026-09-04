@@ -8,9 +8,11 @@ license: "MIT"
 env_requires:
   - name: OPENROUTER_API_KEY
     description: "OpenRouter API key."
+    default:
     required: true
   - name: ROUTERAI_API_KEY
     description: "RouterAI API key."
+    default:
     required: true
 
   - name: OPENVIKING_ENDPOINT
@@ -19,7 +21,7 @@ env_requires:
     required: true
   - name: OPENVIKING_API_KEY
     description: "OpenViking API key."
-    default: openssl rand -hex 32
+    default:
     required: true
   - name: OPENVIKING_ACCOUNT
     description: "OpenViking account."
