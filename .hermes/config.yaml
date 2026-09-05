@@ -1,6 +1,8 @@
 # https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers
 memory:
   provider: openviking
+  openviking:
+    agent: messoyakha-quant-ops
   write_approval: true
   user_profile_enabled: false
 
