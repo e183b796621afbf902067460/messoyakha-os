@@ -16,6 +16,9 @@ agent:
     "file", "terminal", "code_execution",
     "cronjob",
   ]
+  disabled_toolsets: [
+    
+  ]
 
   # https://hermes-agent.nousresearch.com/docs/user-guide/configuration#tool-use-enforcement
   tool_use_enforcement: true
