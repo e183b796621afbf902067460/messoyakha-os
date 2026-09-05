@@ -2,7 +2,6 @@
 name = "messoyakha-cbr-sdk-py"
 dynamic = ["version", "dependencies"]
 description = "..."
-requires-python = ">=3.10,<4.0"
 
 [project.urls]
 cbr = "https://www.cbr.ru/development/dws/"

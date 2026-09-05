@@ -2,7 +2,6 @@
 name = "messoyakha-smart-lab-sdk-py"
 dynamic = ["version", "dependencies"]
 description = "..."
-requires-python = ">=3.10,<4.0"
 
 [project.urls]
 smart-lab-sectors = "https://smart-lab.ru/forum/sectors/"
