@@ -1,17 +1,17 @@
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import httpx
 from loguru import logger
+from markitdown import MarkItDown, MarkItDownException
 from openviking_sdk import SyncHTTPClient
 from openviking_sdk.errors import NotFoundError, OpenVikingError
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, HttpUrl
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=(Path(__file__).resolve().parent / ".env",)
-    )
+    model_config = SettingsConfigDict(env_file=(Path(__file__).resolve().parent / ".env",))
 
     OPENVIKING_ENDPOINT: HttpUrl = Field(default=HttpUrl("http://0.0.0.0:1933"))
     OPENVIKING_API_KEY: str
@@ -30,18 +30,8 @@ def _parent_uri_for(pdf: Path, books_directory: Path) -> str:
     return f"{books_resource_uri}/{relative.parent.as_posix()}"
 
 
-def main(settings: Settings) -> None:
+def main(client: SyncHTTPClient, converter: MarkItDown, settings: Settings) -> None:
     books_directory = Path.cwd() / ".hermes" / ".openviking" / "resources" / "books"
-
-    client = SyncHTTPClient(
-        url=settings.OPENVIKING_ENDPOINT.encoded_string(),
-        api_key=settings.OPENVIKING_API_KEY,
-        account=settings.OPENVIKING_ACCOUNT,
-        user=settings.OPENVIKING_USER,
-        agent_id=settings.OPENVIKING_AGENT,
-        timeout=settings.OPENVIKING_TIMEOUT,
-    )
-    client.initialize()
 
     for pdf in sorted(books_directory.rglob("*.pdf")):
         parent_uri = _parent_uri_for(pdf, books_directory)
@@ -53,20 +43,31 @@ def main(settings: Settings) -> None:
             if any(Path(entry).name.startswith(pdf.stem) for entry in entries):
                 logger.info(f"{pdf.name} is already indexed at {parent_uri}.")
                 continue
-            logger.info(f"{pdf.name} is indexing.")
-            client.add_resource(
-                path=str(pdf),
-                parent=parent_uri,
-                options={
-                    "reason": "Book library sync on Hermes startup",
-                    "processing_mode": "vectors_only",
-                    "create_parent": True,
-                    "directly_upload_media": False,
-                },
-                timeout=settings.OPENVIKING_TIMEOUT,
-                wait=True,
-            )
-        except (OpenVikingError, httpx.HTTPError, OSError) as error:
+
+            with TemporaryDirectory(prefix="book-sync-") as temp:
+                logger.info(f"{pdf.name} is converting.")
+                markdown_path = Path(temp) / f"{pdf.stem}.md"
+                markdown_path.write_text(
+                    data=converter.convert(pdf).markdown, 
+                    encoding="utf-8"
+                )
+                try:
+                    logger.info(f"{pdf.name} is indexing.")
+                    client.add_resource(
+                        path=markdown_path.as_posix(),
+                        parent=parent_uri,
+                        options={
+                            "processing_mode": "vectors_only",
+                            "create_parent": True,
+                            "directly_upload_media": False,
+                        },
+                        timeout=settings.OPENVIKING_TIMEOUT,
+                        wait=True,
+                    )
+                    logger.info(f"{pdf.name} is indexed at {parent_uri}.")
+                finally:
+                    markdown_path.unlink(missing_ok=True)
+        except (OpenVikingError, httpx.HTTPError, OSError, MarkItDownException) as error:
             logger.error(
                 f"Failed to index {pdf.name} ({type(error).__name__}: {error}); it will be retried on the next run."
             )
@@ -74,6 +75,15 @@ def main(settings: Settings) -> None:
 
 
 if __name__ == "__main__":
-    main(
-        settings=Settings()
+    settings: Settings = Settings()
+    client: SyncHTTPClient = SyncHTTPClient(
+        url=settings.OPENVIKING_ENDPOINT.encoded_string(),
+        api_key=settings.OPENVIKING_API_KEY,
+        account=settings.OPENVIKING_ACCOUNT,
+        user=settings.OPENVIKING_USER,
+        agent_id=settings.OPENVIKING_AGENT,
+        timeout=settings.OPENVIKING_TIMEOUT,
     )
+    client.initialize()
+
+    main(client=client, converter=MarkItDown(), settings=settings)
