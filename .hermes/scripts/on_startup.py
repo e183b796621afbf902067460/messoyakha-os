@@ -4,11 +4,15 @@ import httpx
 from loguru import logger
 from openviking_sdk import SyncHTTPClient
 from openviking_sdk.errors import NotFoundError, OpenVikingError
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, HttpUrl
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=(Path(__file__).resolve().parent / ".env",)
+    )
+
     OPENVIKING_ENDPOINT: HttpUrl = Field(default=HttpUrl("http://0.0.0.0:1933"))
     OPENVIKING_API_KEY: str
     OPENVIKING_TIMEOUT: int = Field(default=604800)
@@ -16,9 +20,6 @@ class Settings(BaseSettings):
     OPENVIKING_ACCOUNT: str = Field(default="default")
     OPENVIKING_USER: str = Field(default="default")
     OPENVIKING_AGENT: str = Field(default="hermes")
-
-    class Config:
-        env_file = (Path(__file__).resolve().parent / ".env",)
 
 
 def _parent_uri_for(pdf: Path, books_directory: Path) -> str:
@@ -50,12 +51,7 @@ def main(settings: Settings) -> None:
             except NotFoundError:
                 entries = []
             if any(Path(entry).name.startswith(pdf.stem) for entry in entries):
-                logger.info(f"{pdf.name} is reindexing at {parent_uri}.")
-                client.reindex(
-                    uri=parent_uri,
-                    mode="vectors_only",
-                    wait=True,
-                )
+                logger.info(f"{pdf.name} is already indexed at {parent_uri}.")
                 continue
             logger.info(f"{pdf.name} is indexing.")
             client.add_resource(
